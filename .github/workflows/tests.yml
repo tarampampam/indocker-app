@@ -28,9 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - {uses: gacts/github-slug@v1, id: slug}
+      - run: echo -e '-----BEGIN CERTIFICATE-----\nFAKE CERT\n-----END CERTIFICATE-----' > ./config/certs/privkey1.pem
 
-      - run: echo -e '-----BEGIN CERTIFICATE-----\nFAKE CERT\n-----END CERTIFICATE-----' > /config/certs/privkey1.pem
+      - {uses: gacts/github-slug@v1, id: slug}
 
       - uses: docker/build-push-action@v4
         with:
