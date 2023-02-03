@@ -30,15 +30,10 @@ jobs:
 
       - {uses: gacts/github-slug@v1, id: slug}
 
-      - uses: docker/setup-qemu-action@v2
-
-      - uses: docker/setup-buildx-action@v2
-
       - uses: docker/build-push-action@v4
         with:
           context: .
           push: false
-          platforms: linux/amd64,linux/arm64
           build-args: "APP_VERSION=${{ steps.slug.outputs.commit-hash-short }}"
           tags: app:local
 
