@@ -1,0 +1,23 @@
+# Dynamic configuration
+
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/certs/fullchain1.pem
+        keyFile: /etc/traefik/certs/privkey1.pem
+
+http:
+  middlewares:
+    traefik-dashboard-cors:
+      headers:
+        customResponseHeaders:
+          Access-Control-Allow-Origin: https://indocker.app
+
+  routers:
+    traefik-dashboard-router:
+      rule: Host(`monitor.indocker.app`)
+      entryPoints: [https]
+      service: api@internal
+      tls: {}
+      middlewares: [traefik-dashboard-cors]

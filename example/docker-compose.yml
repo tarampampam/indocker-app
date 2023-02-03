@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  my-nginx:
+    image: nginx:latest
+    labels:
+      - traefik.enable=true
+      # https://doc.traefik.io/traefik/routing/providers/docker/#routers
+      - traefik.http.routers.my-nginx-router.rule=Host(`my-nginx.indocker.app`)
+      #- traefik.http.routers.my-nginx-router.entrypoints=https # "https" by default, but you can specify "http"
+      - traefik.http.routers.my-nginx-router.service=my-nginx-service
+      # https://doc.traefik.io/traefik/routing/providers/docker/#services
+      - traefik.http.services.my-nginx-service.loadbalancer.server.port=80
+      - traefik.http.services.my-nginx-service.loadbalancer.healthcheck.path=/
+      - traefik.http.services.my-nginx-service.loadbalancer.healthcheck.interval=5s
+    networks: [indocker-app-network]
+
+networks:
+  indocker-app-network:
+    external: true
