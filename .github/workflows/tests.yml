@@ -30,6 +30,8 @@ jobs:
 
       - {uses: gacts/github-slug@v1, id: slug}
 
+      - run: echo -e '-----BEGIN CERTIFICATE-----\nFAKE CERT\n-----END CERTIFICATE-----' > /config/certs/privkey1.pem
+
       - uses: docker/build-push-action@v4
         with:
           context: .
