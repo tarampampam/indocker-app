@@ -29,11 +29,17 @@ FROM scratch as runtime
 # import rootfs from builder
 COPY --from=builder /tmp/rootfs /
 
+ARG APP_VERSION="undefined"
+
 LABEL \
-    org.opencontainers.image.authors="tarampampam" \
+    # Docs: <https://github.com/opencontainers/image-spec/blob/master/annotations.md>
     org.opencontainers.image.title="indocker.app" \
+    org.opencontainers.image.description="Domain names with valid SSL for your local docker containers" \
     org.opencontainers.image.url="https://github.com/tarampampam/indocker-app" \
-    org.opencontainers.image.source="https://github.com/tarampampam/indocker-app"
+    org.opencontainers.image.source="https://github.com/tarampampam/indocker-app" \
+    org.opencontainers.image.vendor="tarampampam" \
+    org.opencontainers.version="$APP_VERSION" \
+    org.opencontainers.image.licenses="MIT"
 
 EXPOSE "80/tcp" "443/tcp"
 
