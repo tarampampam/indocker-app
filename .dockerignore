@@ -1,2 +1,21 @@
+## Git & tools
+.git
+.gitignore
+.editorconfig
+.dockerignore
+docker-compose.yml
+
+## IDEs
+.idea
+.vscode
+
+## Non-docker files
 /config/certs/.*
 /config/certs/*.md
+/frontend
+/example
+
+## Temp dirs & trash
+/temp
+/tmp
+.DS_Store

@@ -14,6 +14,19 @@ services:
       - traefik.http.services.my-nginx-service.loadbalancer.healthcheck.path=/
       - traefik.http.services.my-nginx-service.loadbalancer.healthcheck.interval=5s
     networks: [indocker-app-network]
+    security_opt: [no-new-privileges:true]
+
+  whoami:
+    image: containous/whoami:latest
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.whoami-router.rule=Host(`whoami.indocker.app`)
+      - traefik.http.routers.whoami-router.entrypoints=http
+      - traefik.http.routers.whoami-router.service=whoami-service
+      - traefik.http.services.whoami-service.loadbalancer.server.port=8080
+    command: --port 8080
+    networks: [indocker-app-network]
+    security_opt: [no-new-privileges:true]
 
 networks:
   indocker-app-network:

@@ -11,8 +11,10 @@ http:
   middlewares:
     traefik-dashboard-cors:
       headers:
-        customResponseHeaders:
-          Access-Control-Allow-Origin: https://indocker.app
+        accessControlAllowOriginList:
+          - https://indocker.app
+          - https://frontend.indocker.app # for local development
+        accessControlAllowMethods: [GET]
 
   routers:
     traefik-dashboard-router:
