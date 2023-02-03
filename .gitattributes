@@ -1,0 +1,5 @@
+# Text files have auto line endings
+* text=auto
+
+# Disable next extensions in project "used languages" list
+*.html linguist-detectable=false
