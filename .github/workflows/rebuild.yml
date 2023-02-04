@@ -15,8 +15,15 @@ jobs:
     name: Trigger rebuild
     runs-on: ubuntu-latest
     steps:
-      - uses: pozetroninc/github-action-get-latest-release@v0.6.0
+      - uses: actions/github-script@v6
         id: latest
-        with: {repository: '${{ github.repository }}'}
+        with:
+          result-encoding: string
+          retries: 3
+          script: |
+            github.rest.repos.getLatestRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            })
 
       - run: echo ${{ steps.latest.outputs.release }}
