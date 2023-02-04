@@ -28,7 +28,7 @@ jobs:
         with: {script: 'return (new Date()).getMonth()', result-encoding: string}
 
       - uses: actions/cache@v3
-        id: certs-cache
+        id: certs-cache # yea, I know about the sensitive data caching, bla bla bla
         with: {path: config/certs, key: 'config-certs-month-${{ steps.date.outputs.result }}'}
 
       - if: steps.certs-cache.outputs.cache-hit != 'true'
@@ -46,7 +46,6 @@ jobs:
 
       - uses: docker/build-push-action@v4
         with:
-          context: .
           push: true
           platforms: linux/amd64,linux/arm/v6,linux/arm64/v8
           build-args: "APP_VERSION=${{ steps.slug.outputs.version }}"

@@ -33,7 +33,7 @@ jobs:
         with: {script: 'return (new Date()).getMonth()', result-encoding: string}
 
       - uses: actions/cache@v3
-        id: certs-cache
+        id: certs-cache # yea, I know about the sensitive data caching, bla bla bla
         with: {path: config/certs, key: 'config-certs-month-${{ steps.date.outputs.result }}-dry'}
 
       - if: steps.certs-cache.outputs.cache-hit != 'true'
@@ -50,16 +50,13 @@ jobs:
 
       - uses: docker/build-push-action@v4
         with:
-          context: '.'
           push: false
+          tags: app:local
           platforms: linux/amd64,linux/arm/v6,linux/arm64/v8
-          outputs: type=oci,dest=docker-image.tar
-
-      - run: ls -la
 
       - uses: aquasecurity/trivy-action@0.9.0
         with:
-          input: docker-image.tar
+          image-ref: app:local
           format: sarif
           severity: CRITICAL
           exit-code: 1
