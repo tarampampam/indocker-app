@@ -18,7 +18,7 @@
   <style>
     header {
       min-height: 60vh;
-      padding-top: 16vh;
+      padding-top: 13vh;
       padding-bottom: 16vh;
       overflow: hidden;
       position: relative;
@@ -92,24 +92,47 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/css/bootstrap.min.css"
         integrity="sha512-SbiR/eusphKoMVVXysTKG/7VseWii+Y3FdHrt0EpKgpToZeemhqHeZeLWLhJutz/2ut2Vw1uQEj2MbRF+TVBUA=="
         crossorigin="anonymous" referrerpolicy="no-referrer"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css"
-        integrity="sha512-hasIneQUHlh06VNBe7f6ZcHmeRTLIaQWFd43YriJ0UND19bvYRauxthDg8E4eVNPm9bRUhr5JGeqH7FRFXQu5g=="
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/a11y-dark.min.css"
+        integrity="sha512-Vj6gPCk8EZlqnoveEyuGyYaWZ1+jyjMPg8g4shwyyNlRQl6d3L9At02ZHQr5K6s5duZl/+YKMnM3/8pDhoUphg=="
         crossorigin="anonymous" referrerpolicy="no-referrer"/>
 </head>
 <body class="d-flex flex-column min-vh-100">
 
-<div id="top-bar" class="bg-info bg-gradient d-none">
-  <div id="top-bar-text" class="container py-2 text-center">
-    Checking your daemon status...
+<nav>
+  <div id="daemon-status-checking" class="bg-info bg-gradient">
+    <div class="container py-2 text-center">
+      <div class="spinner-grow spinner-grow-sm" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      Checking your daemon status...
+    </div>
   </div>
-</div>
+  <div id="daemon-status-up" class="bg-success text-white bg-gradient d-none">
+    <div class="container py-2 text-center">
+      The local demon works!
+      <a class="btn btn-light btn-sm ms-2" href="https://monitor.indocker.app/dashboard/#/http/routers" target="_blank">
+        Open dashboard
+      </a>
+    </div>
+  </div>
+  <div id="daemon-status-down" class="bg-warning bg-gradient d-none">
+    <div class="container py-2 text-center">
+      Looks like your local daemon is not started
+      <a class="btn btn-light btn-sm ms-2" href="#start_daemon">How to start?</a>
+    </div>
+  </div>
+</nav>
 
 <header class="bg-dark mb-5">
   <div class="container">
     <div class="text-center">
-      <img src="images/docker.svg" width="128" height="128" alt="Docker logo" />
+      <img src="images/docker.svg" width="128" height="128" alt="Docker logo"/>
       <h1 class="text-light">Domain names with valid SSL</h1>
       <h2 class="text-light">...for your <strong>local</strong> docker containers</h2>
+      <a class="btn btn-primary btn-lg mt-3 open-dashboard d-none" target="_blank"
+         href="https://monitor.indocker.app/dashboard/">
+        Open dashboard
+      </a>
     </div>
   </div>
 </header>
@@ -316,26 +339,34 @@ X-Real-Ip: 172.20.0.1</code></pre>
       return new Promise((resolve, reject) => {
         fetch(`${this.baseUrl}/api/version`)
           .then((response) => resolve(response.status === 200))
-          .catch((err) => reject(err))
+          .catch((err) => resolve(false))
       })
     }
   }
 
-  const $topBar = document.getElementById('top-bar')
-  const $topBarText = document.getElementById('top-bar-text')
+  const $daemonStatusChecking = document.getElementById('daemon-status-checking')
+  const $daemonStatusUp = document.getElementById('daemon-status-up')
+  const $daemonStatusDown = document.getElementById('daemon-status-down')
+  const $openDashboardButtons = document.querySelectorAll('.open-dashboard')
 
   const updateTopBarState = () => {
-    $topBar.classList.remove('d-none')
+    $daemonStatusChecking.classList.add('d-none')
 
     api.isStarted().then((started) => {
       if (started) {
-        $topBar.classList.remove('bg-info', 'bg-warning')
-        $topBar.classList.add('bg-success', 'text-white')
-        $topBarText.innerText = 'The local demon works!'
+        $daemonStatusUp.classList.remove('d-none')
+        $daemonStatusDown.classList.add('d-none')
+
+        $openDashboardButtons.forEach(btn => {
+          btn.classList.remove('d-none')
+        })
       } else {
-        $topBar.classList.remove('bg-info', 'bg-success', 'text-white')
-        $topBar.classList.add('bg-warning')
-        $topBarText.innerText = 'Looks like your local daemon is not started'
+        $daemonStatusDown.classList.remove('d-none')
+        $daemonStatusUp.classList.add('d-none')
+
+        $openDashboardButtons.forEach(btn => {
+          btn.classList.add('d-none')
+        })
       }
     })
   }

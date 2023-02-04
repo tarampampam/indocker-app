@@ -1,0 +1,52 @@
+name: release
+
+on:
+  release: # Docs: <https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release>
+    types: [published]
+
+jobs:
+  build-docker-image:
+    name: 🏗️ Build the docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_LOGIN }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: sh ./mkcert.sh
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          CF_EMAIL: ${{ secrets.CF_EMAIL }}
+          DRY_RUN: 'true'
+
+      - {uses: gacts/github-slug@v1, id: slug}
+
+      - uses: docker/setup-qemu-action@v2
+
+      - uses: docker/setup-buildx-action@v2
+
+      - uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm/v6,linux/arm64/v8
+          build-args: "APP_VERSION=${{ steps.slug.outputs.version }}"
+          tags: |
+            ghcr.io/${{ github.actor }}/indocker:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}.${{ steps.slug.outputs.version-patch }}
+            ghcr.io/${{ github.actor }}/indocker:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}
+            ghcr.io/${{ github.actor }}/indocker:${{ steps.slug.outputs.version-major }}
+            ghcr.io/${{ github.actor }}/indocker:latest
+            quay.io/indocker/app:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}.${{ steps.slug.outputs.version-patch }}
+            quay.io/indocker/app:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}
+            quay.io/indocker/app:${{ steps.slug.outputs.version-major }}
+            quay.io/indocker/app:latest
