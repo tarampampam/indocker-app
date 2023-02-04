@@ -26,4 +26,4 @@ jobs:
               repo: context.repo.repo,
             })
 
-      - run: echo ${{ steps.latest.outputs.release }}
+      - run: echo ${{ steps.latest.outputs.result }}
