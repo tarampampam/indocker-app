@@ -52,9 +52,8 @@ jobs:
         with:
           context: '.'
           push: false
-          tags: app:local
           platforms: linux/amd64,linux/arm/v6,linux/arm64/v8
-          outputs: type=docker,dest=docker-image.tar
+          outputs: type=oci,dest=docker-image.tar
 
       - run: ls -la
 
