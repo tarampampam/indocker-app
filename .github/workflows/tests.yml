@@ -34,7 +34,7 @@ jobs:
 
       - uses: actions/cache@v3
         id: certs-cache
-        with: {path: config/certs, key: 'config-certs-month-${{ steps.date.outputs.result }}'}
+        with: {path: config/certs, key: 'config-certs-month-${{ steps.date.outputs.result }}-dry'}
 
       - if: steps.certs-cache.outputs.cache-hit != 'true'
         run: sh ./mkcert.sh
@@ -44,7 +44,7 @@ jobs:
           DRY_RUN: 'true'
 
       - uses: docker/build-push-action@v4
-        with: {context: '.', push: false, tags: app:local}
+        with: {context: '.', push: false, tags: 'app:local'}
 
       - uses: aquasecurity/trivy-action@0.9.0
         with:
