@@ -1,7 +1,6 @@
 name: rebuild
 
 on:
-  push: {}
   workflow_dispatch: {}
   schedule:
     - cron: '*/10 * * * *'
@@ -12,30 +11,21 @@ concurrency:
 
 jobs:
   rebuild:
-    name: Trigger rebuild
+    name: ⚙ Trigger rebuild
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v6
-        id: latest
         with:
-          result-encoding: string
           retries: 3
           script: |
-            return (await github.rest.repos.getLatestRelease({
+            const latestTag = (await github.rest.repos.getLatestRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
             })).data.tag_name
 
-      - run: echo ${{ steps.latest.outputs.result }}
-
-      - uses: actions/github-script@v6
-        id: trigger
-        with:
-          retries: 3
-          script: |
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'release.yml',
-              ref: '${{ steps.latest.outputs.result }}',
-            });
+              ref: latestTag,
+            })

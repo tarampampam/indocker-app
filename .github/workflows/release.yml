@@ -37,7 +37,7 @@ jobs:
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           CF_EMAIL: ${{ secrets.CF_EMAIL }}
-          DRY_RUN: 'false' # BE CAREFUL WITH THIS!!!
+          DRY_RUN: 'false' # BE CAREFUL WITH THIS! QUOTA IS HARD LIMITED!
 
       - {uses: gacts/github-slug@v1, id: slug}
 
@@ -52,10 +52,10 @@ jobs:
           platforms: linux/amd64,linux/arm/v6,linux/arm64/v8
           build-args: "APP_VERSION=${{ steps.slug.outputs.version }}"
           tags: |
-            ghcr.io/${{ github.actor }}/indocker:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}.${{ steps.slug.outputs.version-patch }}
-            ghcr.io/${{ github.actor }}/indocker:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}
-            ghcr.io/${{ github.actor }}/indocker:${{ steps.slug.outputs.version-major }}
-            ghcr.io/${{ github.actor }}/indocker:latest
+            ghcr.io/tarampampam/indocker:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}.${{ steps.slug.outputs.version-patch }}
+            ghcr.io/tarampampam/indocker:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}
+            ghcr.io/tarampampam/indocker:${{ steps.slug.outputs.version-major }}
+            ghcr.io/tarampampam/indocker:latest
             quay.io/indocker/app:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}.${{ steps.slug.outputs.version-patch }}
             quay.io/indocker/app:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}
             quay.io/indocker/app:${{ steps.slug.outputs.version-major }}
