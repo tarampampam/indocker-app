@@ -22,8 +22,8 @@ jobs:
 
       - uses: gacts/gitleaks@v1
 
-  build-docker-image:
-    name: 🏗️ Build the docker image
+  build-and-scan-docker-image:
+    name: 🏗️ Build and scan the docker image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -54,7 +54,7 @@ jobs:
           push: false
           tags: app:local
           platforms: linux/amd64,linux/arm/v6,linux/arm64/v8
-          outputs: type=local,dest=docker-image.tar
+          outputs: type=tar,dest=docker-image.tar
 
       - uses: aquasecurity/trivy-action@0.9.0
         with:
