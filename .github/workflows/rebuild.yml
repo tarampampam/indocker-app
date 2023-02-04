@@ -1,0 +1,22 @@
+name: rebuild
+
+on:
+  push: {}
+  workflow_dispatch: {}
+  schedule:
+    - cron: '*/10 * * * *'
+
+concurrency:
+  group: ${{ github.ref }}-rebuild
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    name: Trigger rebuild
+    runs-on: ubuntu-latest
+    steps:
+      - uses: pozetroninc/github-action-get-latest-release@v0.6.0
+        id: latest
+        with: {repository: '${{ github.repository }}'}
+
+      - run: echo ${{ steps.latest.outputs.release }}
