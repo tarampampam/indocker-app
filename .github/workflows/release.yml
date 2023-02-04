@@ -27,7 +27,7 @@ jobs:
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           CF_EMAIL: ${{ secrets.CF_EMAIL }}
-          DRY_RUN: 'true'
+          DRY_RUN: 'false' # BE CAREFUL WITH THIS!!!
 
       - {uses: gacts/github-slug@v1, id: slug}
 
