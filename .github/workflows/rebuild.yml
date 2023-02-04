@@ -27,3 +27,15 @@ jobs:
             })).data.tag_name
 
       - run: echo ${{ steps.latest.outputs.result }}
+
+      - uses: actions/github-script@v6
+        id: trigger
+        with:
+          retries: 3
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'release.yml',
+              ref: '${{ steps.latest.outputs.result }}',
+            });
