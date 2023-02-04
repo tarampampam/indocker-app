@@ -1,7 +1,7 @@
 <div align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://socialify.git.ci/tarampampam/indocker-app/image?description=1&font=Raleway&forks=1&issues=1&owner=1&pulls=1&pattern=Solid&stargazers=1&theme=Dark">
-  <img align="right" src="https://socialify.git.ci/tarampampam/indocker-app/image?description=1&font=Raleway&forks=1&issues=1&owner=1&pulls=1&pattern=Solid&stargazers=1">
+  <img src="https://socialify.git.ci/tarampampam/indocker-app/image?description=1&font=Raleway&forks=1&issues=1&owner=1&pulls=1&pattern=Solid&stargazers=1">
 </picture>
 
 <p>&nbsp;</p>
@@ -44,7 +44,7 @@ As you probably know, traefik has a built-in feature named "configuration discov
 it using docker container labels (that's why it needs a docker socket to be mounted).
 
 All we have to do is run it, the necessary containers with the required labels, and Viola! It works! More details
-you can on the website of the project: [indocker.app](https://indocker.app/).
+you can find on the website of the project: [indocker.app](https://indocker.app/).
 
 ## Where is the docker image?
 
