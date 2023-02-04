@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  gitleaks:
+  git-leaks:
     name: 🔐 Check for GitLeaks
     runs-on: ubuntu-latest
     steps:
@@ -22,44 +22,37 @@ jobs:
 
       - uses: gacts/gitleaks@v1
 
-  build-docker-image:
-    name: 🏗️ Build the docker image
+  build-and-scan-docker-image:
+    name: 🏗️ Build and scan the docker image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo -e '-----BEGIN CERTIFICATE-----\nFAKE CERT\n-----END CERTIFICATE-----' > ./config/certs/privkey1.pem
+      - uses: actions/github-script@v6
+        id: date
+        with: {script: 'return (new Date()).getMonth()', result-encoding: string}
 
-      - {uses: gacts/github-slug@v1, id: slug}
+      - uses: actions/cache@v3
+        id: certs-cache # yea, I know about the sensitive data caching, bla bla bla
+        with: {path: config/certs, key: 'config-certs-month-${{ steps.date.outputs.result }}-dry'}
+
+      - if: steps.certs-cache.outputs.cache-hit != 'true'
+        run: sh ./mkcert.sh
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          CF_EMAIL: ${{ secrets.CF_EMAIL }}
+          DRY_RUN: 'true'
 
       - uses: docker/build-push-action@v4
         with:
-          context: .
           push: false
-          build-args: "APP_VERSION=${{ steps.slug.outputs.commit-hash-short }}"
           tags: app:local
-
-      - run: docker save app:local > ./docker-image.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with: {path: ./docker-image.tar, name: docker-image, retention-days: 1}
-
-  scan-docker-image:
-    name: 🔎 Scan the docker image
-    runs-on: ubuntu-latest
-    needs: [build-docker-image]
-    steps:
-      - uses: actions/checkout@v3 # is needed for `upload-sarif` action
-
-      - uses: actions/download-artifact@v3
-        with: {name: docker-image}
 
       - uses: aquasecurity/trivy-action@0.9.0
         with:
-          input: docker-image.tar
+          image-ref: app:local
           format: sarif
-          severity: MEDIUM,HIGH,CRITICAL
+          severity: CRITICAL
           exit-code: 1
           output: trivy-results.sarif
 

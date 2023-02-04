@@ -22,6 +22,9 @@ if [ -n "$CF_EMAIL" ] && [ -n "$CF_API_KEY" ]; then
   echo "$0: acme server: $server";
   echo "$0: generating certificate for $ROOT_DOMAIN";
 
+  image='certbot/dns-cloudflare:v2.2.0'; # check for updates here - https://hub.docker.com/r/certbot/dns-cloudflare/tags
+
+  docker pull --quiet "$image";
   docker run \
     -e "EMAIL=${CF_EMAIL}" \
     -e "API_KEY=${CF_API_KEY}" \
@@ -31,7 +34,7 @@ if [ -n "$CF_EMAIL" ] && [ -n "$CF_API_KEY" ]; then
     -e "OUT_GID=$(id -g)" \
     -v "${PWD}/config/certs:/out:rw" \
     --entrypoint sh \
-      certbot/dns-cloudflare:v2.2.0 -c \
+      "$image" -c \
         'echo -e "dns_cloudflare_api_token=${API_KEY}" > /tmp/credentials.ini \
         && set -x \
         && chmod 600 /tmp/credentials.ini \
