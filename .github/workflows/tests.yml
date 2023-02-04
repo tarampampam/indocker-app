@@ -28,15 +28,21 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo -e '-----BEGIN CERTIFICATE-----\nFAKE CERT\n-----END CERTIFICATE-----' > ./config/certs/privkey1.pem
+      - uses: actions/github-script@v6
+        id: date
+        with: {script: 'return (new Date()).getMonth()', result-encoding: string}
 
-      - {uses: gacts/github-slug@v1, id: slug}
+      - uses: actions/cache@v3
+        id: certs-cache
+        with: {path: config/certs, key: 'config-certs-${{ steps.date.outputs.result }}'}
+
+      - if: steps.certs-cache.outputs.cache-hit != 'true'
+        run: echo -e '-----BEGIN CERTIFICATE-----\nFAKE CERT\n-----END CERTIFICATE-----' > ./config/certs/privkey1.pem
 
       - uses: docker/build-push-action@v4
         with:
           context: .
           push: false
-          build-args: "APP_VERSION=${{ steps.slug.outputs.commit-hash-short }}"
           tags: app:local
 
       - run: docker save app:local > ./docker-image.tar
