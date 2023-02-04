@@ -1,7 +1,7 @@
 <div align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://socialify.git.ci/tarampampam/indocker-app/image?description=1&font=Raleway&forks=1&issues=1&owner=1&pulls=1&pattern=Solid&stargazers=1&theme=Dark">
-  <img align="right" src="https://socialify.git.ci/tarampampam/indocker-app/image?description=1&font=Raleway&forks=1&issues=1&owner=1&pulls=1&pattern=Solid&stargazers=1&theme=Dark">
+  <img align="right" src="https://socialify.git.ci/tarampampam/indocker-app/image?description=1&font=Raleway&forks=1&issues=1&owner=1&pulls=1&pattern=Solid&stargazers=1">
 </picture>
 
 <p>&nbsp;</p>
