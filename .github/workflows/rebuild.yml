@@ -21,11 +21,9 @@ jobs:
           result-encoding: string
           retries: 3
           script: |
-            const result = await github.rest.repos.getLatestRelease({
+            return await github.rest.repos.getLatestRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-            })
-
-            console.log(result.data.tag_name)
+            }).data.tag_name
 
       - run: echo ${{ steps.latest.outputs.result }}
