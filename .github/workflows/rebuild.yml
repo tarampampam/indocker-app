@@ -24,6 +24,6 @@ jobs:
             return github.rest.repos.getLatestRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-            })
+            }).tag_name
 
       - run: echo ${{ steps.latest.outputs.result }}
