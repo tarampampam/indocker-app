@@ -26,6 +26,6 @@ jobs:
               repo: context.repo.repo,
             })
 
-            console.log(result)
+            console.log(result.data.tag_name)
 
       - run: echo ${{ steps.latest.outputs.result }}
