@@ -1,4 +1,4 @@
-name: deploy-frontend
+name: 🚀 Deploy the frontend
 
 on:
   workflow_dispatch: {}
@@ -12,10 +12,10 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy the frontend
+    name: 🖼 Deploy the frontend
     runs-on: ubuntu-latest
     environment:
-      name: production
+      name: Production
       url: https://indocker.app
     steps:
       - uses: actions/checkout@v3
