@@ -1,0 +1,30 @@
+name: deploy-frontend
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [master, main]
+    paths: [frontend/**, .github/workflows/deploy-frontend.yml]
+
+concurrency:
+  group: ${{ github.ref }}-frontend
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy the frontend
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://indocker.app
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: cloudflare/pages-action@1
+        with:
+          apiToken: ${{ secrets.CF_PAGES_DEPLOY_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          projectName: indocker-app-index
+          directory: ./frontend
+          branch: main # aka CF "production" environment
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

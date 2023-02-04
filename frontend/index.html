@@ -174,14 +174,14 @@
   <pre><code class="language-shell">$ docker network create indocker-app-network
 64a84ea622e9a951a38fbd4654c34407ac5b04d516998596ce30d06979391b4e</code></pre>
 
-  <p>And then start the container with a reverse proxy in background mode:</p>
+  <p>And then start the container (image name <code>quay.io/indocker/app</code>) with a reverse proxy in background mode:</p>
 
   <pre><code class="language-shell">$ docker run -d --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -p 80:80 -p 443:443 \
   --network indocker-app-network \
   --name indocker.app \
-  tarampampam/indocker-app:1</code></pre>
+  quay.io/indocker/app:1</code></pre>
 
   <blockquote class="blockquote text-muted">
     SSL certificate is valid for just about 3 months after the image download. So, do not forget to update this
