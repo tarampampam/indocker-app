@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  gitleaks:
+  git-leaks:
     name: 🔐 Check for GitLeaks
     runs-on: ubuntu-latest
     steps:
@@ -34,36 +34,21 @@ jobs:
 
       - uses: actions/cache@v3
         id: certs-cache
-        with: {path: config/certs, key: 'config-certs-${{ steps.date.outputs.result }}'}
+        with: {path: config/certs, key: 'config-certs-month-${{ steps.date.outputs.result }}'}
 
       - if: steps.certs-cache.outputs.cache-hit != 'true'
-        run: echo -e '-----BEGIN CERTIFICATE-----\nFAKE CERT\n-----END CERTIFICATE-----' > ./config/certs/privkey1.pem
+        run: sh ./mkcert.sh
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          CF_EMAIL: ${{ secrets.CF_EMAIL }}
+          DRY_RUN: 'true'
 
       - uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: false
-          tags: app:local
-
-      - run: docker save app:local > ./docker-image.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with: {path: ./docker-image.tar, name: docker-image, retention-days: 1}
-
-  scan-docker-image:
-    name: 🔎 Scan the docker image
-    runs-on: ubuntu-latest
-    needs: [build-docker-image]
-    steps:
-      - uses: actions/checkout@v3 # is needed for `upload-sarif` action
-
-      - uses: actions/download-artifact@v3
-        with: {name: docker-image}
+        with: {context: '.', push: false, tags: app:local}
 
       - uses: aquasecurity/trivy-action@0.9.0
         with:
-          input: docker-image.tar
+          image-ref: app:local
           format: sarif
           severity: MEDIUM,HIGH,CRITICAL
           exit-code: 1
