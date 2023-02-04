@@ -43,16 +43,10 @@ jobs:
           CF_EMAIL: ${{ secrets.CF_EMAIL }}
           DRY_RUN: 'true'
 
-      - uses: docker/setup-qemu-action@v2
-        with: {platforms: 'arm,arm64,amd64'}
-
-      - uses: docker/setup-buildx-action@v2
-
       - uses: docker/build-push-action@v4
         with:
           push: false
           tags: app:local
-          platforms: linux/amd64,linux/arm/v6,linux/arm64/v8
 
       - uses: aquasecurity/trivy-action@0.9.0
         with:
