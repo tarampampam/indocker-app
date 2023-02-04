@@ -4,8 +4,7 @@
   <img align="right" src="https://socialify.git.ci/tarampampam/indocker-app/image?description=1&font=Raleway&forks=1&issues=1&owner=1&pulls=1&pattern=Solid&stargazers=1&theme=Dark">
 </picture>
 
-<br/>
-<br/>
+<p>&nbsp;</p>
 
 [![tests][badge-tests]][actions]
 [![release][badge-release]][actions]
