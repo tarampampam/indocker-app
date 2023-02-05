@@ -8,7 +8,7 @@ WORKDIR /tmp/rootfs
 RUN set -x \
     && mkdir -p \
       ./etc/ssl \
-      ./etc/traefik \
+      ./etc/traefik/certs \
       ./bin \
       ./tmp \
     && chmod 777 ./tmp \

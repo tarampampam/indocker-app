@@ -48,9 +48,11 @@ jobs:
 
       - uses: docker/build-push-action@v4
         with:
+          context: .
           push: true
           platforms: linux/amd64,linux/arm/v6,linux/arm64/v8
           build-args: "APP_VERSION=${{ steps.slug.outputs.version }}"
+          cache-from: quay.io/indocker/app:latest
           tags: |
             ghcr.io/tarampampam/indocker:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}.${{ steps.slug.outputs.version-patch }}
             ghcr.io/tarampampam/indocker:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}
