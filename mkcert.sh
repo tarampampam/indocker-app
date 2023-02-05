@@ -45,6 +45,30 @@ if [ -n "$CF_EMAIL" ] && [ -n "$CF_API_KEY" ]; then
           --dns-cloudflare-propagation-seconds 30 \
           --agree-tos \
           --domain "*.${ROOT_DOMAIN}" \
+          --domain "*.app.${ROOT_DOMAIN}" \
+          --domain "*.apps.${ROOT_DOMAIN}" \
+          --domain "*.www.${ROOT_DOMAIN}" \
+          --domain "*.http.${ROOT_DOMAIN}" \
+          --domain "*.mail.${ROOT_DOMAIN}" \
+          --domain "*.m.${ROOT_DOMAIN}" \
+          --domain "*.go.${ROOT_DOMAIN}" \
+          --domain "*.static.${ROOT_DOMAIN}" \
+          --domain "*.img.${ROOT_DOMAIN}" \
+          --domain "*.media.${ROOT_DOMAIN}" \
+          --domain "*.admin.${ROOT_DOMAIN}" \
+          --domain "*.api.${ROOT_DOMAIN}" \
+          --domain "*.back.${ROOT_DOMAIN}" \
+          --domain "*.backend.${ROOT_DOMAIN}" \
+          --domain "*.front.${ROOT_DOMAIN}" \
+          --domain "*.frontend.${ROOT_DOMAIN}" \
+          --domain "*.srv.${ROOT_DOMAIN}" \
+          --domain "*.service.${ROOT_DOMAIN}" \
+          --domain "*.dev.${ROOT_DOMAIN}" \
+          --domain "*.db.${ROOT_DOMAIN}" \
+          --domain "*.test.${ROOT_DOMAIN}" \
+          --domain "*.demo.${ROOT_DOMAIN}" \
+          --domain "*.alpha.${ROOT_DOMAIN}" \
+          --domain "*.beta.${ROOT_DOMAIN}" \
           --email "${EMAIL}" \
           --server "${SERVER}"; \
         rm -f /tmp/credentials.ini \
