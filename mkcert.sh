@@ -25,7 +25,7 @@ if [ -n "$CF_EMAIL" ] && [ -n "$CF_API_KEY" ]; then
   image='certbot/dns-cloudflare:v2.2.0'; # check for updates here - https://hub.docker.com/r/certbot/dns-cloudflare/tags
 
   docker pull --quiet "$image";
-  docker run \
+  docker run --rm \
     -e "EMAIL=${CF_EMAIL}" \
     -e "API_KEY=${CF_API_KEY}" \
     -e "ROOT_DOMAIN=${ROOT_DOMAIN}" \
