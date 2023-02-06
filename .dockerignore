@@ -10,8 +10,8 @@ docker-compose.yml
 .vscode
 
 ## Non-docker files
-/config/certs/.*
-/config/certs/*.md
+/traefik/certs/.*
+/traefik/certs/*.md
 /frontend
 /example
 

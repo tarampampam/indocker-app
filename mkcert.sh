@@ -32,7 +32,7 @@ if [ -n "$CF_EMAIL" ] && [ -n "$CF_API_KEY" ]; then
     -e "SERVER=$server" \
     -e "OUT_UID=$(id -u)" \
     -e "OUT_GID=$(id -g)" \
-    -v "${PWD}/config/certs:/out:rw" \
+    -v "${PWD}/traefik/certs:/out:rw" \
     --entrypoint sh \
       "$image" -c \
         'echo -e "dns_cloudflare_api_token=${API_KEY}" > /tmp/credentials.ini \

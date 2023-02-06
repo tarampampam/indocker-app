@@ -30,7 +30,7 @@ jobs:
 
       - uses: actions/cache@v3
         id: certs-cache # yea, I know about the sensitive data caching, bla bla bla
-        with: {path: config/certs, key: 'config-certs-month-${{ steps.date.outputs.result }}'}
+        with: {path: traefik/certs, key: 'config-certs-month-${{ steps.date.outputs.result }}'}
 
       - if: steps.certs-cache.outputs.cache-hit != 'true'
         run: sh ./mkcert.sh

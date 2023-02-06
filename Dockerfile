@@ -18,7 +18,7 @@ RUN set -x \
     && chown -c 0:0 ./bin/traefik
 
 # copy traefik config
-COPY ./config/*.yml ./etc/traefik/
+COPY ./traefik/*.yml ./etc/traefik/
 
 # install curl for healthcheck
 COPY --from=tarampampam/curl:7.87.0 /bin/curl ./bin/curl
@@ -30,7 +30,7 @@ FROM scratch as runtime
 COPY --from=builder /tmp/rootfs /
 
 # copy certs
-COPY ./config/certs/*.pem /etc/traefik/certs/
+COPY ./traefik/certs/*.pem /etc/traefik/certs/
 
 ARG APP_VERSION="undefined"
 
