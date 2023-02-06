@@ -22,6 +22,17 @@ jobs:
 
       - uses: gacts/gitleaks@v1
 
+  dns-control:
+    name: 🌐 DNSControl check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: gacts/install-dnscontrol@v1
+
+      - run: dnscontrol check
+        working-directory: dns
+
   build-and-scan-docker-image:
     name: 🏗️ Build and scan the docker image
     runs-on: ubuntu-latest
