@@ -69,6 +69,7 @@ if [ -n "$CF_EMAIL" ] && [ -n "$CF_API_KEY" ]; then
           --domain "*.demo.${ROOT_DOMAIN}" \
           --domain "*.alpha.${ROOT_DOMAIN}" \
           --domain "*.beta.${ROOT_DOMAIN}" \
+          --domain "*.x-docker.${ROOT_DOMAIN}" \
           --email "${EMAIL}" \
           --server "${SERVER}"; \
         rm -f /tmp/credentials.ini \
