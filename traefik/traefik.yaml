@@ -20,7 +20,7 @@ entryPoints:
   http:
     address: '0.0.0.0:80/tcp'
   https:
-    address: '0.0.0.0:443'
+    address: '0.0.0.0:443/tcp'
     http3:
       advertisedPort: 443
     http:
@@ -34,7 +34,8 @@ ping: # enable the API handler `/ping` (https://doc.traefik.io/traefik/operation
 
 providers:
   file: # Docs: https://doc.traefik.io/traefik/providers/file/
-    filename: /etc/traefik/dynamic.yaml
+    directory: /etc/traefik/dynamic # you can mount any custom config file into this directory
+    watch: true
   docker:
     endpoint: 'unix:///var/run/docker.sock'
     watch: true

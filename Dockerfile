@@ -17,8 +17,9 @@ RUN set -x \
     && chmod 755 ./bin/traefik \
     && chown -c 0:0 ./bin/traefik
 
-# copy traefik config
-COPY ./traefik/*.yaml ./etc/traefik/
+# copy traefik configs
+COPY ./traefik/traefik.yaml ./etc/traefik/traefik.yaml
+COPY ./traefik/dynamic ./etc/traefik/dynamic
 
 # install curl for healthcheck
 COPY --from=tarampampam/curl:7.87.0 /bin/curl ./bin/curl
