@@ -1,3 +1,6 @@
+# File name (including extension) is important and should be not changed.
+# The reason: <https://doc.traefik.io/traefik/getting-started/configuration-overview/#configuration-file>
+
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
@@ -31,7 +34,7 @@ ping: # enable the API handler `/ping` (https://doc.traefik.io/traefik/operation
 
 providers:
   file: # Docs: https://doc.traefik.io/traefik/providers/file/
-    filename: /etc/traefik/dynamic.yml
+    filename: /etc/traefik/dynamic.yaml
   docker:
     endpoint: 'unix:///var/run/docker.sock'
     watch: true

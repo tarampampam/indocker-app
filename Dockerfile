@@ -18,7 +18,7 @@ RUN set -x \
     && chown -c 0:0 ./bin/traefik
 
 # copy traefik config
-COPY ./traefik/*.yml ./etc/traefik/
+COPY ./traefik/*.yaml ./etc/traefik/
 
 # install curl for healthcheck
 COPY --from=tarampampam/curl:7.87.0 /bin/curl ./bin/curl
@@ -52,5 +52,3 @@ HEALTHCHECK --interval=5s --timeout=3s --start-period=1s CMD [ \
 ]
 
 ENTRYPOINT ["/bin/traefik"]
-
-CMD ["--configfile", "/etc/traefik/static.yml"]
