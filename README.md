@@ -56,6 +56,12 @@ From time to time (about once every 2 months) you need to update it. To do this,
 $ docker pull quay.io/indocker/app:<used-tag>
 ```
 
+## Additional features
+
+- You can mount any [dynamic config file][dynamic-configuration] (with your middlewares, routers, and services)
+  to the `/etc/traefik/dynamic` directory inside the image, and it will be automatically loaded by traefik
+  (eg.: `/etc/traefik/dynamic/my-custom-config.yaml`)
+
 ### License
 
 This is open-sourced software licensed under the [MIT License][license].
@@ -70,3 +76,4 @@ This is open-sourced software licensed under the [MIT License][license].
 [license]:https://github.com/tarampampam/indocker-app/blob/master/LICENSE
 [traefik]:https://github.com/traefik/traefik
 [letsencrypt]:https://letsencrypt.org/
+[dynamic-configuration]:https://doc.traefik.io/traefik/getting-started/configuration-overview/#the-dynamic-configuration
