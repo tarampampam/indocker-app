@@ -1,0 +1,7 @@
+displayName: local-middleware
+summary: Local middleware plugin
+type: middleware
+
+import: middleware
+
+testData: {}

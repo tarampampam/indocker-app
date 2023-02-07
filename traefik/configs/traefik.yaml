@@ -5,6 +5,11 @@ global:
   checkNewVersion: false
   sendAnonymousUsage: false
 
+experimental:
+  localPlugins:
+    local-middleware: # sources are located in traefik/plugins/middleware directory
+      moduleName: middleware
+
 serversTransport: # https://doc.traefik.io/traefik/routing/services/#serverstransport_1
   insecureSkipVerify: true
 

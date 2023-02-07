@@ -9,6 +9,7 @@ RUN set -x \
     && mkdir -p \
       ./etc/ssl \
       ./etc/traefik/certs \
+      ./opt/traefik \
       ./bin \
       ./tmp \
     && chmod 777 ./tmp \
@@ -16,10 +17,6 @@ RUN set -x \
     && mv /usr/local/bin/traefik ./bin/traefik \
     && chmod 755 ./bin/traefik \
     && chown -c 0:0 ./bin/traefik
-
-# copy traefik configs
-COPY ./traefik/traefik.yaml ./etc/traefik/traefik.yaml
-COPY ./traefik/dynamic ./etc/traefik/dynamic
 
 # install curl for healthcheck
 COPY --from=tarampampam/curl:7.87.0 /bin/curl ./bin/curl
@@ -30,8 +27,15 @@ FROM scratch as runtime
 # import rootfs from builder
 COPY --from=builder /tmp/rootfs /
 
-# copy certs
+# copy configs...
+COPY ./traefik/configs/traefik.yaml /etc/traefik/traefik.yaml
+COPY ./traefik/configs/dynamic /etc/traefik/dynamic
+
+# ...certs...
 COPY ./traefik/certs/*.pem /etc/traefik/certs/
+
+# ...and plugins
+COPY ./traefik/plugins /opt/traefik/plugins-local/src
 
 ARG APP_VERSION="undefined"
 
@@ -44,6 +48,8 @@ LABEL \
     org.opencontainers.image.vendor="tarampampam" \
     org.opencontainers.version="$APP_VERSION" \
     org.opencontainers.image.licenses="MIT"
+
+WORKDIR "/opt/traefik"
 
 EXPOSE "80/tcp" "443/tcp"
 

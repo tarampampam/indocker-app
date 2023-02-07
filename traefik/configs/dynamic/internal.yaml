@@ -9,6 +9,10 @@ tls:
 
 http:
   middlewares:
+    local-middleware: # sources are located in traefik/plugins/middleware directory
+      plugin:
+        local-middleware: {} # plugin and middleware names are same
+
     traefik-dashboard-cors:
       headers:
         accessControlAllowOriginList:
@@ -21,5 +25,7 @@ http:
       rule: Host(`monitor.indocker.app`)
       entryPoints: [https]
       service: api@internal
-      tls: {}
-      middlewares: [traefik-dashboard-cors]
+      tls: {} # force TLS usage
+      middlewares:
+        - traefik-dashboard-cors # allow limited CORS for traefik dashboard API
+        - local-middleware # use our local middleware together with the traefik dashboard API
