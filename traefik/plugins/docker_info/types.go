@@ -1,4 +1,4 @@
-package middleware
+package docker_info
 
 type (
 	// Container contains response of Engine API.
