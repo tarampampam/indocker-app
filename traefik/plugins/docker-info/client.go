@@ -11,7 +11,7 @@ import (
 type Client struct {
   io.Closer
 
-  conn net.Conn
+  1conn net.Conn
   http *http.Client
 }
 
