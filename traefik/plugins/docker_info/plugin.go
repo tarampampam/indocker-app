@@ -42,12 +42,17 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, errors.New(name + ": is not a socket")
 	}
 
+	client, err := NewClient(ctx, config.SocketPath)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Plugin{
 		ctx:    ctx,
 		next:   next,
 		name:   name,
 		config: config,
-		client: NewClient(config.SocketPath),
+		client: client,
 	}, nil
 }
 
@@ -59,6 +64,9 @@ func (p *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		var routeErr = errRouteNotFound
 
 		switch route := req.URL.Path[len(p.config.UrlPrefix):]; route { // the simplest router in the world :D
+		case "/ping":
+			routeErr = p.Ping(rw, req)
+
 		case "/version":
 			routeErr = p.DockerVersion(rw, req)
 
@@ -83,6 +91,12 @@ func (p *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	p.next.ServeHTTP(rw, req)
+}
+
+func (p *Plugin) Ping(rw http.ResponseWriter, _ *http.Request) error {
+	p.jsonb(rw, http.StatusOK, []byte(`"OK"`))
+
+	return nil
 }
 
 // DockerVersion returns the docker version information.
@@ -154,9 +168,15 @@ func (p *Plugin) DockerContainerLogs(rw http.ResponseWriter, req *http.Request) 
 	return err
 }
 
+func (*Plugin) setJSONHeaders(rw http.ResponseWriter) {
+	const name, value = "Content-Type", "application/json; charset=utf-8"
+
+	rw.Header().Set(name, value)
+}
+
 // json writes a json response.
 func (p *Plugin) json(rw http.ResponseWriter, status int, v any) {
-	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+	p.setJSONHeaders(rw)
 
 	rw.WriteHeader(status)
 
@@ -167,7 +187,7 @@ func (p *Plugin) json(rw http.ResponseWriter, status int, v any) {
 
 // jsonb writes a json response as binary data.
 func (p *Plugin) jsonb(rw http.ResponseWriter, status int, v []byte) {
-	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+	p.setJSONHeaders(rw)
 
 	rw.WriteHeader(status)
 
@@ -178,7 +198,7 @@ func (p *Plugin) jsonb(rw http.ResponseWriter, status int, v []byte) {
 
 // fail writes an error message to the response writer.
 func (p *Plugin) fail(rw http.ResponseWriter, err error) {
-	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+	p.setJSONHeaders(rw)
 
 	rw.WriteHeader(http.StatusInternalServerError)
 
