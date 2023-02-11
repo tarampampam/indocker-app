@@ -7,8 +7,8 @@ global:
 
 experimental:
   localPlugins:
-    docker-info: # sources are located in traefik/plugins/docker_info directory
-      moduleName: docker_info
+    docker-info: # sources are located in traefik/plugins/docker-info directory
+      moduleName: docker-info
 
 serversTransport: # https://doc.traefik.io/traefik/routing/services/#serverstransport_1
   insecureSkipVerify: true

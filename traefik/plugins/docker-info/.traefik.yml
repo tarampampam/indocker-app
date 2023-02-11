@@ -2,6 +2,6 @@ displayName: docker-info
 summary: Docker info plugin
 type: middleware
 
-import: docker_info
+import: docker-info
 
 testData: {}

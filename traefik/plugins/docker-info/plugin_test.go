@@ -35,5 +35,5 @@ func TestPlugin_ServeHTTP(t *testing.T) {
 		t.Errorf("expected status code %d, got %d", http.StatusOK, rr.Code)
 	}
 
-	t.Log(rr.Body.String()) // TODO: for debugging, remove later
+	// t.Log(rr.Body.String()) // TODO: for debugging, remove later
 }
