@@ -33,6 +33,18 @@ jobs:
       - run: dnscontrol check
         working-directory: dns
 
+  golangci-lint:
+    name: 🧪 Run GolangCI-lint (docker-info plugin)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: gacts/setup-go-with-cache@v1
+        with: {go-version: 1.18}
+
+      - uses: golangci/golangci-lint-action@v3
+        with: {skip-pkg-cache: true, skip-build-cache: true, working-directory: ./traefik/plugins/docker-info}
+
   build-and-scan-docker-image:
     name: 🏗️ Build and scan the docker image
     runs-on: ubuntu-latest
