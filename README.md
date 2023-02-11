@@ -48,7 +48,7 @@ you can find on the website of the project: [indocker.app](https://indocker.app/
 
 ## Where is the docker image?
 
-Here: `quay.io/indocker/app` _(~40 Mb download size)_.
+Here: `quay.io/indocker/app:1` _(~40 Mb download size)_.
 
 From time to time (about once every 2 months) you need to update it. To do this, you need to run the following command:
 
