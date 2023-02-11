@@ -1,11 +1,11 @@
 package docker_info
 
 import (
+	"bytes"
 	"context"
+	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
-	"io"
-	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -27,11 +27,11 @@ func CreateConfig() *Config {
 
 // Plugin a plugins.
 type Plugin struct {
+	ctx    context.Context
 	next   http.Handler
 	name   string
 	config *Config
-
-	ctx context.Context
+	client *Client
 }
 
 // New creates a new plugins.
@@ -43,10 +43,11 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}
 
 	return &Plugin{
-		config: config,
+		ctx:    ctx,
 		next:   next,
 		name:   name,
-		ctx:    ctx,
+		config: config,
+		client: NewClient(config.SocketPath),
 	}, nil
 }
 
@@ -58,8 +59,20 @@ func (p *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		var routeErr = errRouteNotFound
 
 		switch route := req.URL.Path[len(p.config.UrlPrefix):]; route { // the simplest router in the world :D
+		case "/version":
+			routeErr = p.DockerVersion(rw, req)
+
 		case "/containers/list":
 			routeErr = p.DockerContainersList(rw, req)
+
+		case "/inspect": // ?id=<container-hash>
+			routeErr = p.DockerInspect(rw, req)
+
+		case "/stats": // ?id=<container-hash>
+			routeErr = p.DockerContainerStats(rw, req)
+
+		case "/logs": // ?id=<container-hash>
+			routeErr = p.DockerContainerLogs(rw, req)
 		}
 
 		if routeErr != nil {
@@ -72,69 +85,73 @@ func (p *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	p.next.ServeHTTP(rw, req)
 }
 
-// DockerContainersList returns a list with all containers.
-func (p *Plugin) DockerContainersList(rw http.ResponseWriter, _ *http.Request) error {
-	var containers []Container
-	if err := p.requestDocker(p.ctx, http.MethodGet, "containers/json", http.NoBody, &containers); err != nil {
+// DockerVersion returns the docker version information.
+func (p *Plugin) DockerVersion(rw http.ResponseWriter, _ *http.Request) error {
+	var list, code, err = p.client.Version(p.ctx)
+	if err != nil {
 		return err
 	}
 
-	type container struct {
-		Names []string `json:"names"`
-	}
-
-	// prepare a response
-	var resp = make([]container, len(containers))
-
-	// fill it
-	for i, c := range containers {
-		resp[i].Names = c.Names
-	}
-
-	p.json(rw, http.StatusOK, resp)
+	p.jsonb(rw, code, list)
 
 	return nil
 }
 
-// dockerClient creates a new docker client.
-func (p *Plugin) dockerClient() (*http.Client, func(), error) {
-	var conn, cErr = (&net.Dialer{}).DialContext(p.ctx, "unix", p.config.SocketPath)
-	if cErr != nil {
-		return nil, nil, cErr
+// DockerContainersList returns a list with all containers.
+func (p *Plugin) DockerContainersList(rw http.ResponseWriter, _ *http.Request) error {
+	var list, code, err = p.client.ContainersList(p.ctx)
+	if err != nil {
+		return err
 	}
 
-	return &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) { return conn, nil },
-		},
-	}, func() { _ = conn.Close() }, nil
+	p.jsonb(rw, code, list)
+
+	return nil
 }
 
-// requestDocker executes a request against the docker socket.
-func (p *Plugin) requestDocker(ctx context.Context, method, path string, body io.Reader, out any) error {
-	c, end, err := p.dockerClient()
+// DockerInspect returns the container inspect information.
+func (p *Plugin) DockerInspect(rw http.ResponseWriter, req *http.Request) error {
+	var data, code, err = p.client.ContainerInspect(p.ctx, req.URL.Query().Get("id"))
 	if err != nil {
 		return err
 	}
 
-	defer end()
+	p.jsonb(rw, code, data)
 
-	// create a new request
-	req, err := http.NewRequestWithContext(ctx, method, "http://docker/"+path, body)
+	return nil
+}
+
+// DockerContainerStats returns the container stats information.
+func (p *Plugin) DockerContainerStats(rw http.ResponseWriter, req *http.Request) error {
+	var data, code, err = p.client.ContainerStats(p.ctx, req.URL.Query().Get("id"))
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	p.jsonb(rw, code, data)
 
-	// execute the request
-	resp, err := c.Do(req)
+	return nil
+}
+
+// DockerContainerLogs returns the base64-encoded container logs.
+func (p *Plugin) DockerContainerLogs(rw http.ResponseWriter, req *http.Request) error {
+	var data, code, err = p.client.ContainerLogs(p.ctx, req.URL.Query().Get("id"))
 	if err != nil {
 		return err
 	}
 
-	// decode the response
-	return json.NewDecoder(resp.Body).Decode(&out)
+	var (
+		lines  = bytes.FieldsFunc(data, func(r rune) bool { return r == '\n' || r == '\r' })
+		result = make([]string, len(lines))
+	)
+
+	for i, line := range lines {
+		result[i] = b64.StdEncoding.EncodeToString(line)
+	}
+
+	p.json(rw, code, result)
+
+	return err
 }
 
 // json writes a json response.
@@ -144,6 +161,17 @@ func (p *Plugin) json(rw http.ResponseWriter, status int, v any) {
 	rw.WriteHeader(status)
 
 	if err := json.NewEncoder(rw).Encode(v); err != nil {
+		p.fail(rw, err)
+	}
+}
+
+// jsonb writes a json response as binary data.
+func (p *Plugin) jsonb(rw http.ResponseWriter, status int, v []byte) {
+	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	rw.WriteHeader(status)
+
+	if _, err := rw.Write(v); err != nil {
 		p.fail(rw, err)
 	}
 }
@@ -162,5 +190,5 @@ func (p *Plugin) fail(rw http.ResponseWriter, err error) {
 		msg = "internal error"
 	}
 
-	_, _ = rw.Write([]byte(`{"error": "` + msg + `"}`))
+	_, _ = rw.Write([]byte(`{"error":"` + msg + `"}`))
 }
