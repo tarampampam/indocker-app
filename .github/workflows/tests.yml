@@ -36,6 +36,9 @@ jobs:
   golangci-lint:
     name: 🧪 Run GolangCI-lint (docker-info plugin)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: traefik/plugins/docker-info
     steps:
       - uses: actions/checkout@v3
 
