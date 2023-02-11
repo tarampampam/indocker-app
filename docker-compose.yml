@@ -1,9 +1,11 @@
 version: '3.8'
 
+volumes:
+  node-data: {}
+
 services:
   app:
-    build:
-      dockerfile: Dockerfile
+    build: {dockerfile: Dockerfile}
     ports:
       - '80:80/tcp'
       - '443:443/tcp'
@@ -12,15 +14,30 @@ services:
     networks: [indocker-app-network]
     security_opt: [no-new-privileges:true]
 
-  frontend:
-    image: caddy:2.6-alpine
+  node: # frontend - https://frontend.indocker.app/
+    image: node:18-alpine
+    environment:
+      PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@node] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
+      HOME: /tmp
+      NPM_CONFIG_UPDATE_NOTIFIER: false
     volumes:
-      - ./frontend:/usr/share/caddy:ro
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - node-data:/tmp:rw
+      - .:/src:rw
+    working_dir: /src/frontend
+    command: npm run serve
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --spider -q "http://127.0.0.1:8080/"']
+      interval: 2s
+      timeout: 2s
+      start_period: 5s
+      retries: 15
     labels:
       - traefik.enable=true
       - traefik.http.routers.frontend-router.rule=Host(`frontend.indocker.app`)
       - traefik.http.routers.frontend-router.service=frontend-service
-      - traefik.http.services.frontend-service.loadbalancer.server.port=80
+      - traefik.http.services.frontend-service.loadbalancer.server.port=8080
     networks: [indocker-app-network]
     security_opt: [no-new-privileges:true]
 
