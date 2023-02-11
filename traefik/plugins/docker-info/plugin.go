@@ -42,7 +42,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, errors.New(name + ": is not a socket")
 	}
 
-	client, err := NewClient(ctx, config.SocketPath)
+	client, err := NewClient(config.SocketPath)
 	if err != nil {
 		return nil, err
 	}

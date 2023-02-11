@@ -1,3 +1,3 @@
-module docker_info
+module docker-info
 
 go 1.18
