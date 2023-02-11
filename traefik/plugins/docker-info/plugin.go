@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -79,7 +80,7 @@ func (p *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		case "/stats": // ?id=<container-hash>
 			routeErr = p.DockerContainerStats(rw, req)
 
-		case "/logs": // ?id=<container-hash>
+		case "/logs": // ?id=<container-hash>&tail=<lines>
 			routeErr = p.DockerContainerLogs(rw, req)
 		}
 
@@ -94,7 +95,16 @@ func (p *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *Plugin) Ping(rw http.ResponseWriter, _ *http.Request) error {
-	p.jsonb(rw, http.StatusOK, []byte(`"OK"`))
+	var _, code, err = p.client.Ping(p.ctx)
+	if err != nil {
+		return err
+	}
+
+	if code != http.StatusOK {
+		return errors.New("docker ping failed")
+	}
+
+	p.jsonb(rw, code, []byte(`"OK"`))
 
 	return nil
 }
@@ -149,7 +159,18 @@ func (p *Plugin) DockerContainerStats(rw http.ResponseWriter, req *http.Request)
 
 // DockerContainerLogs returns the base64-encoded container logs.
 func (p *Plugin) DockerContainerLogs(rw http.ResponseWriter, req *http.Request) error {
-	var data, code, err = p.client.ContainerLogs(p.ctx, req.URL.Query().Get("id"))
+	var tail uint64 = 0
+
+	if t := req.URL.Query().Get("tail"); t != "" {
+		v, err := strconv.ParseUint(t, 10, 32)
+		if err != nil {
+			return err
+		}
+
+		tail = v
+	}
+
+	var data, code, err = p.client.ContainerLogs(p.ctx, req.URL.Query().Get("id"), tail)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 )
 
 type Client struct {
@@ -26,6 +27,16 @@ func NewClient(unixSocket string) (*Client, error) {
 			},
 		},
 	}, nil
+}
+
+// Ping pings the Docker socket.
+func (c *Client) Ping(ctx context.Context) ([]byte, int, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://docker/_ping", http.NoBody)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return c.makeRequest(req)
 }
 
 // Version returns the Docker version.
@@ -87,17 +98,19 @@ func (c *Client) ContainerStats(ctx context.Context, containerID string) ([]byte
 }
 
 // ContainerLogs returns the container logs.
-func (c *Client) ContainerLogs(ctx context.Context, containerID string) ([]byte, int, error) {
+func (c *Client) ContainerLogs(ctx context.Context, containerID string, tail uint64) ([]byte, int, error) {
 	if err := c.validateContainerID(containerID); err != nil {
 		return nil, 0, err
 	}
 
+	var url = "http://docker/containers/" + containerID + "/logs?stdout=1&stderr=1&timestamps=0&details=1&follow=0"
+
+	if tail > 0 {
+		url = url + "&tail=" + strconv.FormatUint(tail, 10)
+	}
+
 	// https://github.com/moby/moby/blob/f34567bf41ad65102a8b1f05496dc92b500a3056/client/container_logs.go#L36
-	req, err := http.NewRequestWithContext(ctx,
-		http.MethodGet,
-		"http://docker/containers/"+containerID+"/logs?stdout=1&stderr=1&timestamps=0&details=1&follow=0",
-		http.NoBody,
-	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -26,7 +26,7 @@ services:
       - node-data:/tmp:rw
       - .:/src:rw
     working_dir: /src/frontend
-    command: npm run serve
+    command: npm run serve -- --client-web-socket-url 'auto://0.0.0.0:0/ws'
     healthcheck:
       test: ['CMD-SHELL', 'wget --spider -q "http://127.0.0.1:8080/"']
       interval: 2s

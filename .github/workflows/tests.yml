@@ -45,6 +45,27 @@ jobs:
       - uses: golangci/golangci-lint-action@v3
         with: {skip-pkg-cache: true, skip-build-cache: true, working-directory: ./traefik/plugins/docker-info}
 
+  build-frontend:
+    name: 🧪 Lint and build the frontend
+    runs-on: ubuntu-latest
+    env: {FORCE_COLOR: 'true'}
+    defaults: {run: {working-directory: ./frontend}}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: gacts/setup-node-with-cache@v1
+        with: {node-version: 19}
+
+      - run: npm ci --no-audit --prefer-offline
+        env: {NPM_CONFIG_UPDATE_NOTIFIER: false}
+
+      - run: npm run lint
+
+      - run: npm run build
+
+      - uses: actions/upload-artifact@v3
+        with: {path: ./frontend/dist, name: frontend-dist, if-no-files-found: error, retention-days: 1}
+
   build-and-scan-docker-image:
     name: 🏗️ Build and scan the docker image
     runs-on: ubuntu-latest

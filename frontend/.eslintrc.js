@@ -12,6 +12,8 @@ module.exports = {
     "@vue/typescript/recommended",
   ],
   plugins: ["@typescript-eslint"],
-  rules: {},
+  rules: {
+    "no-control-regex": 0,
+  },
   ignorePatterns: ["schema.gen.ts"],
 }
