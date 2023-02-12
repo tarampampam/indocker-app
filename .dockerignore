@@ -1,21 +1,5 @@
-## Git & tools
-.git
-.gitignore
-.editorconfig
-.dockerignore
-docker-compose.yml
+## Ignore all
+*
 
-## IDEs
-.idea
-.vscode
-
-## Non-docker files
-/traefik/certs/.*
-/traefik/certs/*.md
-/frontend
-/example
-
-## Temp dirs & trash
-/temp
-/tmp
-.DS_Store
+## Except
+!/traefik
