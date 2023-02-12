@@ -24,6 +24,7 @@ func NewClient(unixSocket string) (*Client, error) {
 				DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 					return (&net.Dialer{}).DialContext(ctx, "unix", unixSocket)
 				},
+				DisableKeepAlives: true,
 			},
 		},
 	}, nil

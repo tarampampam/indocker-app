@@ -6,46 +6,68 @@ const ansiCleanupRegex = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?
 export default class {
   private baseUrl: string
 
+  private defaultFetchOptions: RequestInit = {
+    keepalive: true,
+  }
+
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
   }
 
+  /**
+   * @link https://docs.docker.com/engine/api/v1.42/#tag/System/operation/SystemPing
+   */
   async ping(): Promise<boolean> {
     try {
-      return (await fetch(new Request(`${this.baseUrl}/ping`, {method: 'GET'}))).ok
+      return (await fetch(new Request(`${this.baseUrl}/ping`, {...this.defaultFetchOptions, method: 'GET'}))).ok
     } catch (_) {
       return false
     }
   }
 
-  /** @throws {Error} */
+  /**
+   * @link https://docs.docker.com/engine/api/v1.42/#tag/System/operation/SystemVersion
+   * @throws {Error}
+   */
   async version(): Promise<DockerVersion> {
-    return await fetch(new Request(`${this.baseUrl}/version`, {method: 'GET'}))
+    return await fetch(new Request(`${this.baseUrl}/version`, {...this.defaultFetchOptions, method: 'GET'}))
       .then((resp) => resp.json())
   }
 
-  /** @throws {Error} */
+  /**
+   * @link https://docs.docker.com/engine/api/v1.42/#tag/Container/operation/ContainerList
+   * @throws {Error}
+   */
   async containersList(): Promise<ContainerInfo[]> {
-    return await fetch(new Request(`${this.baseUrl}/containers/list`, {method: 'GET'}))
+    return await fetch(new Request(`${this.baseUrl}/containers/list`, {...this.defaultFetchOptions, method: 'GET'}))
       .then((resp) => resp.json())
   }
 
-  /** @throws {Error} */
+  /**
+   * @link https://docs.docker.com/engine/api/v1.42/#tag/Container/operation/ContainerInspect
+   * @throws {Error}
+   */
   async inspect(id: string): Promise<ContainerInspectInfo> {
-    return await fetch(new Request(`${this.baseUrl}/inspect?id=${id}`, {method: 'GET'}))
+    return await fetch(new Request(`${this.baseUrl}/inspect?id=${id}`, {...this.defaultFetchOptions, method: 'GET'}))
       .then((resp) => resp.json())
   }
 
-  /** @throws {Error} */
+  /**
+   * @link https://docs.docker.com/engine/api/v1.42/#tag/Container/operation/ContainerStats
+   * @throws {Error}
+   */
   async stats(id: string): Promise<ContainerStats> {
-    return await fetch(new Request(`${this.baseUrl}/stats?id=${id}`, {method: 'GET'}))
+    return await fetch(new Request(`${this.baseUrl}/stats?id=${id}`, {...this.defaultFetchOptions, method: 'GET'}))
       .then((resp) => resp.json())
   }
 
-  /** @throws {Error} */
+  /**
+   * @link https://docs.docker.com/engine/api/v1.42/#tag/Container/operation/ContainerLogs
+   * @throws {Error}
+   */
   async logs(id: string, tail = 0, cleanup = true): Promise<string[]> {
     const b64lines = await (
-      await fetch(new Request(`${this.baseUrl}/logs?id=${id}&tail=${tail}`, {method: 'GET'}))
+      await fetch(new Request(`${this.baseUrl}/logs?id=${id}&tail=${tail}`, {...this.defaultFetchOptions, method: 'GET'}))
     ).json() as string[]
 
     return b64lines
