@@ -5,6 +5,7 @@ services:
     image: nginx:latest
     labels:
       - traefik.enable=true
+      - traefik.docker.network=indocker-app-network
       # https://doc.traefik.io/traefik/routing/providers/docker/#routers
       - traefik.http.routers.my-nginx-router.rule=Host(`my-nginx.indocker.app`)
       #- traefik.http.routers.my-nginx-router.entrypoints=https # "https" by default, but you can specify "http"
@@ -20,6 +21,7 @@ services:
     image: containous/whoami:latest
     labels:
       - traefik.enable=true
+      - traefik.docker.network=indocker-app-network
       - traefik.http.routers.whoami-router.rule=Host(`whoami.indocker.app`)
       - traefik.http.routers.whoami-router.entrypoints=http
       - traefik.http.routers.whoami-router.service=whoami-service
