@@ -1,7 +1,7 @@
-displayName: docker-info
+displayName: indocker
 summary: Docker info plugin
 type: middleware
 
-import: docker-info
+import: indocker
 
 testData: {}

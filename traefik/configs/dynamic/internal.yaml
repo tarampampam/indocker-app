@@ -9,9 +9,9 @@ tls:
 
 http:
   middlewares:
-    docker-info-middleware: # sources are located in traefik/plugins/docker-info directory
+    indocker-middleware: # sources are located in traefik/plugins/indocker directory
       plugin:
-        docker-info: {}
+        indocker: {}
 
     traefik-dashboard-cors:
       headers:
@@ -28,4 +28,4 @@ http:
       tls: {} # force TLS usage
       middlewares:
         - traefik-dashboard-cors # allow limited CORS for traefik dashboard API
-        - docker-info-middleware # use our local docker-info plugin together with the traefik dashboard API
+        - indocker-middleware # use our local indocker plugin together with the traefik dashboard API

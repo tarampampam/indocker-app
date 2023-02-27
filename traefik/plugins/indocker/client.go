@@ -1,4 +1,4 @@
-package docker_info
+package indocker
 
 import (
 	"context"

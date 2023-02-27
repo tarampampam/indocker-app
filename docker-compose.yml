@@ -28,7 +28,7 @@ services:
     working_dir: /src/frontend
     command: npm run serve -- --client-web-socket-url 'auto://0.0.0.0:0/ws'
     healthcheck:
-      test: ['CMD-SHELL', 'wget --spider -q "http://127.0.0.1:8080/"']
+      test: ['CMD', 'wget', '--spider', '-q', 'http://127.0.0.1:8080/']
       interval: 2s
       timeout: 2s
       start_period: 5s

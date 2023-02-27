@@ -1,4 +1,4 @@
-package docker_info
+package indocker
 
 import (
 	"bytes"
@@ -20,8 +20,8 @@ type Config struct {
 
 // CreateConfig creates the default plugins configuration.
 func CreateConfig() *Config {
-	return &Config{
-		UrlPrefix:  "/docker-info",
+	return &Config{ // defaults
+		UrlPrefix:  "/indocker",
 		SocketPath: "/var/run/docker.sock",
 	}
 }
@@ -74,7 +74,7 @@ func (p *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		case "/containers/list":
 			routeErr = p.DockerContainersList(rw, req)
 
-		case "/inspect": // ?id=<container-hash>
+		case "/Inspect": // ?id=<container-hash>
 			routeErr = p.DockerInspect(rw, req)
 
 		case "/stats": // ?id=<container-hash>
@@ -133,7 +133,7 @@ func (p *Plugin) DockerContainersList(rw http.ResponseWriter, _ *http.Request) e
 	return nil
 }
 
-// DockerInspect returns the container inspect information.
+// DockerInspect returns the container Inspect information.
 func (p *Plugin) DockerInspect(rw http.ResponseWriter, req *http.Request) error {
 	var data, code, err = p.client.ContainerInspect(p.ctx, req.URL.Query().Get("id"))
 	if err != nil {
