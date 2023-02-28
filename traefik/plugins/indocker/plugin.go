@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config the plugins configuration.
@@ -33,6 +34,7 @@ type Plugin struct {
 	name   string
 	config *Config
 	client *Client
+	docker *Docker
 }
 
 // New creates a new plugins.
@@ -42,6 +44,8 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	} else if stat.Mode().Type() != os.ModeSocket {
 		return nil, errors.New(name + ": is not a socket")
 	}
+
+	docker := NewDocker(config.SocketPath)
 
 	client, err := NewClient(config.SocketPath)
 	if err != nil {
@@ -54,6 +58,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		name:   name,
 		config: config,
 		client: client,
+		docker: docker,
 	}, nil
 }
 
@@ -65,6 +70,9 @@ func (p *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		var routeErr = errRouteNotFound
 
 		switch route := req.URL.Path[len(p.config.UrlPrefix):]; route { // the simplest router in the world :D
+		case "/stream-docker-state":
+			routeErr = p.StreamDockerState(rw, req)
+
 		case "/ping":
 			routeErr = p.Ping(rw, req)
 
@@ -92,6 +100,59 @@ func (p *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	p.next.ServeHTTP(rw, req)
+}
+
+// StreamDockerState streams the docker state.
+// Docs: <https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation>
+func (p *Plugin) StreamDockerState(rw http.ResponseWriter, r *http.Request) error {
+	flusher, isFlusher := rw.(http.Flusher)
+	if !isFlusher {
+		return errors.New("streaming unsupported")
+	}
+
+	var t = time.NewTicker(1 * time.Second)
+	defer t.Stop()
+
+	var buf bytes.Buffer // reuse buffer to reduce allocations
+
+	type payload struct {
+		Foo string `json:"foo"`
+	}
+
+	rw.Header().Set("Content-Type", "text/event-stream")
+	rw.Header().Set("Cache-Control", "no-cache")
+	rw.Header().Set("Connection", "keep-alive")
+
+	rw.WriteHeader(http.StatusOK)
+	flusher.Flush()
+
+	for {
+		buf.WriteString("data: ")
+
+		if j, err := json.Marshal(payload{Foo: "bar"}); err != nil {
+			return err
+		} else {
+			buf.Write(j)
+		}
+
+		buf.WriteRune('\n')
+
+		if _, err := buf.WriteTo(rw); err != nil { // writing automatically resets the buffer
+			return err
+		}
+
+		flusher.Flush()
+
+		select {
+		case <-p.ctx.Done():
+			return p.ctx.Err()
+
+		case <-r.Context().Done(): // received browser disconnection
+			return nil
+
+		case <-t.C:
+		}
+	}
 }
 
 func (p *Plugin) Ping(rw http.ResponseWriter, _ *http.Request) error {

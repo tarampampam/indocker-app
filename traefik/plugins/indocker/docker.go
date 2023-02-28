@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -13,8 +12,13 @@ import (
 	"time"
 )
 
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+// Docker is a simple Docker watcher.
 type Docker struct {
-	client *http.Client
+	client httpClient
 
 	containers struct {
 		sync.RWMutex
@@ -23,11 +27,13 @@ type Docker struct {
 }
 
 type (
+	// Container contains the Docker container information.
 	Container struct {
 		Inspect Inspect
 		Stats   Stats
 	}
 
+	// Inspect is the Docker inspect output.
 	Inspect struct {
 		Cmd      []string          // config
 		Env      []string          // config
@@ -53,6 +59,7 @@ type (
 		Status        string // state
 	}
 
+	// Stats is the Docker stats output.
 	Stats struct {
 		Read            time.Time
 		NumProcs        uint
@@ -67,7 +74,16 @@ type (
 	}
 )
 
-func NewDocker(unixSocket string) *Docker {
+// DockerOption is a function that configures a Docker.
+type DockerOption func(*Docker)
+
+// WithHTTPClient allows to configure the HTTP client used to communicate with the Docker API.
+func WithHTTPClient(httpClient httpClient) DockerOption {
+	return func(d *Docker) { d.client = httpClient }
+}
+
+// NewDocker creates a new Docker.
+func NewDocker(unixSocket string, opt ...DockerOption) *Docker {
 	var d = Docker{
 		client: &http.Client{
 			Transport: &http.Transport{
@@ -81,9 +97,14 @@ func NewDocker(unixSocket string) *Docker {
 
 	d.containers.m = make(map[string]Container) // init map
 
+	for _, option := range opt {
+		option(&d)
+	}
+
 	return &d
 }
 
+// Watch should be run in a goroutine and will watch for container changes.
 func (d *Docker) Watch(ctx context.Context, interval time.Duration) {
 	var wg sync.WaitGroup
 
@@ -125,7 +146,7 @@ func (d *Docker) Watch(ctx context.Context, interval time.Duration) {
 		d.containers.RLock()
 		for id := range d.containers.m {
 			wg.Add(1)
-			go func(id string) {
+			go func(id string) { // inspect
 				defer wg.Done()
 
 				inspect, err := d.Inspect(ctx, id)
@@ -142,7 +163,7 @@ func (d *Docker) Watch(ctx context.Context, interval time.Duration) {
 			}(id)
 
 			wg.Add(1)
-			go func(id string) {
+			go func(id string) { // stats
 				defer wg.Done()
 
 				stats, err := d.Stats(ctx, id)
@@ -162,14 +183,26 @@ func (d *Docker) Watch(ctx context.Context, interval time.Duration) {
 
 		wg.Wait()
 
-		fmt.Printf("%+v\n\n", d.containers.m) // TODO only for debug
-
 		if d.pause(ctx, interval) {
 			return
 		}
 	}
 }
 
+// State returns the current state of the containers.
+func (d *Docker) State() map[string]Container {
+	d.containers.RLock()
+	defer d.containers.RUnlock()
+
+	var m = make(map[string]Container, len(d.containers.m))
+	for k, v := range d.containers.m { // copy map
+		m[k] = v
+	}
+
+	return m
+}
+
+// pause pauses the current goroutine for the given interval.
 func (d *Docker) pause(ctx context.Context, interval time.Duration) (canceled bool) {
 	var t = time.NewTimer(interval)
 	defer t.Stop()
@@ -184,6 +217,7 @@ func (d *Docker) pause(ctx context.Context, interval time.Duration) (canceled bo
 	return
 }
 
+// RunningContainerIDs returns the IDs of all running containers.
 func (d *Docker) RunningContainerIDs(ctx context.Context) ([]string, error) {
 	// https://docs.docker.com/engine/api/v1.42/#tag/Container/operation/ContainerList
 	req, _ := http.NewRequestWithContext(ctx,
@@ -231,6 +265,7 @@ func (d *Docker) RunningContainerIDs(ctx context.Context) ([]string, error) {
 	return ids, nil
 }
 
+// Inspect returns the inspect data of the given container.
 func (d *Docker) Inspect(ctx context.Context, id string) (*Inspect, error) {
 	// https://docs.docker.com/engine/api/v1.42/#tag/Container/operation/ContainerInspect
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://docker/containers/"+id+"/json", http.NoBody)
@@ -311,6 +346,7 @@ func (d *Docker) Inspect(ctx context.Context, id string) (*Inspect, error) {
 	}, nil
 }
 
+// Stats returns the stats of the given container.
 func (d *Docker) Stats(ctx context.Context, id string) (*Stats, error) {
 	// https://docs.docker.com/engine/api/v1.42/#tag/Container/operation/ContainerStats
 	req, _ := http.NewRequestWithContext(ctx,
@@ -354,38 +390,38 @@ func (d *Docker) Stats(ctx context.Context, id string) (*Stats, error) {
 			Usage    uint64   `json:"usage"`     // current res_counter usage for memory
 			MaxUsage uint64   `json:"max_usage"` // maximum usage ever recorded
 			Stats    struct { // all the stats exported via memory.stat (https://bit.ly/3Z5FpN8)
-				ActiveAnon              uint64 `json:"active_anon"`
-				ActiveFile              uint64 `json:"active_file"`
-				Cache                   uint64 `json:"cache"`
-				Dirty                   uint64 `json:"dirty"`
-				HierarchicalMemoryLimit uint64 `json:"hierarchical_memory_limit"`
-				HierarchicalMemSWLimit  uint64 `json:"hierarchical_memsw_limit"`
-				InactiveAnon            uint64 `json:"inactive_anon"`
-				InactiveFile            uint64 `json:"inactive_file"`
-				MappedFile              uint64 `json:"mapped_file"`
-				PgFault                 uint64 `json:"pgfault"`
-				PGMAJFault              uint64 `json:"pgmajfault"`
-				PGPGin                  uint64 `json:"pgpgin"`
-				PGPGout                 uint64 `json:"pgpgout"`
-				RSS                     uint64 `json:"rss"`
-				RSSHuge                 uint64 `json:"rss_huge"`
-				TotalActiveAnon         uint64 `json:"total_active_anon"`
-				TotalActiveFile         uint64 `json:"total_active_file"`
-				TotalCache              uint64 `json:"total_cache"`
-				TotalDirty              uint64 `json:"total_dirty"`
-				TotalInactiveAnon       uint64 `json:"total_inactive_anon"`
-				TotalInactiveFile       uint64 `json:"total_inactive_file"`
-				TotalMappedFile         uint64 `json:"total_mapped_file"`
-				TotalPGFault            uint64 `json:"total_pgfault"`
-				TotalPGMAJFault         uint64 `json:"total_pgmajfault"`
-				TotalPGPGin             uint64 `json:"total_pgpgin"`
-				TotalPGPGout            uint64 `json:"total_pgpgout"`
-				TotalRSS                uint64 `json:"total_rss"`
-				TotalRSSHuge            uint64 `json:"total_rss_huge"`
-				TotalUnEvictable        uint64 `json:"total_unevictable"`
-				TotalWriteBack          uint64 `json:"total_writeback"`
-				UnEvictable             uint64 `json:"unevictable"`
-				WriteBack               uint64 `json:"writeback"`
+				// ActiveAnon              uint64 `json:"active_anon"`
+				// ActiveFile              uint64 `json:"active_file"`
+				// Cache                   uint64 `json:"cache"`
+				// Dirty                   uint64 `json:"dirty"`
+				// HierarchicalMemoryLimit uint64 `json:"hierarchical_memory_limit"`
+				// HierarchicalMemSWLimit  uint64 `json:"hierarchical_memsw_limit"`
+				// InactiveAnon            uint64 `json:"inactive_anon"`
+				// InactiveFile            uint64 `json:"inactive_file"`
+				// MappedFile              uint64 `json:"mapped_file"`
+				// PgFault                 uint64 `json:"pgfault"`
+				// PGMAJFault              uint64 `json:"pgmajfault"`
+				// PGPGin                  uint64 `json:"pgpgin"`
+				// PGPGout                 uint64 `json:"pgpgout"`
+				RSS uint64 `json:"rss"`
+				// RSSHuge                 uint64 `json:"rss_huge"`
+				// TotalActiveAnon         uint64 `json:"total_active_anon"`
+				// TotalActiveFile         uint64 `json:"total_active_file"`
+				// TotalCache              uint64 `json:"total_cache"`
+				// TotalDirty              uint64 `json:"total_dirty"`
+				// TotalInactiveAnon       uint64 `json:"total_inactive_anon"`
+				// TotalInactiveFile       uint64 `json:"total_inactive_file"`
+				// TotalMappedFile         uint64 `json:"total_mapped_file"`
+				// TotalPGFault            uint64 `json:"total_pgfault"`
+				// TotalPGMAJFault         uint64 `json:"total_pgmajfault"`
+				// TotalPGPGin             uint64 `json:"total_pgpgin"`
+				// TotalPGPGout            uint64 `json:"total_pgpgout"`
+				// TotalRSS                uint64 `json:"total_rss"`
+				// TotalRSSHuge            uint64 `json:"total_rss_huge"`
+				// TotalUnEvictable        uint64 `json:"total_unevictable"`
+				// TotalWriteBack          uint64 `json:"total_writeback"`
+				// UnEvictable             uint64 `json:"unevictable"`
+				// WriteBack               uint64 `json:"writeback"`
 			} `json:"stats"`
 			Limit uint64 `json:"limit"`
 		} `json:"memory_stats"`

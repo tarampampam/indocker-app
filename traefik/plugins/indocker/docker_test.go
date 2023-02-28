@@ -9,7 +9,22 @@ import (
 )
 
 func TestDocker_Watch(t *testing.T) {
-	docker := indocker.NewDocker("/var/run/docker.sock")
+	var (
+		ctx, cancel = context.WithTimeout(context.Background(), time.Second*2)
+		d           = indocker.NewDocker("/var/run/docker.sock")
+	)
 
-	docker.Watch(context.Background(), time.Millisecond*3500)
+	defer cancel()
+
+	go d.Watch(ctx, time.Millisecond*300)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-time.After(time.Millisecond * 500):
+			t.Log(d.State())
+		}
+	}
 }

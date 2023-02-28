@@ -9,6 +9,7 @@ import (
 	"strconv"
 )
 
+// Deprecated
 type Client struct {
 	io.Closer
 
@@ -17,6 +18,7 @@ type Client struct {
 }
 
 // NewClient creates a new client for the Docker API.
+// Deprecated
 func NewClient(unixSocket string) (*Client, error) {
 	return &Client{
 		http: &http.Client{
@@ -31,6 +33,7 @@ func NewClient(unixSocket string) (*Client, error) {
 }
 
 // Ping pings the Docker socket.
+// Deprecated
 func (c *Client) Ping(ctx context.Context) ([]byte, int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://docker/_ping", http.NoBody)
 	if err != nil {
@@ -41,6 +44,7 @@ func (c *Client) Ping(ctx context.Context) ([]byte, int, error) {
 }
 
 // Version returns the Docker version.
+// Deprecated
 func (c *Client) Version(ctx context.Context) ([]byte, int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://docker/version", http.NoBody)
 	if err != nil {
@@ -51,6 +55,7 @@ func (c *Client) Version(ctx context.Context) ([]byte, int, error) {
 }
 
 // ContainersList returns the list of containers.
+// Deprecated
 func (c *Client) ContainersList(ctx context.Context) ([]byte, int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://docker/containers/json", http.NoBody)
 	if err != nil {
@@ -61,6 +66,7 @@ func (c *Client) ContainersList(ctx context.Context) ([]byte, int, error) {
 }
 
 // ContainerInspect returns the container details.
+// Deprecated
 func (c *Client) ContainerInspect(ctx context.Context, containerID string) ([]byte, int, error) {
 	if err := c.validateContainerID(containerID); err != nil {
 		return nil, 0, err
@@ -80,6 +86,7 @@ func (c *Client) ContainerInspect(ctx context.Context, containerID string) ([]by
 }
 
 // ContainerStats returns the container stats.
+// Deprecated
 func (c *Client) ContainerStats(ctx context.Context, containerID string) ([]byte, int, error) {
 	if err := c.validateContainerID(containerID); err != nil {
 		return nil, 0, err
@@ -99,6 +106,7 @@ func (c *Client) ContainerStats(ctx context.Context, containerID string) ([]byte
 }
 
 // ContainerLogs returns the container logs.
+// Deprecated
 func (c *Client) ContainerLogs(ctx context.Context, containerID string, tail uint64) ([]byte, int, error) {
 	if err := c.validateContainerID(containerID); err != nil {
 		return nil, 0, err
@@ -154,6 +162,7 @@ func (c *Client) makeRequest(req *http.Request) ([]byte, int, error) {
 }
 
 // Close closes the connection to the Docker socket.
+// Deprecated
 func (c *Client) Close() error {
 	if c.conn != nil {
 		return c.conn.Close()
