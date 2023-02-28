@@ -4,13 +4,13 @@
 
 <script lang="ts">
 import {defineComponent} from 'vue'
-import API from '../api'
+import API, {DockerState} from '../api'
 import OverallMemoryUsage from './components/overall-memory-usage.vue'
 import {EventNames, MemoryUsageUpdatedEvent} from './events';
 
 const errorsHandler = console.error
 
-const api = new API('https://monitor.indocker.app/docker-info/')
+const api = new API('https://monitor.indocker.app/indocker/')
 
 export default defineComponent({
   components: {
@@ -24,35 +24,43 @@ export default defineComponent({
   },
 
   async created() {
-    window.setInterval(this.update, 1000)
-    this.update()
+    const dockerState: DockerState[] = []
+
+    api.streamDockerState((data) => {
+      dockerState.splice(0, dockerState.length, ...data)
+
+      console.log(dockerState)
+    })
+
+    // window.setInterval(this.update, 1000)
+    // this.update()
   },
 
   methods: {
-    update(): void {
-      api.containersList()
-        .then(containers => {
-          const ids = containers.map(c => c.Id)
-
-          Promise
-            .all(ids.map(id => api.stats(id)))
-            .then(stats => {
-              const event: MemoryUsageUpdatedEvent = {
-                containers: {},
-              }
-
-              stats.forEach((stat, i) => {
-                event.containers[ids[i]] = {
-                  totalMemoryUsageInBytes: stat.memory_stats.usage,
-                }
-              })
-
-              this.$emitter.emit(EventNames.MemoryUsageUpdated, event)
-            })
-            .catch(errorsHandler)
-        })
-        .catch(errorsHandler)
-    },
+    // update(): void {
+    //   api.containersList()
+    //     .then(containers => {
+    //       const ids = containers.map(c => c.Id)
+    //
+    //       Promise
+    //         .all(ids.map(id => api.stats(id)))
+    //         .then(stats => {
+    //           const event: MemoryUsageUpdatedEvent = {
+    //             containers: {},
+    //           }
+    //
+    //           stats.forEach((stat, i) => {
+    //             event.containers[ids[i]] = {
+    //               totalMemoryUsageInBytes: stat.memory_stats.usage,
+    //             }
+    //           })
+    //
+    //           this.$emitter.emit(EventNames.MemoryUsageUpdated, event)
+    //         })
+    //         .catch(errorsHandler)
+    //     })
+    //     .catch(errorsHandler)
+    // },
   },
 
   computed: {

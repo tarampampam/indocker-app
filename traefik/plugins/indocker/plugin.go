@@ -15,15 +15,19 @@ import (
 
 // Config the plugins configuration.
 type Config struct {
-	UrlPrefix  string `json:"urlPrefix" yaml:"urlPrefix"`
-	SocketPath string `json:"socketPath" yaml:"socketPath"`
+	UrlPrefix      string        `json:"urlPrefix" yaml:"urlPrefix"`
+	SocketPath     string        `json:"socketPath" yaml:"socketPath"`
+	WatchInterval  time.Duration `json:"watchInterval" yaml:"watchInterval"`
+	SnapshotsCount uint          `json:"snapshotsCount" yaml:"snapshotsCount"`
 }
 
 // CreateConfig creates the default plugins configuration.
 func CreateConfig() *Config {
 	return &Config{ // defaults
-		UrlPrefix:  "/indocker",
-		SocketPath: "/var/run/docker.sock",
+		UrlPrefix:      "/indocker",
+		SocketPath:     "/var/run/docker.sock",
+		WatchInterval:  time.Millisecond * 500,
+		SnapshotsCount: 15,
 	}
 }
 
@@ -45,12 +49,13 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, errors.New(name + ": is not a socket")
 	}
 
-	docker := NewDocker(config.SocketPath)
-
 	client, err := NewClient(config.SocketPath)
 	if err != nil {
 		return nil, err
 	}
+
+	var docker = NewDocker(config.SocketPath, WithSnapshotsCapacity(config.SnapshotsCount))
+	go docker.Watch(ctx, config.WatchInterval)
 
 	return &Plugin{
 		ctx:    ctx,
@@ -105,19 +110,25 @@ func (p *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 // StreamDockerState streams the docker state.
 // Docs: <https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation>
 func (p *Plugin) StreamDockerState(rw http.ResponseWriter, r *http.Request) error {
+	var interval = 1 * time.Second // default refresh interval
+
+	if passedInterval := r.URL.Query().Get("interval"); passedInterval != "" {
+		if d, err := time.ParseDuration(passedInterval); err != nil {
+			return errors.New("invalid interval: " + err.Error())
+		} else {
+			interval = d
+		}
+	}
+
 	flusher, isFlusher := rw.(http.Flusher)
 	if !isFlusher {
 		return errors.New("streaming unsupported")
 	}
 
-	var t = time.NewTicker(1 * time.Second)
+	var t = time.NewTicker(interval)
 	defer t.Stop()
 
 	var buf bytes.Buffer // reuse buffer to reduce allocations
-
-	type payload struct {
-		Foo string `json:"foo"`
-	}
 
 	rw.Header().Set("Content-Type", "text/event-stream")
 	rw.Header().Set("Cache-Control", "no-cache")
@@ -126,13 +137,17 @@ func (p *Plugin) StreamDockerState(rw http.ResponseWriter, r *http.Request) erro
 	rw.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
+	var (
+		j       = json.NewEncoder(&buf)
+		ctxDone = p.ctx.Done()
+		reqDone = r.Context().Done()
+	)
+
 	for {
 		buf.WriteString("data: ")
 
-		if j, err := json.Marshal(payload{Foo: "bar"}); err != nil {
+		if err := j.Encode(p.docker.Snapshots()); err != nil {
 			return err
-		} else {
-			buf.Write(j)
 		}
 
 		buf.WriteRune('\n')
@@ -144,10 +159,10 @@ func (p *Plugin) StreamDockerState(rw http.ResponseWriter, r *http.Request) erro
 		flusher.Flush()
 
 		select {
-		case <-p.ctx.Done():
+		case <-ctxDone:
 			return p.ctx.Err()
 
-		case <-r.Context().Done(): // received browser disconnection
+		case <-reqDone: // received browser disconnection
 			return nil
 
 		case <-t.C:

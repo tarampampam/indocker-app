@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 )
@@ -20,57 +19,63 @@ type httpClient interface {
 type Docker struct {
 	client httpClient
 
-	containers struct {
+	snapshots struct {
 		sync.RWMutex
-		m map[string]Container
+		data []*Snapshot
+		cap  int // readonly
 	}
 }
 
 type (
+	Snapshot struct {
+		CreatedAt  time.Time             `json:"created_at"`
+		Containers map[string]*Container `json:"containers"`
+	}
+
 	// Container contains the Docker container information.
 	Container struct {
-		Inspect Inspect
-		Stats   Stats
+		Inspect Inspect `json:"inspect"`
+		Stats   Stats   `json:"stats"`
 	}
 
 	// Inspect is the Docker inspect output.
 	Inspect struct {
-		Cmd      []string          // config
-		Env      []string          // config
-		Hostname string            // config
-		Labels   map[string]string // config
-		User     string            // config
+		Cmd      []string          `json:"cmd"`      // config
+		Env      []string          `json:"env"`      // config
+		Hostname string            `json:"hostname"` // config
+		Labels   map[string]string `json:"labels"`   // config
+		User     string            `json:"user"`     // config
 
-		Created      time.Time
-		ID           string
-		Image        string
-		Name         string
-		RestartCount uint32
+		Created      time.Time `json:"created"`
+		ID           string    `json:"id"`
+		Image        string    `json:"image"`
+		Name         string    `json:"name"`
+		RestartCount uint32    `json:"restart_count"`
 
-		ExitCode      int    // state
-		HealthStatus  string // health state
-		FailingStreak uint32 // health state
-		OOMKilled     bool   // state
-		Dead          bool   // state
-		Paused        bool   // state
-		Restarting    bool   // state
-		Running       bool   // state
-		PID           int    // state
-		Status        string // state
+		ExitCode      int    `json:"exit_code"`      // state
+		HealthStatus  string `json:"health_status"`  // health state
+		FailingStreak uint32 `json:"failing_streak"` // health state
+		OOMKilled     bool   `json:"oom_killed"`     // state
+		Dead          bool   `json:"dead"`           // state
+		Paused        bool   `json:"paused"`         // state
+		Restarting    bool   `json:"restarting"`     // state
+		Running       bool   `json:"running"`        // state
+		PID           int    `json:"pid"`            // state
+		Status        string `json:"status"`         // state
 	}
 
 	// Stats is the Docker stats output.
 	Stats struct {
-		Read            time.Time
-		NumProcs        uint
-		CPUUsage        uint64
-		MemoryUsage     uint64
-		MemoryMaxUsage  uint64
-		MemoryLimit     uint64
-		NetworkRxBytes  uint64
-		NetworkRxErrors uint64
-		NetworkTxBytes  uint64
-		NetworkTxErrors uint64
+		Read            time.Time `json:"read"`
+		NumProcs        uint      `json:"num_procs"`
+		CPUUsage        uint64    `json:"cpu_usage"`
+		MemoryUsage     uint64    `json:"memory_usage"`
+		MemoryMaxUsage  uint64    `json:"memory_max_usage"`
+		MemoryLimit     uint64    `json:"memory_limit"`
+		NetworkRxBytes  uint64    `json:"network_rx_bytes"`
+		NetworkRxErrors uint64    `json:"network_rx_errors"`
+		NetworkTxBytes  uint64    `json:"network_tx_bytes"`
+		NetworkTxErrors uint64    `json:"network_tx_errors"`
 	}
 )
 
@@ -80,6 +85,14 @@ type DockerOption func(*Docker)
 // WithHTTPClient allows to configure the HTTP client used to communicate with the Docker API.
 func WithHTTPClient(httpClient httpClient) DockerOption {
 	return func(d *Docker) { d.client = httpClient }
+}
+
+// WithSnapshotsCapacity allows to configure the maximal number of snapshots.
+func WithSnapshotsCapacity(cap uint) DockerOption {
+	return func(d *Docker) {
+		d.snapshots.cap = int(cap)
+		d.snapshots.data = make([]*Snapshot, 0, cap)
+	}
 }
 
 // NewDocker creates a new Docker.
@@ -95,10 +108,15 @@ func NewDocker(unixSocket string, opt ...DockerOption) *Docker {
 		},
 	}
 
-	d.containers.m = make(map[string]Container) // init map
-
 	for _, option := range opt {
 		option(&d)
+	}
+
+	if d.snapshots.cap == 0 || d.snapshots.data == nil {
+		const defaultCap = 10
+
+		d.snapshots.cap = defaultCap
+		d.snapshots.data = make([]*Snapshot, 0, defaultCap)
 	}
 
 	return &d
@@ -110,9 +128,7 @@ func (d *Docker) Watch(ctx context.Context, interval time.Duration) {
 
 	for {
 		ids, rErr := d.RunningContainerIDs(ctx)
-		if rErr != nil {
-			_, _ = os.Stderr.WriteString(rErr.Error())
-
+		if rErr != nil || len(ids) == 0 {
 			if d.pause(ctx, interval) {
 				return
 			}
@@ -120,68 +136,54 @@ func (d *Docker) Watch(ctx context.Context, interval time.Duration) {
 			continue
 		}
 
-		{ // sync the containers map
-			var tmp = make(map[string]struct{}, len(ids))
-			for _, id := range ids { // convert slice into temporary map
-				tmp[id] = struct{}{}
-			}
+		var (
+			snapshotMu sync.Mutex
+			snapshot   = Snapshot{CreatedAt: time.Now(), Containers: make(map[string]*Container, len(ids))}
+		)
 
-			d.containers.Lock()
-
-			for id := range d.containers.m { // remove non-existent containers
-				if _, ok := tmp[id]; !ok {
-					delete(d.containers.m, id)
-				}
-			}
-
-			for id := range tmp { // add new containers
-				if _, ok := d.containers.m[id]; !ok {
-					d.containers.m[id] = Container{} // but without useful data (yet)
-				}
-			}
-
-			d.containers.Unlock()
+		for _, id := range ids {
+			snapshot.Containers[id] = &Container{} // make init
 		}
 
-		d.containers.RLock()
-		for id := range d.containers.m {
+		for _, id := range ids {
 			wg.Add(1)
 			go func(id string) { // inspect
 				defer wg.Done()
 
-				inspect, err := d.Inspect(ctx, id)
-				if err != nil {
+				if inspect, err := d.Inspect(ctx, id); err != nil {
 					return
+				} else {
+					snapshotMu.Lock()
+					snapshot.Containers[id].Inspect = *inspect
+					snapshotMu.Unlock()
 				}
-
-				d.containers.Lock()
-				if v, ok := d.containers.m[id]; ok {
-					v.Inspect = *inspect
-					d.containers.m[id] = v
-				}
-				d.containers.Unlock()
 			}(id)
 
 			wg.Add(1)
 			go func(id string) { // stats
 				defer wg.Done()
 
-				stats, err := d.Stats(ctx, id)
-				if err != nil {
+				if stats, err := d.Stats(ctx, id); err != nil {
 					return
+				} else {
+					snapshotMu.Lock()
+					snapshot.Containers[id].Stats = *stats
+					snapshotMu.Unlock()
 				}
-
-				d.containers.Lock()
-				if v, ok := d.containers.m[id]; ok {
-					v.Stats = *stats
-					d.containers.m[id] = v
-				}
-				d.containers.Unlock()
 			}(id)
 		}
-		d.containers.RUnlock()
 
 		wg.Wait()
+
+		{ // sync the snapshots slice
+			d.snapshots.Lock()
+			if len(d.snapshots.data) >= d.snapshots.cap {
+				d.snapshots.data = append(d.snapshots.data[1:len(d.snapshots.data)], &snapshot) // remove first element and append new one
+			} else {
+				d.snapshots.data = append(d.snapshots.data, &snapshot) // append new one
+			}
+			d.snapshots.Unlock()
+		}
 
 		if d.pause(ctx, interval) {
 			return
@@ -189,17 +191,15 @@ func (d *Docker) Watch(ctx context.Context, interval time.Duration) {
 	}
 }
 
-// State returns the current state of the containers.
-func (d *Docker) State() map[string]Container {
-	d.containers.RLock()
-	defer d.containers.RUnlock()
+// Snapshots returns the current snapshots.
+func (d *Docker) Snapshots() []*Snapshot {
+	d.snapshots.RLock()
+	defer d.snapshots.RUnlock()
 
-	var m = make(map[string]Container, len(d.containers.m))
-	for k, v := range d.containers.m { // copy map
-		m[k] = v
-	}
+	var s = make([]*Snapshot, len(d.snapshots.data))
+	copy(s, d.snapshots.data) // copy slice
 
-	return m
+	return s
 }
 
 // pause pauses the current goroutine for the given interval.
@@ -426,16 +426,14 @@ func (d *Docker) Stats(ctx context.Context, id string) (*Stats, error) {
 			Limit uint64 `json:"limit"`
 		} `json:"memory_stats"`
 		Networks map[string]struct { // network stats of one container
-			RxBytes    uint64 `json:"rx_bytes"`              // bytes received
-			RxPackets  uint64 `json:"rx_packets"`            // packets received
-			RxErrors   uint64 `json:"rx_errors"`             // received errors
-			RxDropped  uint64 `json:"rx_dropped"`            // incoming packets dropped
-			TxBytes    uint64 `json:"tx_bytes"`              // bytes sent
-			TxPackets  uint64 `json:"tx_packets"`            // packets sent
-			TxErrors   uint64 `json:"tx_errors"`             // sent errors
-			TxDropped  uint64 `json:"tx_dropped"`            // outgoing packets dropped
-			EndpointID string `json:"endpoint_id,omitempty"` // endpoint ID (not used on Linux)
-			InstanceID string `json:"instance_id,omitempty"` // instance ID (not used on Linux)
+			RxBytes   uint64 `json:"rx_bytes"`   // bytes received
+			RxPackets uint64 `json:"rx_packets"` // packets received
+			RxErrors  uint64 `json:"rx_errors"`  // received errors
+			RxDropped uint64 `json:"rx_dropped"` // incoming packets dropped
+			TxBytes   uint64 `json:"tx_bytes"`   // bytes sent
+			TxPackets uint64 `json:"tx_packets"` // packets sent
+			TxErrors  uint64 `json:"tx_errors"`  // sent errors
+			TxDropped uint64 `json:"tx_dropped"` // outgoing packets dropped
 		} `json:"networks"`
 	}
 	if err = json.Unmarshal(data, &payload); err != nil {
