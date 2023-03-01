@@ -24,12 +24,8 @@ export default defineComponent({
   },
 
   async created() {
-    const dockerState: DockerState[] = []
-
     api.streamDockerState((data) => {
-      dockerState.splice(0, dockerState.length, ...data)
-
-      console.log(dockerState)
+      console.log(data)
     })
 
     // window.setInterval(this.update, 1000)

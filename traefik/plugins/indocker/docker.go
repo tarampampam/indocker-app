@@ -22,7 +22,6 @@ type Docker struct {
 	snapshots struct {
 		sync.RWMutex
 		data []*Snapshot
-		cap  int // readonly
 	}
 }
 
@@ -89,10 +88,7 @@ func WithHTTPClient(httpClient httpClient) DockerOption {
 
 // WithSnapshotsCapacity allows to configure the maximal number of snapshots.
 func WithSnapshotsCapacity(cap uint) DockerOption {
-	return func(d *Docker) {
-		d.snapshots.cap = int(cap)
-		d.snapshots.data = make([]*Snapshot, 0, cap)
-	}
+	return func(d *Docker) { d.snapshots.data = make([]*Snapshot, cap) }
 }
 
 // NewDocker creates a new Docker.
@@ -112,11 +108,8 @@ func NewDocker(unixSocket string, opt ...DockerOption) *Docker {
 		option(&d)
 	}
 
-	if d.snapshots.cap == 0 || d.snapshots.data == nil {
-		const defaultCap = 10
-
-		d.snapshots.cap = defaultCap
-		d.snapshots.data = make([]*Snapshot, 0, defaultCap)
+	if d.snapshots.data == nil {
+		d.snapshots.data = make([]*Snapshot, 0, 10) // default capacity is 10
 	}
 
 	return &d
@@ -175,12 +168,23 @@ func (d *Docker) Watch(ctx context.Context, interval time.Duration) {
 
 		wg.Wait()
 
-		{ // sync the snapshots slice
+		{
 			d.snapshots.Lock()
-			if len(d.snapshots.data) >= d.snapshots.cap {
-				d.snapshots.data = append(d.snapshots.data[1:len(d.snapshots.data)], &snapshot) // remove first element and append new one
+			// note: append is not used here because in yaegi it causes a memory leak
+			if d.snapshots.data[len(d.snapshots.data)-1] != nil { // slice is full
+				// shift all slice elements from right to left
+				for i := 0; i < len(d.snapshots.data)-1; i++ {
+					d.snapshots.data[i] = d.snapshots.data[i+1]
+				}
+				d.snapshots.data[len(d.snapshots.data)-1] = &snapshot // set the last element
 			} else {
-				d.snapshots.data = append(d.snapshots.data, &snapshot) // append new one
+				// find the last non-nil element
+				for i := 0; i < len(d.snapshots.data); i++ {
+					if d.snapshots.data[i] == nil {
+						d.snapshots.data[i] = &snapshot
+						break
+					}
+				}
 			}
 			d.snapshots.Unlock()
 		}
@@ -196,7 +200,17 @@ func (d *Docker) Snapshots() []*Snapshot {
 	d.snapshots.RLock()
 	defer d.snapshots.RUnlock()
 
-	var s = make([]*Snapshot, len(d.snapshots.data))
+	var size = len(d.snapshots.data)
+
+	// find the last non-nil element
+	for i := 0; i < len(d.snapshots.data); i++ {
+		if d.snapshots.data[i] == nil {
+			size = i
+			break
+		}
+	}
+
+	var s = make([]*Snapshot, size)
 	copy(s, d.snapshots.data) // copy slice
 
 	return s

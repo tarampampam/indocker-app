@@ -59,11 +59,11 @@ export default class {
   /**
    * @link https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events
    */
-  streamDockerState(callback: (data: DockerState[]) => void, interval: string = '500ms'): EventSource {
+  streamDockerState(callback: (data: DockerState[]) => void, interval: string = '1000ms'): EventSource {
     const sse = new EventSource(`${this.baseUrl}/stream-docker-state?interval=${interval}`)
 
     sse.addEventListener('message', (event) => {
-      callback(JSON.parse(event.data))
+      callback((JSON.parse(event.data) as DockerState[]))
     })
 
     return sse
