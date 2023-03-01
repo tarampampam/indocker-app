@@ -9,15 +9,15 @@ const (
 	LogLevel  envVariable = "LOG_LEVEL"  // logging level
 	LogFormat envVariable = "LOG_FORMAT" // logging format (json|console)
 
-	ServerAddress    envVariable = "SERVER_ADDR"      // server address (hostname or port)
-	HTTPPort         envVariable = "HTTP_PORT"        // HTTP server port
-	HTTPSPort        envVariable = "HTTPS_PORT"       // HTTPS server port
-	HTTPSCertFile    envVariable = "HTTPS_CERT_FILE"  // HTTPS certificate file path
-	HTTPSKeyFile     envVariable = "HTTPS_KEY_FILE"   // HTTPS certificate key file path
-	ReadTimeout      envVariable = "READ_TIMEOUT"     // Read timeout
-	WriteTimeout     envVariable = "WRITE_TIMEOUT"    // Write timeout
-	ShutdownTimeout  envVariable = "SHUTDOWN_TIMEOUT" // Shutdown timeout
-	DockerSocketPath envVariable = "DOCKER_SOCKET"    // Docker socket path
+	ServerAddress   envVariable = "SERVER_ADDR"      // server address (hostname or port)
+	HTTPPort        envVariable = "HTTP_PORT"        // HTTP server port
+	HTTPSPort       envVariable = "HTTPS_PORT"       // HTTPS server port
+	HTTPSCertFile   envVariable = "HTTPS_CERT_FILE"  // HTTPS certificate file path
+	HTTPSKeyFile    envVariable = "HTTPS_KEY_FILE"   // HTTPS certificate key file path
+	ReadTimeout     envVariable = "READ_TIMEOUT"     // Read timeout
+	WriteTimeout    envVariable = "WRITE_TIMEOUT"    // Write timeout
+	ShutdownTimeout envVariable = "SHUTDOWN_TIMEOUT" // Shutdown timeout
+	DockerHost      envVariable = "DOCKER_HOST"      // Docker host (or socket path)
 )
 
 // String returns environment variable name in the string representation.
