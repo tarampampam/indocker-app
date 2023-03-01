@@ -3,7 +3,6 @@ package start
 import (
 	"context"
 	"crypto/tls"
-	stdErrors "errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -39,7 +38,7 @@ type (
 		ShutdownTimeout time.Duration
 
 		Docker struct {
-			SocketPath string
+			Host string
 		}
 	}
 )
@@ -48,16 +47,16 @@ func NewCommand(log *zap.Logger) *cli.Command {
 	var cmd = command{}
 
 	const (
-		addrFlagName             = "addr"
-		httpPortFlagName         = "http-port"
-		httpsPortFlagName        = "https-port"
-		httpsCertFileFlagName    = "https-cert-file"
-		httpsKeyFileFlagName     = "https-key-file"
-		readTimeoutFlagName      = "read-timeout"
-		writeTimeoutFlagName     = "write-timeout"
-		idleTimeoutFlagName      = "idle-timeout"
-		shutdownTimeoutFlagName  = "shutdown-timeout"
-		dockerSocketPathFlagName = "docker-socket"
+		addrFlagName            = "addr"
+		httpPortFlagName        = "http-port"
+		httpsPortFlagName       = "https-port"
+		httpsCertFileFlagName   = "https-cert-file"
+		httpsKeyFileFlagName    = "https-key-file"
+		readTimeoutFlagName     = "read-timeout"
+		writeTimeoutFlagName    = "write-timeout"
+		idleTimeoutFlagName     = "idle-timeout"
+		shutdownTimeoutFlagName = "shutdown-timeout"
+		dockerHostFlagName      = "docker-socket"
 	)
 
 	cmd.c = &cli.Command{
@@ -76,7 +75,7 @@ func NewCommand(log *zap.Logger) *cli.Command {
 			opt.WriteTimeout = c.Duration(writeTimeoutFlagName)
 			opt.IDLETimeout = c.Duration(idleTimeoutFlagName)
 			opt.ShutdownTimeout = c.Duration(shutdownTimeoutFlagName)
-			opt.Docker.SocketPath = c.String(dockerSocketPathFlagName)
+			opt.Docker.Host = c.String(dockerHostFlagName)
 
 			if opt.HTTP.Port == 0 || opt.HTTP.Port > 65535 {
 				return fmt.Errorf("wrong HTTP port number (%d)", opt.HTTP.Port)
@@ -108,18 +107,12 @@ func NewCommand(log *zap.Logger) *cli.Command {
 				opt.HTTPS.KeyFile = data
 			}
 
-			if stat, err := os.Stat(opt.Docker.SocketPath); err != nil {
-				return errors.Wrapf(err, "failed to access the docker socket %s", opt.Docker.SocketPath)
-			} else if stat.Mode().Type() != os.ModeSocket {
-				return fmt.Errorf("%s is not a socket", opt.Docker.SocketPath)
-			}
-
 			return cmd.Run(c.Context, log, opt)
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    addrFlagName,
-				Usage:   "server address (hostname or port)",
+				Usage:   "server address (hostname or port; 0.0.0.0 for all interfaces)",
 				Value:   "0.0.0.0",
 				EnvVars: []string{env.ServerAddress.String()},
 			},
@@ -172,10 +165,10 @@ func NewCommand(log *zap.Logger) *cli.Command {
 				EnvVars: []string{env.ShutdownTimeout.String()},
 			},
 			&cli.StringFlag{
-				Name:    dockerSocketPathFlagName,
-				Usage:   "path to the docker socket",
-				Value:   "/var/run/docker.sock",
-				EnvVars: []string{env.DockerSocketPath.String()},
+				Name:    dockerHostFlagName,
+				Usage:   "docker host (or path to the docker socket)",
+				Value:   "unix:///var/run/docker.sock",
+				EnvVars: []string{env.DockerHost.String()},
 			},
 		},
 	}
@@ -209,12 +202,15 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 	}
 
 	// create HTTP server
-	var server = appHttp.NewServer(ctx, log,
-		appHttp.WithTLSConfig(&tls.Config{Certificates: []tls.Certificate{cert}}),
+	var server = appHttp.NewServer(ctx, log, &tls.Config{Certificates: []tls.Certificate{cert}},
 		appHttp.WithReadTimeout(opt.ReadTimeout),
 		appHttp.WithWriteTimeout(opt.WriteTimeout),
 		appHttp.WithIDLETimeout(opt.IDLETimeout),
 	)
+
+	if err := server.Register(opt.Docker.Host); err != nil { // register all routes
+		return err
+	}
 
 	startingErrCh := make(chan error, 1) // channel for server starting error
 	defer close(startingErrCh)
@@ -230,8 +226,8 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 			zap.Duration("idle timeout", opt.IDLETimeout),
 		)
 
-		var startingError = server.Start("0.0.0.0", uint16(opt.HTTP.Port), uint16(opt.HTTPS.Port))
-		if startingError != nil && !stdErrors.Is(startingError, http.ErrServerClosed) {
+		var startingError = server.Start(opt.Addr, uint16(opt.HTTP.Port), uint16(opt.HTTPS.Port))
+		if startingError != nil && !errors.Is(startingError, http.ErrServerClosed) {
 			errCh <- startingError
 		}
 
