@@ -1,0 +1,4 @@
+*
+!.gitignore
+!embed.go
+!embed_test.go
