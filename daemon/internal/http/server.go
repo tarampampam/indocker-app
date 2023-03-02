@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"gh.tarampamp.am/indocker-app/daemon/docker"
+	"gh.tarampamp.am/indocker-app/daemon/internal/docker"
 	"gh.tarampamp.am/indocker-app/daemon/internal/http/handlers"
 )
 
@@ -54,6 +54,8 @@ func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...
 
 func (s *Server) Register(docker *docker.Docker) error {
 	var proxy = handlers.NewProxy(docker)
+
+	// TODO redirect to https
 
 	for _, server := range []*http.Server{s.http, s.https} {
 		server.Handler = proxy

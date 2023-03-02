@@ -3,8 +3,8 @@ package handlers
 import (
 	"crypto/tls"
 	_ "embed"
+	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -13,16 +13,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-type router interface {
+type dockerRouter interface {
 	FindRoute(domain string) (string, error)
 }
 
 type Proxy struct {
-	router router
+	router dockerRouter
 	client *http.Client
 }
 
-func NewProxy(router router) *Proxy {
+func NewProxy(router dockerRouter) *Proxy {
 	return &Proxy{
 		router: router,
 		client: &http.Client{ // TODO timeout
@@ -42,14 +42,18 @@ func (c *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Proxy) handle(w http.ResponseWriter, r *http.Request) error {
-	host, _, err := net.SplitHostPort(r.Host)
-	if err != nil {
-		return err
+	var host string
+
+	var hostPort = strings.FieldsFunc(r.Host, func(r rune) bool { return r == ':' })
+	if len(hostPort) > 0 {
+		host = hostPort[0]
+	} else {
+		return fmt.Errorf("invalid host (%s) requested", r.Host)
 	}
 
 	route, err := c.router.FindRoute(host)
 	if err != nil {
-		return errors.Wrap(err, "route")
+		return errors.Wrap(err, "route finding")
 	}
 
 	newUrl, err := url.Parse(route + r.RequestURI)

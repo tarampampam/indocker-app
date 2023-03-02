@@ -1,12 +1,12 @@
 package main
 
 import (
-  "fmt"
-  "os"
+	"fmt"
+	"os"
 
-  "go.uber.org/automaxprocs/maxprocs"
+	"go.uber.org/automaxprocs/maxprocs"
 
-  "gh.tarampamp.am/indocker-app/daemon/internal/cli"
+	"gh.tarampamp.am/indocker-app/daemon/internal/cli"
 )
 
 // set GOMAXPROCS to match Linux container CPU quota.

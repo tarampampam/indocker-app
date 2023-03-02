@@ -1,27 +1,80 @@
 version: '3.8'
 
+volumes:
+  tmp-data: {}
+  golint-go: {}
+  golint-cache: {}
+
 services:
-  app:
+  daemon: &daemon
     build:
-      dockerfile: Dockerfile
-    ports:
-      - '80:80/tcp'
-      - '443:443/tcp'
+      context: daemon
+      target: builder
+    environment:
+      PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@go] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
+      HOME: /tmp
+      GOPATH: /tmp
     volumes:
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - tmp-data:/tmp:rw
+      - ./daemon:/src:rw
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks: [indocker-app-network]
+    working_dir: /src
     security_opt: [no-new-privileges:true]
 
-  frontend:
-    image: caddy:2.6-alpine
-    volumes:
-      - ./frontend:/usr/share/caddy:ro
+  daemon-web:
+    <<: *daemon
+    ports:
+      - '80:8080/tcp' # Open <http://daemon.indocker.app>
+      - '443:8443/tcp' # Open <https://daemon.indocker.app>
+    entrypoint: sh -c 'go build -buildvcs=false -o /tmp/app ./cmd/app/ && exec $0 "$@"'
+    command: /tmp/app start
+#    healthcheck:
+#      test: ['CMD', '/tmp/app', 'start', 'healthcheck']
+#      interval: 5s
+#      start_period: 2s
+
+#  app:
+#    build:
+#      dockerfile: Dockerfile
+#    ports:
+#      - '80:80/tcp'
+#      - '443:443/tcp'
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock:ro
+#    networks: [indocker-app-network]
+#    security_opt: [no-new-privileges:true]
+
+#  frontend:
+#    image: caddy:2.6-alpine
+#    volumes:
+#      - ./frontend:/usr/share/caddy:ro
+#    labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.frontend-router.rule=Host(`frontend.indocker.app`)
+#      - traefik.http.routers.frontend-router.service=frontend-service
+#      - traefik.http.services.frontend-service.loadbalancer.server.port=80
+#    networks: [indocker-app-network]
+#    security_opt: [no-new-privileges:true]
+
+  whoami:
+    image: containous/whoami:latest
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.frontend-router.rule=Host(`frontend.indocker.app`)
-      - traefik.http.routers.frontend-router.service=frontend-service
-      - traefik.http.services.frontend-service.loadbalancer.server.port=80
-    networks: [indocker-app-network]
+      indocker.host: whoami.indocker.app # Open <https://whoami.indocker.app>
+      indocker.port: 8080
+    command: --port 8080
+    security_opt: [no-new-privileges:true]
+
+  golint: # Go code linter, used as a "shortcut" for usage in makefile
+    image: golangci/golangci-lint:v1.51-alpine
+    environment:
+      GOLANGCI_LINT_CACHE: /tmp/golint # <https://github.com/golangci/golangci-lint/blob/v1.33.0/internal/cache/default.go#L68>
+    volumes:
+      - golint-go:/go:rw # go dependencies will be downloaded on each run without this
+      - golint-cache:/tmp/golint:rw
+      - ./daemon:/src:ro
+    working_dir: /src
     security_opt: [no-new-privileges:true]
 
 networks:
