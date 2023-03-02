@@ -8,7 +8,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"
 
-	"gh.tarampamp.am/indocker-app/daemon/docker"
+	"gh.tarampamp.am/indocker-app/daemon/internal/docker"
 )
 
 func TestDocker_WatchContainers(t *testing.T) {
@@ -29,8 +29,8 @@ loop:
 		case <-ctx.Done():
 			break loop
 
-		case <-time.After(time.Millisecond * 500):
-			t.Log(w.Alive())
+			// case <-time.After(time.Millisecond * 500):
+			// 	t.Log(w.Alive())
 		}
 	}
 }

@@ -15,8 +15,9 @@ import (
 	"go.uber.org/zap"
 
 	"gh.tarampamp.am/indocker-app/daemon/certs"
-	"gh.tarampamp.am/indocker-app/daemon/docker"
 	"gh.tarampamp.am/indocker-app/daemon/internal/breaker"
+	"gh.tarampamp.am/indocker-app/daemon/internal/cli/start/healthcheck"
+	"gh.tarampamp.am/indocker-app/daemon/internal/docker"
 	"gh.tarampamp.am/indocker-app/daemon/internal/env"
 	appHttp "gh.tarampamp.am/indocker-app/daemon/internal/http"
 )
@@ -173,6 +174,9 @@ func NewCommand(log *zap.Logger) *cli.Command {
 				Value:   "unix:///var/run/docker.sock",
 				EnvVars: []string{env.DockerHost.String()},
 			},
+		},
+		Subcommands: []*cli.Command{
+			healthcheck.NewCommand(),
 		},
 	}
 
