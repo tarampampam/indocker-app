@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -13,11 +14,12 @@ import (
 )
 
 const (
-	prefix       = "indocker"
-	hostLabel    = prefix + ".host"
-	portLabel    = prefix + ".port"
-	networkLabel = prefix + ".network"
-	schemeLabel  = prefix + ".scheme"
+	labelsPrefix = "indocker."
+
+	LabelHost    = labelsPrefix + "host"
+	LabelPort    = labelsPrefix + "port"
+	LabelNetwork = labelsPrefix + "network"
+	LabelScheme  = labelsPrefix + "scheme"
 )
 
 type Docker struct {
@@ -78,7 +80,7 @@ func (d *Docker) Watch(pCtx context.Context) {
 				delete(d.hosts, k)
 			}
 			for _, container := range list {
-				if value, ok := container.Labels[hostLabel]; ok {
+				if value, ok := container.Labels[LabelHost]; ok {
 					d.hosts[value] = container.ID
 					break
 				}
@@ -152,15 +154,15 @@ func (d *Docker) FindRoute(hostname string) (string, error) {
 		if container, found := d.alive[id]; found {
 			var scheme, port, netName = "http", "80", "bridge" // defaults
 
-			if v, ok := container.Labels[schemeLabel]; ok {
+			if v, ok := container.Labels[LabelScheme]; ok {
 				scheme = v
 			}
 
-			if v, ok := container.Labels[portLabel]; ok {
+			if v, ok := container.Labels[LabelPort]; ok {
 				port = v
 			}
 
-			if v, ok := container.Labels[networkLabel]; ok {
+			if v, ok := container.Labels[LabelNetwork]; ok {
 				netName = v
 			}
 
@@ -177,7 +179,11 @@ func (d *Docker) FindRoute(hostname string) (string, error) {
 					}
 				}
 
-				return scheme + "://" + net.IPAddress + ":" + port, nil
+				if net != nil {
+					return scheme + "://" + net.IPAddress + ":" + port, nil
+				}
+
+				return "", fmt.Errorf("no network for the container %s found", id)
 			}
 		}
 	}

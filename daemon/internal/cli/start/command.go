@@ -4,15 +4,18 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 
 	"gh.tarampamp.am/indocker-app/daemon/certs"
+	"gh.tarampamp.am/indocker-app/daemon/docker"
 	"gh.tarampamp.am/indocker-app/daemon/internal/breaker"
 	"gh.tarampamp.am/indocker-app/daemon/internal/env"
 	appHttp "gh.tarampamp.am/indocker-app/daemon/internal/http"
@@ -208,7 +211,14 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 		appHttp.WithIDLETimeout(opt.IDLETimeout),
 	)
 
-	if err := server.Register(opt.Docker.Host); err != nil { // register all routes
+	dkr, dErr := docker.NewDocker(time.Second, client.WithHost(opt.Docker.Host))
+	if dErr != nil {
+		return errors.Wrap(dErr, "failed to create docker client")
+	}
+
+	go dkr.Watch(ctx) // start docker changes watching
+
+	if err := server.Register(dkr); err != nil { // register all routes
 		return err
 	}
 
@@ -217,6 +227,20 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 
 	// start HTTP server in separate goroutine
 	go func(errCh chan<- error) {
+		httpListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", opt.Addr, opt.HTTP.Port))
+		if err != nil {
+			errCh <- errors.Wrapf(err, "failed to listen on HTTP port (%s:%d)", opt.Addr, opt.HTTP.Port)
+
+			return
+		}
+
+		httpsListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", opt.Addr, opt.HTTPS.Port))
+		if err != nil {
+			errCh <- errors.Wrapf(err, "failed to listen on HTTPS port (%s:%d)", opt.Addr, opt.HTTPS.Port)
+
+			return
+		}
+
 		log.Info("HTTP(S) servers starting",
 			zap.String("address", opt.Addr),
 			zap.Uint("http port", opt.HTTP.Port),
@@ -226,7 +250,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 			zap.Duration("idle timeout", opt.IDLETimeout),
 		)
 
-		var startingError = server.Start(opt.Addr, uint16(opt.HTTP.Port), uint16(opt.HTTPS.Port))
+		var startingError = server.Start(httpListener, httpsListener)
 		if startingError != nil && !errors.Is(startingError, http.ErrServerClosed) {
 			errCh <- startingError
 		}
