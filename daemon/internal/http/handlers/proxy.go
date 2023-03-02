@@ -17,13 +17,13 @@ type router interface {
 	FindRoute(domain string) (string, error)
 }
 
-type CatchAll struct {
+type Proxy struct {
 	router router
 	client *http.Client
 }
 
-func NewCatchAll(router router) *CatchAll {
-	return &CatchAll{
+func NewProxy(router router) *Proxy {
+	return &Proxy{
 		router: router,
 		client: &http.Client{ // TODO timeout
 			Transport: &http.Transport{
@@ -35,13 +35,13 @@ func NewCatchAll(router router) *CatchAll {
 	}
 }
 
-func (c *CatchAll) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (c *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := c.handle(w, r); err != nil {
 		c.error(w, http.StatusInternalServerError, err)
 	}
 }
 
-func (c *CatchAll) handle(w http.ResponseWriter, r *http.Request) error {
+func (c *Proxy) handle(w http.ResponseWriter, r *http.Request) error {
 	host, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (c *CatchAll) handle(w http.ResponseWriter, r *http.Request) error {
 //go:embed error.html
 var errorTemplate string
 
-func (c *CatchAll) error(w http.ResponseWriter, code int, err error) {
+func (c *Proxy) error(w http.ResponseWriter, code int, err error) {
 	w.WriteHeader(code)
 
 	var message string
@@ -98,10 +98,8 @@ func (c *CatchAll) error(w http.ResponseWriter, code int, err error) {
 		message = http.StatusText(code)
 	}
 
-	const codePlaceholder, messagePlaceholder = "{{ code }}", "{{ message }}"
-
-	var content = strings.ReplaceAll(errorTemplate, codePlaceholder, strconv.Itoa(code))
-	content = strings.ReplaceAll(content, messagePlaceholder, message)
+	content := strings.ReplaceAll(errorTemplate, "{{ code }}", strconv.Itoa(code))
+	content = strings.ReplaceAll(content, "{{ message }}", message)
 
 	_, _ = w.Write([]byte(content))
 }
