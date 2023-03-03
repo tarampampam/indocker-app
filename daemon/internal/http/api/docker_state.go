@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"time"
 
 	"gh.tarampamp.am/indocker-app/daemon/internal/docker"
 )
@@ -39,18 +38,12 @@ func (h *DockerState) handle(w http.ResponseWriter, r *http.Request) (bool, erro
 		return false, errors.New("streaming unsupported")
 	}
 
-	var interval = 1 * time.Second // default refresh interval
-
-	if passedInterval := r.URL.Query().Get("interval"); passedInterval != "" {
-		if d, err := time.ParseDuration(passedInterval); err != nil {
-			return false, errors.New("invalid interval: " + err.Error())
-		} else {
-			interval = d
-		}
+	var subscription = make(chan map[string]*docker.ContainerDetails)
+	if err := h.docker.Subscribe(subscription); err != nil {
+		return false, err
 	}
 
-	var t = time.NewTicker(interval)
-	defer t.Stop()
+	defer func() { _ = h.docker.Unsubscribe(subscription) }()
 
 	var buf bytes.Buffer // reuse buffer to reduce allocations
 
@@ -61,28 +54,27 @@ func (h *DockerState) handle(w http.ResponseWriter, r *http.Request) (bool, erro
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
-	var j = json.NewEncoder(&buf)
+	var enc = json.NewEncoder(&buf)
 
 	for {
-		buf.WriteString("data: ")
-
-		if err := j.Encode(h.docker.Snapshots()); err != nil {
-			return true, err
-		}
-
-		buf.WriteRune('\n')
-
-		if _, err := buf.WriteTo(w); err != nil { // writing automatically resets the buffer
-			return true, err
-		}
-
-		flusher.Flush()
-
 		select {
+		case details := <-subscription:
+			buf.WriteString("data: ")
+
+			if err := enc.Encode(details); err != nil {
+				return true, err
+			}
+
+			buf.WriteRune('\n')
+
+			if _, err := buf.WriteTo(w); err != nil { // writing automatically resets the buffer
+				return true, err
+			}
+
+			flusher.Flush()
+
 		case <-r.Context().Done(): // received browser disconnection
 			return true, nil
-
-		case <-t.C:
 		}
 	}
 }
