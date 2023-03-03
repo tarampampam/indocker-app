@@ -41,12 +41,11 @@ func WithIDLETimeout(timeout time.Duration) ServerOption {
 
 func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...ServerOption) *Server {
 	var (
-		stdLog  = zap.NewStdLog(log)
 		baseCtx = func(ln net.Listener) context.Context { return ctx }
 		server  = Server{
 			log:   log,
-			http:  &http.Server{ErrorLog: stdLog, BaseContext: baseCtx},
-			https: &http.Server{ErrorLog: stdLog, BaseContext: baseCtx, TLSConfig: tc},
+			http:  &http.Server{BaseContext: baseCtx},
+			https: &http.Server{BaseContext: baseCtx, TLSConfig: tc},
 		}
 	)
 
@@ -71,12 +70,13 @@ func (s *Server) Register(docker *docker.Docker) error {
 		apiDockerState = api.NewDockerState(docker)
 	)
 
-	for server, logger := range map[*http.Server]*zap.Logger{
+	for server, namedLogger := range map[*http.Server]*zap.Logger{
 		s.http:  s.log.Named("http"),
 		s.https: s.log.Named("https"),
 	} {
+		server.ErrorLog = zap.NewStdLog(namedLogger)       // replace the default logger with named
 		server.Handler = middleware.HealthcheckMiddleware( // healthcheck requests will not be logged
-			middleware.LogReq(logger, // named loggers for each server
+			middleware.LogReq(namedLogger, // named loggers for each server
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // API handlers wrapper
 					const apiPrefix = "/api"
 
