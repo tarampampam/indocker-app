@@ -1,4 +1,4 @@
-package handlers
+package proxy
 
 import (
 	"crypto/tls"
@@ -44,7 +44,7 @@ func (c *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (c *Proxy) handle(w http.ResponseWriter, r *http.Request) error {
 	var host string
 
-	var hostPort = strings.FieldsFunc(r.Host, func(r rune) bool { return r == ':' })
+	var hostPort = strings.Split(r.Host, ":")
 	if len(hostPort) > 0 {
 		host = hostPort[0]
 	} else {

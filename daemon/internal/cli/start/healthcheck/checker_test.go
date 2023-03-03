@@ -29,7 +29,7 @@ func TestHealthChecker_CheckSuccess(t *testing.T) {
 		}
 
 		assert.Equal(t, http.MethodGet, req.Method)
-		assert.Equal(t, "HealthChecker/internal", req.Header.Get("User-Agent"))
+		assert.Equal(t, "HealthChecker/indocker", req.Header.Get("User-Agent"))
 
 		return &http.Response{
 			Body:       io.NopCloser(bytes.NewReader([]byte{})),

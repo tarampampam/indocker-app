@@ -3,15 +3,20 @@ package http
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"gh.tarampamp.am/indocker-app/daemon/internal/docker"
-	"gh.tarampamp.am/indocker-app/daemon/internal/http/handlers"
+	"gh.tarampamp.am/indocker-app/daemon/internal/http/api"
+	"gh.tarampamp.am/indocker-app/daemon/internal/http/middleware"
+	"gh.tarampamp.am/indocker-app/daemon/internal/http/proxy"
+	"gh.tarampamp.am/indocker-app/daemon/internal/version"
 )
 
 type Server struct {
@@ -53,15 +58,64 @@ func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...
 }
 
 func (s *Server) Register(docker *docker.Docker) error {
-	var proxy = handlers.NewProxy(docker)
+	var proxyHandler = proxy.NewProxy(docker)
 
-	// TODO redirect to https
+	var apiOrigins = map[string]struct{}{
+		"indocker.app":          {},
+		"frontend.indocker.app": {}, // for local development
+	}
 
-	for _, server := range []*http.Server{s.http, s.https} {
-		server.Handler = proxy
+	var (
+		apiVer         = api.Version(version.Version())
+		api404         = api.NotFound()
+		apiDockerState = api.NewDockerState(docker)
+	)
+
+	for server, logger := range map[*http.Server]*zap.Logger{
+		s.http:  s.log.Named("http"),
+		s.https: s.log.Named("https"),
+	} {
+		server.Handler = middleware.HealthcheckMiddleware( // healthcheck requests will not be logged
+			middleware.LogReq(logger, // named loggers for each server
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // API handlers wrapper
+					const apiPrefix = "/api"
+
+					// r.Host can be "localhost:8080" or "localhost"
+					if hostPort := strings.Split(r.Host, ":"); len(hostPort) > 0 {
+						var origin = hostPort[0]
+
+						// check if the origin is allowed and the request is for the API
+						if _, ok := apiOrigins[origin]; ok && strings.HasPrefix(r.URL.Path, apiPrefix+"/") {
+							s.corsHeaders(w, origin)
+
+							switch u, m := r.URL.Path, r.Method; { // the fastest multiplexer in the world :D
+							case m == http.MethodGet && u == apiPrefix+"/version":
+								apiVer.ServeHTTP(w, r)
+
+							case m == http.MethodGet && u == apiPrefix+"/docker/state":
+								apiDockerState.ServeHTTP(w, r)
+
+							default:
+								api404.ServeHTTP(w, r)
+							}
+
+							return
+						}
+					}
+
+					proxyHandler.ServeHTTP(w, r)
+				}),
+			),
+		)
 	}
 
 	return nil
+}
+
+func (s *Server) corsHeaders(w http.ResponseWriter, origin string) {
+	w.Header().Set("Access-Control-Allow-Origin", fmt.Sprintf("https://%s", origin))
+	w.Header().Set("Access-Control-Allow-Methods", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
 }
 
 // Start the server.
