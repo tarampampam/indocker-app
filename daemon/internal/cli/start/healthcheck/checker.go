@@ -2,6 +2,7 @@ package healthcheck
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"time"
@@ -19,7 +20,12 @@ type HealthChecker struct {
 	httpClient httpClient
 }
 
-const defaultHTTPClientTimeout = time.Second * 3
+const (
+	defaultHTTPClientTimeout = time.Second * 3
+
+	UserAgent = "HealthChecker/indocker"
+	Route     = "/healthz"
+)
 
 // NewHealthChecker creates heals checker.
 func NewHealthChecker(ctx context.Context, client ...httpClient) *HealthChecker {
@@ -28,7 +34,14 @@ func NewHealthChecker(ctx context.Context, client ...httpClient) *HealthChecker 
 	if len(client) == 1 {
 		c = client[0]
 	} else {
-		c = &http.Client{Timeout: defaultHTTPClientTimeout} // default
+		c = &http.Client{ // default
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+			Timeout: defaultHTTPClientTimeout,
+		}
 	}
 
 	return &HealthChecker{ctx: ctx, httpClient: c}
@@ -39,8 +52,8 @@ func (c *HealthChecker) Check(httpPort, httpsPort uint) error {
 	var eg, egCtx = errgroup.WithContext(c.ctx)
 
 	for _, _uri := range []string{
-		fmt.Sprintf("http://127.0.0.1:%d/healthz", httpPort),
-		fmt.Sprintf("https://127.0.0.1:%d/healthz", httpsPort),
+		fmt.Sprintf("http://127.0.0.1:%d%s", httpPort, Route),
+		fmt.Sprintf("https://127.0.0.1:%d%s", httpsPort, Route),
 	} {
 		uri := _uri
 
@@ -50,7 +63,7 @@ func (c *HealthChecker) Check(httpPort, httpsPort uint) error {
 				return err
 			}
 
-			req.Header.Set("User-Agent", "HealthChecker/internal")
+			req.Header.Set("User-Agent", UserAgent)
 
 			resp, err := c.httpClient.Do(req)
 			if err != nil {

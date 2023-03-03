@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -31,7 +32,23 @@ type Docker struct {
 
 	hostsMu sync.RWMutex
 	hosts   map[string]string // map[hostname]container_id
+
+	snapshotsMu sync.RWMutex
+	snapshots   []Snapshot
 }
+
+type (
+	Snapshot struct {
+		CreatedAt  time.Time             `json:"created_at"`
+		Containers map[string]*Container `json:"containers"`
+	}
+
+	// Container contains the Docker container information.
+	Container struct {
+		Inspect types.ContainerJSON `json:"inspect"`
+		Stats   types.StatsJSON     `json:"stats"`
+	}
+)
 
 func NewDocker(frequency time.Duration, opts ...client.Opt) (*Docker, error) {
 	c, err := client.NewClientWithOpts(opts...)
@@ -44,6 +61,7 @@ func NewDocker(frequency time.Duration, opts ...client.Opt) (*Docker, error) {
 		client:    c,
 		alive:     make(map[string]types.Container),
 		hosts:     make(map[string]string),
+		snapshots: make([]Snapshot, 0, 20),
 	}, nil
 }
 
@@ -70,8 +88,8 @@ func (d *Docker) Watch(pCtx context.Context) {
 			for k := range d.alive {
 				delete(d.alive, k)
 			}
-			for _, container := range list {
-				d.alive[container.ID] = container
+			for _, c := range list {
+				d.alive[c.ID] = c
 			}
 			d.aliveMu.Unlock()
 
@@ -79,13 +97,68 @@ func (d *Docker) Watch(pCtx context.Context) {
 			for k := range d.hosts {
 				delete(d.hosts, k)
 			}
-			for _, container := range list {
-				if value, ok := container.Labels[LabelHost]; ok {
-					d.hosts[value] = container.ID
+			for _, c := range list {
+				if value, ok := c.Labels[LabelHost]; ok {
+					d.hosts[value] = c.ID
 					break
 				}
 			}
 			d.hostsMu.Unlock()
+
+			var (
+				snapshotMu sync.Mutex
+				snapshot   = Snapshot{CreatedAt: time.Now(), Containers: make(map[string]*Container, len(list))}
+			)
+
+			for _, c := range list {
+				snapshot.Containers[c.ID] = &Container{}
+			}
+
+			var wg sync.WaitGroup
+
+			for _, c := range list {
+				wg.Add(1)
+				go func(id string) { // inspect
+					defer wg.Done()
+
+					if inspect, err := d.client.ContainerInspect(ctx, id); err != nil {
+						return
+					} else {
+						snapshotMu.Lock()
+						snapshot.Containers[id].Inspect = inspect
+						snapshotMu.Unlock()
+					}
+				}(c.ID)
+
+				wg.Add(1)
+				go func(id string) { // stats
+					defer wg.Done()
+
+					if resp, err := d.client.ContainerStatsOneShot(ctx, id); err != nil {
+						return
+					} else {
+						var stats = types.StatsJSON{}
+
+						if decodingErr := json.NewDecoder(resp.Body).Decode(&stats); decodingErr != nil {
+							return
+						}
+
+						snapshotMu.Lock()
+						snapshot.Containers[id].Stats = stats
+						snapshotMu.Unlock()
+					}
+				}(c.ID)
+			}
+
+			wg.Wait()
+
+			d.snapshotsMu.Lock()
+			if len(d.snapshots) >= cap(d.snapshots) {
+				d.snapshots = append(d.snapshots[1:len(d.snapshots)], snapshot) // remove first element and append new one
+			} else {
+				d.snapshots = append(d.snapshots, snapshot) // append new one
+			}
+			d.snapshotsMu.Unlock()
 		}
 	}
 }
@@ -189,4 +262,15 @@ func (d *Docker) FindRoute(hostname string) (string, error) {
 	}
 
 	return "", errors.New("not found")
+}
+
+// Snapshots returns the current snapshots.
+func (d *Docker) Snapshots() []Snapshot {
+	d.snapshotsMu.RLock()
+	defer d.snapshotsMu.RUnlock()
+
+	var s = make([]Snapshot, len(d.snapshots))
+	copy(s, d.snapshots) // copy slice
+
+	return s
 }

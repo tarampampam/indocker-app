@@ -30,10 +30,10 @@ services:
       - '443:8443/tcp' # Open <https://daemon.indocker.app>
     entrypoint: sh -c 'go build -buildvcs=false -o /tmp/app ./cmd/app/ && exec $0 "$@"'
     command: /tmp/app start
-#    healthcheck:
-#      test: ['CMD', '/tmp/app', 'start', 'healthcheck']
-#      interval: 5s
-#      start_period: 2s
+    healthcheck:
+      test: ['CMD', '/tmp/app', 'start', 'healthcheck']
+      interval: 5s
+      start_period: 2s
 
 #  app:
 #    build:
