@@ -5,12 +5,12 @@ go 1.20
 require (
 	gh.tarampamp.am/urfave-cli-docs v1.0.0
 	github.com/docker/docker v23.0.1+incompatible
-	github.com/felixge/httpsnoop v1.0.3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.2
 	github.com/urfave/cli/v2 v2.24.4
 	github.com/zenizh/go-capturer v0.0.0-20211219060012-52ea6c8fed04
 	go.uber.org/automaxprocs v1.5.1
+	go.uber.org/goleak v1.1.11
 	go.uber.org/zap v1.24.0
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 )
