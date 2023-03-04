@@ -20,6 +20,12 @@ type ContainersRoute struct {
 }
 
 type (
+	ContainersRouter interface {
+		// RouteToContainerByHostname returns a URL to the container with the given hostname (from the docker
+		// label, of course).
+		RouteToContainerByHostname(hostname string) (string, error)
+	}
+
 	Route struct {
 		Scheme  string // http, https or something like that (default: http)
 		Port    uint16 // port number (default: 80)
