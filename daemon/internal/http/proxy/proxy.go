@@ -14,7 +14,7 @@ import (
 )
 
 type dockerRouter interface {
-	FindRoute(domain string) (string, error)
+	RouteToContainerByHostname(hostname string) (string, error)
 }
 
 type Proxy struct {
@@ -51,7 +51,7 @@ func (c *Proxy) handle(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("invalid host (%s) requested", r.Host)
 	}
 
-	route, err := c.router.FindRoute(host)
+	route, err := c.router.RouteToContainerByHostname(host)
 	if err != nil {
 		return errors.Wrap(err, "route finding")
 	}

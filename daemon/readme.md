@@ -32,18 +32,19 @@ $ ./app [GLOBAL FLAGS] start [COMMAND FLAGS] [ARGUMENTS...]
 
 The following flags are supported:
 
-| Name                     | Description                                                                             | Default value                 | Environment variables |
-|--------------------------|-----------------------------------------------------------------------------------------|:-----------------------------:|:---------------------:|
-| `--addr="…"`             | server address (hostname or port; 0.0.0.0 for all interfaces)                           |           `0.0.0.0`           |     `SERVER_ADDR`     |
-| `--http-port="…"`        | HTTP server port                                                                        |            `8080`             |      `HTTP_PORT`      |
-| `--https-port="…"`       | HTTPS server port                                                                       |            `8443`             |     `HTTPS_PORT`      |
-| `--https-cert-file="…"`  | TLS certificate file path (if empty, embedded certificate will be used)                 |                               |   `HTTPS_CERT_FILE`   |
-| `--https-key-file="…"`   | TLS key file path (if empty, embedded key will be used)                                 |                               |   `HTTPS_KEY_FILE`    |
-| `--read-timeout="…"`     | maximum duration for reading the entire request, including the body (zero = no timeout) |            `1m0s`             |    `READ_TIMEOUT`     |
-| `--write-timeout="…"`    | maximum duration before timing out writes of the response (zero = no timeout)           |            `1m0s`             |    `WRITE_TIMEOUT`    |
-| `--idle-timeout="…"`     | maximum amount of time to wait for the next request (keep-alive, zero = no timeout)     |            `1m0s`             |    `WRITE_TIMEOUT`    |
-| `--shutdown-timeout="…"` | maximum duration for graceful shutdown                                                  |             `15s`             |  `SHUTDOWN_TIMEOUT`   |
-| `--docker-socket="…"`    | docker host (or path to the docker socket)                                              | `unix:///var/run/docker.sock` |     `DOCKER_HOST`     |
+| Name                          | Description                                                                             | Default value                 | Environment variables   |
+|-------------------------------|-----------------------------------------------------------------------------------------|:-----------------------------:|:-----------------------:|
+| `--addr="…"`                  | server address (hostname or port; 0.0.0.0 for all interfaces)                           |           `0.0.0.0`           |      `SERVER_ADDR`      |
+| `--http-port="…"`             | HTTP server port                                                                        |            `8080`             |       `HTTP_PORT`       |
+| `--https-port="…"`            | HTTPS server port                                                                       |            `8443`             |      `HTTPS_PORT`       |
+| `--https-cert-file="…"`       | TLS certificate file path (if empty, embedded certificate will be used)                 |                               |    `HTTPS_CERT_FILE`    |
+| `--https-key-file="…"`        | TLS key file path (if empty, embedded key will be used)                                 |                               |    `HTTPS_KEY_FILE`     |
+| `--read-timeout="…"`          | maximum duration for reading the entire request, including the body (zero = no timeout) |            `1m0s`             |     `READ_TIMEOUT`      |
+| `--write-timeout="…"`         | maximum duration before timing out writes of the response (zero = no timeout)           |            `1m0s`             |     `WRITE_TIMEOUT`     |
+| `--idle-timeout="…"`          | maximum amount of time to wait for the next request (keep-alive, zero = no timeout)     |            `1m0s`             |     `WRITE_TIMEOUT`     |
+| `--shutdown-timeout="…"`      | maximum duration for graceful shutdown                                                  |             `15s`             |   `SHUTDOWN_TIMEOUT`    |
+| `--docker-socket="…"`         | docker host (or path to the docker socket)                                              | `unix:///var/run/docker.sock` |      `DOCKER_HOST`      |
+| `--docker-watch-interval="…"` | docker watch interval (how often to ask Docker for changes)                             |             `1s`              | `DOCKER_WATCH_INTERVAL` |
 
 ### `start healthcheck` subcommand (aliases: `chk`, `health`, `check`)
 

@@ -1,10 +1,13 @@
 package docker_test
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
+	"io"
 	"net/http"
 	"runtime"
-	"sync"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,45 +19,27 @@ import (
 	"gh.tarampamp.am/indocker-app/daemon/internal/docker"
 )
 
-type watcherMock2 struct {
-	sync.Mutex
-	ch docker.ContainersSubscription
-}
+//go:embed testdata/inspect.json
+var inspect []byte
 
-var _ docker.ContainersWatcher = (*watcherMock2)(nil) // verify interface implementation
-
-func (wm *watcherMock2) Push(d map[string]types.Container) { // this is a helper method for testing
-	wm.Lock()
-	if wm.ch != nil {
-		wm.ch <- d
-	}
-	wm.Unlock()
-}
-
-func (wm *watcherMock2) Subscribe(ch docker.ContainersSubscription) error {
-	wm.Lock()
-	wm.ch = ch
-	wm.Unlock()
-
-	return nil
-}
-
-func (wm *watcherMock2) Unsubscribe(docker.ContainersSubscription) error {
-	wm.Lock()
-	wm.ch = nil
-	wm.Unlock()
-
-	return nil
-}
+//go:embed testdata/stats.json
+var stats []byte
 
 func TestNewContainerStateWatch_Subscribe(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
 	w, err := docker.NewContainerStateWatch(client.WithHTTPClient(
 		newMockClient(func(req *http.Request) (*http.Response, error) {
+			if strings.HasSuffix(req.URL.Path, "/stats") {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewReader(stats)),
+				}, nil
+			}
+
 			return &http.Response{
 				StatusCode: http.StatusOK,
-				Body:       http.NoBody,
+				Body:       io.NopCloser(bytes.NewReader(inspect)),
 			}, nil
 		}),
 	))
@@ -64,7 +49,7 @@ func TestNewContainerStateWatch_Subscribe(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var cw = &watcherMock2{}
+	var cw = &watcherMock{}
 
 	// run the state watcher in a goroutine
 	go func() { assert.ErrorIs(t, w.Watch(ctx, cw), context.Canceled) }()
@@ -81,16 +66,20 @@ func TestNewContainerStateWatch_Subscribe(t *testing.T) {
 		assert.ErrorContains(t, w.Unsubscribe(sub), "not subscribed")
 	}()
 
-	// for i := 0; i < 10; i++ {
-	go cw.Push(map[string]types.Container{
-		"3176a2479c92": {ID: "3176a2479c92"},
-		"4cb07b47f9fb": {ID: "4cb07b47f9fb"},
-	})
-	// }
-
 	runtime.Gosched()
-	<-time.After(10 * time.Millisecond)
 
-	update := <-sub
-	t.Log(update)
+	for i := 0; i < 10; i++ {
+		go cw.Push(map[string]types.Container{
+			"3176a2479c92": {ID: "3176a2479c92"},
+			"4cb07b47f9fb": {ID: "4cb07b47f9fb"},
+		})
+
+		<-time.After(time.Millisecond * 10)
+		runtime.Gosched()
+
+		update := <-sub
+		assert.Len(t, update, 2)
+		assert.Equal(t, "ba033ac4401106a3b513bc9d639eee123ad78ca3616b921167cd74b20e25ed39", update["3176a2479c92"].Inspect.ID)
+		assert.Equal(t, uint64(3), update["3176a2479c92"].Stats.PidsStats.Current)
+	}
 }

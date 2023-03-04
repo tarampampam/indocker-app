@@ -3,7 +3,6 @@ package docker_test
 import (
 	"context"
 	"runtime"
-	"sync"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -14,43 +13,12 @@ import (
 	"gh.tarampamp.am/indocker-app/daemon/internal/docker"
 )
 
-type watcherMock1 struct {
-	sync.Mutex
-	ch docker.ContainersSubscription
-}
-
-var _ docker.ContainersWatcher = (*watcherMock1)(nil) // verify interface implementation
-
-func (wm *watcherMock1) Push(d map[string]types.Container) { // this is a helper method for testing
-	wm.Lock()
-	if wm.ch != nil {
-		wm.ch <- d
-	}
-	wm.Unlock()
-}
-
-func (wm *watcherMock1) Subscribe(ch docker.ContainersSubscription) error {
-	wm.Lock()
-	wm.ch = ch
-	wm.Unlock()
-
-	return nil
-}
-
-func (wm *watcherMock1) Unsubscribe(docker.ContainersSubscription) error {
-	wm.Lock()
-	wm.ch = nil
-	wm.Unlock()
-
-	return nil
-}
-
 func TestContainersRoute_RouteToContainer(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
 	var (
 		router  = docker.NewContainersRoute()
-		watcher = &watcherMock1{}
+		watcher = &watcherMock{}
 	)
 
 	// create a context with cancel

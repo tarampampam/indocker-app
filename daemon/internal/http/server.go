@@ -56,18 +56,18 @@ func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...
 	return &server
 }
 
-func (s *Server) Register(docker *docker.Docker) error {
-	var proxyHandler = proxy.NewProxy(docker)
-
+func (s *Server) Register(drw docker.ContainersRouter, dsw docker.ContainersStateWatcher) error {
 	var apiOrigins = map[string]struct{}{
 		"indocker.app":          {},
 		"frontend.indocker.app": {}, // for local development
 	}
 
 	var (
+		proxyHandler = proxy.NewProxy(drw)
+
 		apiVer         = api.Version(version.Version())
 		api404         = api.NotFound()
-		apiDockerState = api.NewDockerState(docker)
+		apiDockerState = api.NewDockerState(dsw)
 	)
 
 	for server, namedLogger := range map[*http.Server]*zap.Logger{

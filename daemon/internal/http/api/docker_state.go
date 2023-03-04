@@ -10,11 +10,11 @@ import (
 )
 
 type DockerState struct {
-	docker *docker.Docker
+	dsw docker.ContainersStateWatcher
 }
 
-func NewDockerState(docker *docker.Docker) *DockerState {
-	return &DockerState{docker: docker}
+func NewDockerState(dsw docker.ContainersStateWatcher) *DockerState {
+	return &DockerState{dsw: dsw}
 }
 
 func (h *DockerState) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -38,12 +38,12 @@ func (h *DockerState) handle(w http.ResponseWriter, r *http.Request) (bool, erro
 		return false, errors.New("streaming unsupported")
 	}
 
-	var subscription = make(chan map[string]*docker.ContainerDetails)
-	if err := h.docker.Subscribe(subscription); err != nil {
+	var sub = make(docker.ContainersStateSubscription)
+	if err := h.dsw.Subscribe(sub); err != nil {
 		return false, err
 	}
 
-	defer func() { _ = h.docker.Unsubscribe(subscription) }()
+	defer func() { _ = h.dsw.Unsubscribe(sub) }()
 
 	var buf bytes.Buffer // reuse buffer to reduce allocations
 
@@ -58,7 +58,7 @@ func (h *DockerState) handle(w http.ResponseWriter, r *http.Request) (bool, erro
 
 	for {
 		select {
-		case details := <-subscription:
+		case details := <-sub:
 			buf.WriteString("data: ")
 
 			if err := enc.Encode(details); err != nil {
