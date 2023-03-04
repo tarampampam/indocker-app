@@ -19,12 +19,12 @@ type Docker struct {
 	client    *client.Client
 
 	aliveMu sync.RWMutex
-	alive   map[string]types.Container
+	alive   map[string]types.Container // TODO remove?
 
 	hostsMu sync.RWMutex
 	hosts   map[string]string // map[hostname]container_id
 
-	subsMu sync.RWMutex
+	subsMu sync.Mutex
 	subs   map[chan<- map[string]*ContainerDetails]chan struct{} // map[subscription]cancel
 }
 
@@ -95,9 +95,9 @@ const (
 	labelsPrefix = "indocker."
 
 	LabelHost    = labelsPrefix + "host"
-	LabelPort    = labelsPrefix + "port"
-	LabelNetwork = labelsPrefix + "network"
-	LabelScheme  = labelsPrefix + "scheme"
+	LabelPort    = labelsPrefix + "Port"
+	LabelNetwork = labelsPrefix + "Network"
+	LabelScheme  = labelsPrefix + "Scheme"
 )
 
 func (d *Docker) Watch(pCtx context.Context) {
@@ -140,9 +140,9 @@ func (d *Docker) Watch(pCtx context.Context) {
 			}
 			d.hostsMu.Unlock()
 
-			d.subsMu.RLock()
+			d.subsMu.Lock()
 			var subsCount = len(d.subs)
-			d.subsMu.RUnlock()
+			d.subsMu.Unlock()
 
 			if subsCount > 0 {
 				var (
@@ -392,7 +392,7 @@ func (d *Docker) FindRoute(hostname string) (string, error) {
 					return scheme + "://" + net.IPAddress + ":" + port, nil
 				}
 
-				return "", fmt.Errorf("no network for the container %s found", id)
+				return "", fmt.Errorf("no Network for the container %s found", id)
 			}
 		}
 	}
