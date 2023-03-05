@@ -56,13 +56,17 @@ func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...
 }
 
 func (s *Server) Register(
+	ctx context.Context,
 	drw docker.ContainersRouter,
 	dsw docker.ContainersStateWatcher,
 	proxyClientTimeout time.Duration,
 ) error {
 	var router = NewRouter("/indocker", proxy.NewProxy(drw, proxyClientTimeout))
 
-	router.Register(http.MethodGet, "/api/version", api.Version(version.Version()))
+	router.Register(http.MethodGet, "/api/version/current", api.VersionCurrent(version.Version()))
+	router.Register(http.MethodGet, "/api/version/latest", api.VersionLatest(func() (*version.LatestVersion, error) {
+		return version.GetLatestVersion(ctx, &http.Client{Timeout: time.Second * 30})
+	}, time.Minute*30))
 	router.Register(http.MethodGet, "/ws/docker/state", ws.DockerState(dsw))
 
 	for server, namedLogger := range map[*http.Server]*zap.Logger{
