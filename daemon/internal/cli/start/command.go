@@ -182,7 +182,7 @@ func NewCommand(log *zap.Logger) *cli.Command {
 			&cli.StringFlag{
 				Name:    dockerHostFlagName,
 				Usage:   "docker host (or path to the docker socket)",
-				Value:   "unix:///var/run/docker.sock",
+				Value:   client.DefaultDockerHost,
 				EnvVars: []string{env.DockerHost.String()},
 			},
 			&cli.DurationFlag{
