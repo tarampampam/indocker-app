@@ -40,7 +40,9 @@ type (
 		WriteTimeout    time.Duration
 		IDLETimeout     time.Duration
 		ShutdownTimeout time.Duration
-
+		Proxy           struct {
+			RequestTimeout time.Duration
+		}
 		Docker struct {
 			Host          string
 			WatchInterval time.Duration
@@ -63,6 +65,7 @@ func NewCommand(log *zap.Logger) *cli.Command {
 		shutdownTimeoutFlagName     = "shutdown-timeout"
 		dockerHostFlagName          = "docker-socket"
 		dockerWatchIntervalFlagName = "docker-watch-interval"
+		proxyRequestTimeoutFlagName = "proxy-request-timeout"
 	)
 
 	cmd.c = &cli.Command{
@@ -83,6 +86,7 @@ func NewCommand(log *zap.Logger) *cli.Command {
 			opt.ShutdownTimeout = c.Duration(shutdownTimeoutFlagName)
 			opt.Docker.Host = c.String(dockerHostFlagName)
 			opt.Docker.WatchInterval = c.Duration(dockerWatchIntervalFlagName)
+			opt.Proxy.RequestTimeout = c.Duration(proxyRequestTimeoutFlagName)
 
 			if opt.HTTP.Port == 0 || opt.HTTP.Port > 65535 {
 				return fmt.Errorf("wrong HTTP port number (%d)", opt.HTTP.Port)
@@ -182,6 +186,12 @@ func NewCommand(log *zap.Logger) *cli.Command {
 				EnvVars: []string{env.DockerHost.String()},
 			},
 			&cli.DurationFlag{
+				Name:    proxyRequestTimeoutFlagName,
+				Usage:   "time limit for requests made by proxy server",
+				Value:   time.Second * 60,
+				EnvVars: []string{env.ProxyRequestTimeout.String()},
+			},
+			&cli.DurationFlag{
 				Name:    dockerWatchIntervalFlagName,
 				Usage:   "how often to ask Docker for changes (minimum 100ms)",
 				Value:   time.Second,
@@ -263,7 +273,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 			}
 		}()
 
-		if err := server.Register(dockerRouter, dockerStateWatcher); err != nil { // register all routes
+		if err := server.Register(dockerRouter, dockerStateWatcher, opt.Proxy.RequestTimeout); err != nil { // register all routes
 			return err
 		}
 	}
