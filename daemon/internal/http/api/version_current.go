@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-func Version(ver string) http.HandlerFunc {
+func VersionCurrent(ver string) http.HandlerFunc {
 	var (
 		once  sync.Once
 		cache []byte

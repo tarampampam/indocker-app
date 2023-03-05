@@ -19,7 +19,7 @@ func NewRouter(prefix string, fallback http.Handler) *Router {
 	var r = Router{
 		routes:   make(map[string]http.Handler), // map[method+prefix+route]handler
 		prefix:   prefix,
-		origins:  []string{"indocker.app", "frontend.indocker.app" /* for local development */},
+		origins:  []string{"indocker.app", "frontend.indocker.app" /* for local development */}, // TODO make configurable?
 		fallback: fallback,
 	}
 

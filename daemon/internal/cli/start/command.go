@@ -273,7 +273,8 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 			}
 		}()
 
-		if err := server.Register(dockerRouter, dockerStateWatcher, opt.Proxy.RequestTimeout); err != nil { // register all routes
+		// register all routes
+		if err := server.Register(ctx, dockerRouter, dockerStateWatcher, opt.Proxy.RequestTimeout); err != nil {
 			return err
 		}
 	}
