@@ -44,7 +44,8 @@ The following flags are supported:
 | `--idle-timeout="…"`          | maximum amount of time to wait for the next request (keep-alive, zero = no timeout)     |            `1m0s`             |     `WRITE_TIMEOUT`     |
 | `--shutdown-timeout="…"`      | maximum duration for graceful shutdown                                                  |             `15s`             |   `SHUTDOWN_TIMEOUT`    |
 | `--docker-socket="…"`         | docker host (or path to the docker socket)                                              | `unix:///var/run/docker.sock` |      `DOCKER_HOST`      |
-| `--docker-watch-interval="…"` | docker watch interval (how often to ask Docker for changes)                             |             `1s`              | `DOCKER_WATCH_INTERVAL` |
+| `--proxy-request-timeout="…"` | time limit for requests made by proxy server                                            |            `1m0s`             | `PROXY_REQUEST_TIMEOUT` |
+| `--docker-watch-interval="…"` | how often to ask Docker for changes (minimum 100ms)                                     |             `1s`              | `DOCKER_WATCH_INTERVAL` |
 
 ### `start healthcheck` subcommand (aliases: `chk`, `health`, `check`)
 

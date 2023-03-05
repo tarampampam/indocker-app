@@ -3,10 +3,8 @@ package http
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -16,13 +14,17 @@ import (
 	"gh.tarampamp.am/indocker-app/daemon/internal/http/api"
 	"gh.tarampamp.am/indocker-app/daemon/internal/http/middleware"
 	"gh.tarampamp.am/indocker-app/daemon/internal/http/proxy"
+	"gh.tarampamp.am/indocker-app/daemon/internal/http/ws"
 	"gh.tarampamp.am/indocker-app/daemon/internal/version"
 )
 
 type Server struct {
-	log   *zap.Logger
+	log *zap.Logger
+
 	http  *http.Server
 	https *http.Server
+
+	origins []string // allowed origins to use internal handlers
 }
 
 type ServerOption func(*Server)
@@ -43,9 +45,10 @@ func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...
 	var (
 		baseCtx = func(ln net.Listener) context.Context { return ctx }
 		server  = Server{
-			log:   log,
-			http:  &http.Server{BaseContext: baseCtx},
-			https: &http.Server{BaseContext: baseCtx, TLSConfig: tc},
+			log:     log,
+			http:    &http.Server{BaseContext: baseCtx},
+			https:   &http.Server{BaseContext: baseCtx, TLSConfig: tc},
+			origins: []string{"indocker.app", "frontend.indocker.app" /* for local development */},
 		}
 	)
 
@@ -56,66 +59,29 @@ func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...
 	return &server
 }
 
-func (s *Server) Register(drw docker.ContainersRouter, dsw docker.ContainersStateWatcher) error {
-	var apiOrigins = map[string]struct{}{
-		"indocker.app":          {},
-		"frontend.indocker.app": {}, // for local development
-	}
+func (s *Server) Register(
+	drw docker.ContainersRouter,
+	dsw docker.ContainersStateWatcher,
+	proxyClientTimeout time.Duration,
+) error {
+	var router = NewRouter("/indocker", proxy.NewProxy(drw, proxyClientTimeout))
 
-	var (
-		proxyHandler = proxy.NewProxy(drw)
-
-		apiVer         = api.Version(version.Version())
-		api404         = api.NotFound()
-		apiDockerState = api.NewDockerState(dsw)
-	)
+	router.Register(http.MethodGet, "/api/version", api.Version(version.Version()))
+	router.Register(http.MethodGet, "/ws/docker/state", ws.DockerState(dsw))
 
 	for server, namedLogger := range map[*http.Server]*zap.Logger{
 		s.http:  s.log.Named("http"),
 		s.https: s.log.Named("https"),
 	} {
-		server.ErrorLog = zap.NewStdLog(namedLogger)       // replace the default logger with named
+		server.ErrorLog = zap.NewStdLog(namedLogger) // replace the default logger with named
 		server.Handler = middleware.HealthcheckMiddleware( // healthcheck requests will not be logged
 			middleware.LogReq(namedLogger, // named loggers for each server
-				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // API handlers wrapper
-					const apiPrefix = "/api"
-
-					// r.Host can be "localhost:8080" or "localhost"
-					if hostPort := strings.Split(r.Host, ":"); len(hostPort) > 0 {
-						var origin = hostPort[0]
-
-						// check if the origin is allowed and the request is for the API
-						if _, ok := apiOrigins[origin]; ok && strings.HasPrefix(r.URL.Path, apiPrefix+"/") {
-							s.corsHeaders(w, origin)
-
-							switch u, m := r.URL.Path, r.Method; { // the fastest multiplexer in the world :D
-							case m == http.MethodGet && u == apiPrefix+"/version":
-								apiVer.ServeHTTP(w, r)
-
-							case m == http.MethodGet && u == apiPrefix+"/docker/state":
-								apiDockerState.ServeHTTP(w, r)
-
-							default:
-								api404.ServeHTTP(w, r)
-							}
-
-							return
-						}
-					}
-
-					proxyHandler.ServeHTTP(w, r)
-				}),
+				router,
 			),
 		)
 	}
 
 	return nil
-}
-
-func (s *Server) corsHeaders(w http.ResponseWriter, origin string) {
-	w.Header().Set("Access-Control-Allow-Origin", fmt.Sprintf("https://%s", origin))
-	w.Header().Set("Access-Control-Allow-Methods", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
 }
 
 // Start the server.

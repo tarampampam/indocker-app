@@ -1,6 +1,9 @@
 package middleware
 
 import (
+	"bufio"
+	"errors"
+	"net"
 	"net/http"
 	"time"
 
@@ -74,4 +77,12 @@ func (o *observer) Flush() {
 	if f, ok := o.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
+}
+
+func (o *observer) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if j, ok := o.ResponseWriter.(http.Hijacker); ok {
+		return j.Hijack()
+	}
+
+	return nil, nil, errors.New("observer does not implement http.Hijacker")
 }

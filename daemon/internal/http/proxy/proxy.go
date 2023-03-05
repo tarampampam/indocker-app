@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -22,15 +23,16 @@ type Proxy struct {
 	client *http.Client
 }
 
-func NewProxy(router dockerRouter) *Proxy {
+func NewProxy(router dockerRouter, clientTimeout time.Duration) *Proxy {
 	return &Proxy{
 		router: router,
-		client: &http.Client{ // TODO timeout
+		client: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
 					InsecureSkipVerify: true,
 				},
 			},
+			Timeout: clientTimeout,
 		},
 	}
 }

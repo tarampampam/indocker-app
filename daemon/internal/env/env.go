@@ -18,6 +18,7 @@ const (
 	WriteTimeout        envVariable = "WRITE_TIMEOUT"         // Write timeout
 	ShutdownTimeout     envVariable = "SHUTDOWN_TIMEOUT"      // Shutdown timeout
 	DockerHost          envVariable = "DOCKER_HOST"           // Docker host (or socket path)
+	ProxyRequestTimeout envVariable = "PROXY_REQUEST_TIMEOUT" // Proxy HTTP client request timeout
 	DockerWatchInterval envVariable = "DOCKER_WATCH_INTERVAL" // Docker watch interval
 )
 
