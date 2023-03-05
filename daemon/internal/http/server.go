@@ -19,12 +19,9 @@ import (
 )
 
 type Server struct {
-	log *zap.Logger
-
+	log   *zap.Logger
 	http  *http.Server
 	https *http.Server
-
-	origins []string // allowed origins to use internal handlers
 }
 
 type ServerOption func(*Server)
@@ -45,10 +42,9 @@ func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...
 	var (
 		baseCtx = func(ln net.Listener) context.Context { return ctx }
 		server  = Server{
-			log:     log,
-			http:    &http.Server{BaseContext: baseCtx},
-			https:   &http.Server{BaseContext: baseCtx, TLSConfig: tc},
-			origins: []string{"indocker.app", "frontend.indocker.app" /* for local development */},
+			log:   log,
+			http:  &http.Server{BaseContext: baseCtx},
+			https: &http.Server{BaseContext: baseCtx, TLSConfig: tc},
 		}
 	)
 
@@ -73,7 +69,7 @@ func (s *Server) Register(
 		s.http:  s.log.Named("http"),
 		s.https: s.log.Named("https"),
 	} {
-		server.ErrorLog = zap.NewStdLog(namedLogger) // replace the default logger with named
+		server.ErrorLog = zap.NewStdLog(namedLogger)       // replace the default logger with named
 		server.Handler = middleware.HealthcheckMiddleware( // healthcheck requests will not be logged
 			middleware.LogReq(namedLogger, // named loggers for each server
 				router,
