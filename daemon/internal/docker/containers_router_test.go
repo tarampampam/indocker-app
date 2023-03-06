@@ -64,6 +64,20 @@ func TestContainersRoute_RouteToContainer(t *testing.T) {
 				},
 			},
 		},
+		"bazbaz": {
+			ID: "bazbaz",
+			Labels: map[string]string{
+				"indocker.host":   "baz.indocker.app",
+				"indocker.Scheme": "https",
+			},
+			NetworkSettings: &types.SummaryNetworkSettings{
+				Networks: map[string]*network.EndpointSettings{
+					"bridge": {
+						IPAddress: "8.8.9.9",
+					},
+				},
+			},
+		},
 	})
 
 	runtime.Gosched() // wait for the router to process the update
@@ -77,7 +91,12 @@ func TestContainersRoute_RouteToContainer(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "http://3.4.5.6:80", route)
 
+	// test with full hostname
 	route, err = router.RouteToContainerByHostname("baz")
+	assert.NoError(t, err)
+	assert.Equal(t, "https://8.8.9.9:80", route)
+
+	route, err = router.RouteToContainerByHostname("blah404")
 	assert.Empty(t, route)
 	assert.ErrorContains(t, err, "no Route found")
 }

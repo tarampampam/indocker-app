@@ -131,6 +131,12 @@ func (r *ContainersRoute) Watch(ctx context.Context, watcher ContainersWatcher) 
 			for _, c := range containers {
 				// check if the container has a host label (this is the only required label)
 				if host, found := c.Labels[labelHost]; found {
+					const fullHostSuffix = ".indocker.app"
+
+					if strings.HasSuffix(host, fullHostSuffix) {
+						host = strings.TrimSuffix(host, fullHostSuffix)
+					}
+
 					var newRoute = r.defaults
 
 					// check if the container has other labels
