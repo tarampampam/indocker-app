@@ -65,7 +65,12 @@ func (s *Server) Register(
 
 	router.Register(http.MethodGet, "/api/version/current", api.VersionCurrent(version.Version()))
 	router.Register(http.MethodGet, "/api/version/latest", api.VersionLatest(func() (*version.LatestVersion, error) {
-		return version.GetLatestVersion(ctx, &http.Client{Timeout: time.Second * 30})
+		return version.GetLatestVersion(ctx, &http.Client{
+			Timeout: time.Second * 30,
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+			},
+		})
 	}, time.Minute*30))
 	router.Register(http.MethodGet, "/ws/docker/state", ws.DockerState(dsw))
 
