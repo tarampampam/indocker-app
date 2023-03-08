@@ -6,9 +6,9 @@ volumes:
   golint-cache: {}
 
 services:
-  daemon: &daemon
+  app: &app
     build:
-      context: daemon
+      context: app
       target: builder
     environment:
       PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@go] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
@@ -18,16 +18,16 @@ services:
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
       - tmp-data:/tmp:rw
-      - ./daemon:/src:rw
+      - ./app:/src:rw
       - /var/run/docker.sock:/var/run/docker.sock:ro
     working_dir: /src
     security_opt: [no-new-privileges:true]
 
-  daemon-web:
-    <<: *daemon
+  app-web:
+    <<: *app
     ports:
-      - '80:8080/tcp' # Open <http://daemon.indocker.app>
-      - '443:8443/tcp' # Open <https://daemon.indocker.app>
+      - '80:8080/tcp' # Open <http://app.indocker.app>
+      - '443:8443/tcp' # Open <https://app.indocker.app>
     entrypoint: sh -c 'go build -buildvcs=false -o /tmp/app ./cmd/app/ && exec $0 "$@"'
     command: /tmp/app start
     healthcheck:
@@ -73,7 +73,7 @@ services:
     volumes:
       - golint-go:/go:rw # go dependencies will be downloaded on each run without this
       - golint-cache:/tmp/golint:rw
-      - ./daemon:/src:ro
+      - ./app:/src:ro
     working_dir: /src
     security_opt: [no-new-privileges:true]
 
