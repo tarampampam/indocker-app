@@ -43,8 +43,8 @@ func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...
 		baseCtx = func(ln net.Listener) context.Context { return ctx }
 		server  = Server{
 			log:   log,
-			http:  &http.Server{BaseContext: baseCtx},
-			https: &http.Server{BaseContext: baseCtx, TLSConfig: tc},
+			http:  &http.Server{BaseContext: baseCtx},                //nolint:gosec
+			https: &http.Server{BaseContext: baseCtx, TLSConfig: tc}, //nolint:gosec
 		}
 	)
 
@@ -66,12 +66,12 @@ func (s *Server) Register(
 	router.Register(http.MethodGet, "/api/version/current", api.VersionCurrent(version.Version()))
 	router.Register(http.MethodGet, "/api/version/latest", api.VersionLatest(func() (*version.LatestVersion, error) {
 		return version.GetLatestVersion(ctx, &http.Client{
-			Timeout: time.Second * 30,
+			Timeout: time.Second * 30, //nolint:gomnd
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 			},
 		})
-	}, time.Minute*30))
+	}, time.Minute*30)) //nolint:gomnd
 	router.Register(http.MethodGet, "/ws/docker/state", ws.DockerState(dsw))
 
 	for server, namedLogger := range map[*http.Server]*zap.Logger{
@@ -95,7 +95,7 @@ func (s *Server) Start(http, https net.Listener) error {
 		return errors.New("HTTPS server: TLS config was not set")
 	}
 
-	var errCh = make(chan error, 2)
+	var errCh = make(chan error, 2) //nolint:gomnd
 
 	go func() { errCh <- s.http.Serve(http) }()
 	go func() { errCh <- s.https.ServeTLS(https, "", "") }()

@@ -29,7 +29,7 @@ func NewProxy(router dockerRouter, clientTimeout time.Duration) *Proxy {
 		client: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
+					InsecureSkipVerify: true, //nolint:gosec
 				},
 			},
 			Timeout: clientTimeout,

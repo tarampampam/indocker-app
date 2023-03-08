@@ -17,9 +17,11 @@ import (
 	"gh.tarampamp.am/indocker-app/daemon/certs"
 	"gh.tarampamp.am/indocker-app/daemon/internal/breaker"
 	"gh.tarampamp.am/indocker-app/daemon/internal/cli/start/healthcheck"
+	"gh.tarampamp.am/indocker-app/daemon/internal/collector"
 	"gh.tarampamp.am/indocker-app/daemon/internal/docker"
 	"gh.tarampamp.am/indocker-app/daemon/internal/env"
 	appHttp "gh.tarampamp.am/indocker-app/daemon/internal/http"
+	"gh.tarampamp.am/indocker-app/daemon/internal/version"
 )
 
 type (
@@ -47,25 +49,27 @@ type (
 			Host          string
 			WatchInterval time.Duration
 		}
+		DontSendUsageStats bool
 	}
 )
 
-func NewCommand(log *zap.Logger) *cli.Command {
+func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 	var cmd = command{}
 
 	const (
-		addrFlagName                = "addr"
-		httpPortFlagName            = "http-port"
-		httpsPortFlagName           = "https-port"
-		httpsCertFileFlagName       = "https-cert-file"
-		httpsKeyFileFlagName        = "https-key-file"
-		readTimeoutFlagName         = "read-timeout"
-		writeTimeoutFlagName        = "write-timeout"
-		idleTimeoutFlagName         = "idle-timeout"
-		shutdownTimeoutFlagName     = "shutdown-timeout"
-		dockerHostFlagName          = "docker-socket"
-		dockerWatchIntervalFlagName = "docker-watch-interval"
-		proxyRequestTimeoutFlagName = "proxy-request-timeout"
+		addrFlagName                   = "addr"
+		httpPortFlagName               = "http-port"
+		httpsPortFlagName              = "https-port"
+		httpsCertFileFlagName          = "https-cert-file"
+		httpsKeyFileFlagName           = "https-key-file"
+		readTimeoutFlagName            = "read-timeout"
+		writeTimeoutFlagName           = "write-timeout"
+		idleTimeoutFlagName            = "idle-timeout"
+		shutdownTimeoutFlagName        = "shutdown-timeout"
+		dockerHostFlagName             = "docker-socket"
+		dockerWatchIntervalFlagName    = "docker-watch-interval"
+		proxyRequestTimeoutFlagName    = "proxy-request-timeout"
+		dontSendAnonymousUsageFlagName = "dont-send-anonymous-usage"
 	)
 
 	cmd.c = &cli.Command{
@@ -87,6 +91,7 @@ func NewCommand(log *zap.Logger) *cli.Command {
 			opt.Docker.Host = c.String(dockerHostFlagName)
 			opt.Docker.WatchInterval = c.Duration(dockerWatchIntervalFlagName)
 			opt.Proxy.RequestTimeout = c.Duration(proxyRequestTimeoutFlagName)
+			opt.DontSendUsageStats = c.Bool(dontSendAnonymousUsageFlagName)
 
 			if opt.HTTP.Port == 0 || opt.HTTP.Port > 65535 {
 				return fmt.Errorf("wrong HTTP port number (%d)", opt.HTTP.Port)
@@ -134,13 +139,13 @@ func NewCommand(log *zap.Logger) *cli.Command {
 			&cli.UintFlag{
 				Name:    httpPortFlagName,
 				Usage:   "HTTP server port",
-				Value:   8080,
+				Value:   8080, //nolint:gomnd
 				EnvVars: []string{env.HTTPPort.String()},
 			},
 			&cli.UintFlag{
 				Name:    httpsPortFlagName,
 				Usage:   "HTTPS server port",
-				Value:   8443,
+				Value:   8443, //nolint:gomnd
 				EnvVars: []string{env.HTTPSPort.String()},
 			},
 			&cli.StringFlag{
@@ -158,25 +163,25 @@ func NewCommand(log *zap.Logger) *cli.Command {
 			&cli.DurationFlag{
 				Name:    readTimeoutFlagName,
 				Usage:   "maximum duration for reading the entire request, including the body (zero = no timeout)",
-				Value:   time.Second * 60,
+				Value:   time.Second * 60, //nolint:gomnd
 				EnvVars: []string{env.ReadTimeout.String()},
 			},
 			&cli.DurationFlag{
 				Name:    writeTimeoutFlagName,
 				Usage:   "maximum duration before timing out writes of the response (zero = no timeout)",
-				Value:   time.Second * 60,
+				Value:   time.Second * 60, //nolint:gomnd
 				EnvVars: []string{env.WriteTimeout.String()},
 			},
 			&cli.DurationFlag{
 				Name:    idleTimeoutFlagName,
 				Usage:   "maximum amount of time to wait for the next request (keep-alive, zero = no timeout)",
-				Value:   time.Second * 60,
+				Value:   time.Second * 60, //nolint:gomnd
 				EnvVars: []string{env.WriteTimeout.String()},
 			},
 			&cli.DurationFlag{
 				Name:    shutdownTimeoutFlagName,
 				Usage:   "maximum duration for graceful shutdown",
-				Value:   time.Second * 15,
+				Value:   time.Second * 15, //nolint:gomnd
 				EnvVars: []string{env.ShutdownTimeout.String()},
 			},
 			&cli.StringFlag{
@@ -188,7 +193,7 @@ func NewCommand(log *zap.Logger) *cli.Command {
 			&cli.DurationFlag{
 				Name:    proxyRequestTimeoutFlagName,
 				Usage:   "time limit for requests made by proxy server",
-				Value:   time.Second * 60,
+				Value:   time.Second * 60, //nolint:gomnd
 				EnvVars: []string{env.ProxyRequestTimeout.String()},
 			},
 			&cli.DurationFlag{
@@ -196,6 +201,10 @@ func NewCommand(log *zap.Logger) *cli.Command {
 				Usage:   "how often to ask Docker for changes (minimum 100ms)",
 				Value:   time.Second,
 				EnvVars: []string{env.DockerWatchInterval.String()},
+			},
+			&cli.BoolFlag{
+				Name:  dontSendAnonymousUsageFlagName,
+				Usage: "Don't send anonymous usage statistics (please, leave it enabled, it helps us to improve the project)",
 			},
 		},
 		Subcommands: []*cli.Command{
@@ -207,7 +216,7 @@ func NewCommand(log *zap.Logger) *cli.Command {
 }
 
 // Run current command.
-func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options) error {
+func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options) error { //nolint:funlen,gocognit,gocyclo,lll
 	var (
 		ctx, cancel = context.WithCancel(parentCtx) // main context creation
 		oss         = breaker.NewOSSignals(ctx)     // OS signals listener
@@ -232,7 +241,11 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 	}
 
 	// create HTTP server
-	var server = appHttp.NewServer(ctx, log, &tls.Config{Certificates: []tls.Certificate{cert}},
+	var server = appHttp.NewServer(ctx, log,
+		&tls.Config{
+			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS12,
+		},
 		appHttp.WithReadTimeout(opt.ReadTimeout),
 		appHttp.WithWriteTimeout(opt.WriteTimeout),
 		appHttp.WithIDLETimeout(opt.IDLETimeout),
@@ -320,6 +333,26 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 
 		log.Info("HTTP(S) servers stopped")
 	}(startingErrCh)
+
+	if opt.DontSendUsageStats {
+		log.Warn("Anonymous usage statistics sending is disabled",
+			zap.String("please", "leave it enabled, it helps us to improve the project"),
+		)
+	} else {
+		const (
+			initDelay, interval = 5 * time.Second, 30 * time.Minute
+			mixPanelProjectID   = "e39a1eb7c7732fef947e07c4caf6a844"
+		)
+
+		var collect = collector.NewCollector(ctx, initDelay, interval,
+			collector.NewMixPanelSender(mixPanelProjectID, version.Version()),
+			collector.HardwareMACResolver{},
+		)
+
+		collect.Schedule(collector.Event{Name: "app_run"})
+
+		defer collect.Stop()
+	}
 
 	// and wait for..
 	select {

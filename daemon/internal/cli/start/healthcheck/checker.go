@@ -37,7 +37,7 @@ func NewHealthChecker(ctx context.Context, client ...httpClient) *HealthChecker 
 		c = &http.Client{ // default
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
+					InsecureSkipVerify: true, //nolint:gosec
 				},
 			},
 			Timeout: defaultHTTPClientTimeout,
