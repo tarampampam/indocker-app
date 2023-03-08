@@ -2,7 +2,7 @@
 # Makefile readme (en): <https://www.gnu.org/software/make/manual/html_node/index.html#SEC_Contents>
 
 SHELL = /bin/sh
-LDFLAGS = "-s -w -X gh.tarampamp.am/indocker-app/daemon/internal/version.version=$(shell git rev-parse HEAD)"
+LDFLAGS = "-s -w -X gh.tarampamp.am/indocker-app/app/internal/version.version=$(shell git rev-parse HEAD)"
 
 DC_RUN_ARGS = --rm --user "$(shell id -u):$(shell id -g)"
 APP_NAME = $(notdir $(CURDIR))
@@ -14,37 +14,37 @@ help: ## Show this help
 	@printf "\033[33m%s:\033[0m\n" 'Available commands'
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[32m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-# Daemon stuff
+# App stuff
 
-daemon-generate: ## Generate daemon assets
-	docker-compose run $(DC_RUN_ARGS) --no-deps daemon sh -c "go generate ./... && go generate -tags docs ./docs ./internal/cli"
+app-generate: ## Generate app assets
+	docker-compose run $(DC_RUN_ARGS) --no-deps app sh -c "go generate ./... && go generate -tags docs ./docs ./internal/cli"
 
-daemon-build: daemon-generate ## Build daemon binary file
-	docker-compose run $(DC_RUN_ARGS) -e "CGO_ENABLED=0" --no-deps daemon go build -trimpath -ldflags $(LDFLAGS) ./cmd/app
-	./daemon/app --version
+app-build: app-generate ## Build app binary file
+	docker-compose run $(DC_RUN_ARGS) -e "CGO_ENABLED=0" --no-deps app go build -trimpath -ldflags $(LDFLAGS) ./cmd/app
+	./app/app --version
 
-daemon-test: ## Run daemon tests
-	docker-compose run $(DC_RUN_ARGS) --no-deps daemon gotestsum --format testname -- -race -timeout 10s ./...
+app-test: ## Run app tests
+	docker-compose run $(DC_RUN_ARGS) --no-deps app gotestsum --format testname -- -race -timeout 10s ./...
 
-daemon-lint: ## Lint the daemon sources
+app-lint: ## Lint the app sources
 	docker-compose run --rm golint golangci-lint run
 
-daemon-fmt: ## Run source code formatting tools
-	docker-compose run $(DC_RUN_ARGS) --no-deps daemon gofmt -s -w -d .
-	docker-compose run $(DC_RUN_ARGS) --no-deps daemon goimports -d -w .
-	docker-compose run $(DC_RUN_ARGS) --no-deps daemon go mod tidy
+app-fmt: ## Run source code formatting tools
+	docker-compose run $(DC_RUN_ARGS) --no-deps app gofmt -s -w -d .
+	docker-compose run $(DC_RUN_ARGS) --no-deps app goimports -d -w .
+	docker-compose run $(DC_RUN_ARGS) --no-deps app go mod tidy
 
-daemon-shell: ## Start shell inside daemon environment
-	docker-compose run $(DC_RUN_ARGS) daemon sh
+app-shell: ## Start shell inside app environment
+	docker-compose run $(DC_RUN_ARGS) app sh
 
-test: daemon-lint daemon-test ## Run all tests
+test: app-lint app-test ## Run all tests
 
-up: daemon-generate ## Start the app in the development mode
-	docker-compose up --detach daemon-web whoami
-	@printf "\n   \e[30;42m %s \033[0m"     'HTTP  ⇒ http://daemon.indocker.app';
-	@printf "\n   \e[30;42m %s \033[0m\n"   'HTTPS ⇒ https://daemon.indocker.app';
+up: app-generate ## Start the app in the development mode
+	docker-compose up --detach app-web whoami
+	@printf "\n   \e[30;42m %s \033[0m"     'HTTP  ⇒ http://app.indocker.app';
+	@printf "\n   \e[30;42m %s \033[0m\n"   'HTTPS ⇒ https://app.indocker.app';
 	@printf "\n   \e[30;42m %s \033[0m\n\n" 'Press CTRL+C to stop logs watching ';
-	docker-compose logs -f daemon-web
+	docker-compose logs -f app-web
 
 down: ## Stop the app
 	docker-compose down --remove-orphans
