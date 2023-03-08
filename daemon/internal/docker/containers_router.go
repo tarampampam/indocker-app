@@ -60,9 +60,9 @@ func WithContainersRouteBuilder(b RouteBuilder) ContainersRouteOption {
 }
 
 // defaultRouteBuilder is used by default to build the route.
-var defaultRouteBuilder RouteBuilder = func(r Route) string {
+var defaultRouteBuilder RouteBuilder = func(r Route) string { //nolint:gochecknoglobals
 	var s strings.Builder
-	s.Grow(len(r.Scheme) + 3 + len(r.IPAddr) + 1 + 5)
+	s.Grow(len(r.Scheme) + 3 + len(r.IPAddr) + 1 + 5) //nolint:gomnd
 
 	s.WriteString(r.Scheme)
 	s.WriteString("://")
@@ -92,7 +92,7 @@ func NewContainersRoute(opt ...ContainersRouteOption) *ContainersRoute {
 }
 
 // Watch starts watching for changes in the docker containers and updates the internal routing table.
-func (r *ContainersRoute) Watch(ctx context.Context, watcher ContainersWatcher) error {
+func (r *ContainersRoute) Watch(ctx context.Context, watcher ContainersWatcher) error { //nolint:funlen,gocognit,gocyclo,lll
 	const (
 		labelsPrefix = "indocker."
 
@@ -130,7 +130,7 @@ func (r *ContainersRoute) Watch(ctx context.Context, watcher ContainersWatcher) 
 			// fill the map with new values
 			for _, c := range containers {
 				// check if the container has a host label (this is the only required label)
-				if host, found := c.Labels[labelHost]; found {
+				if host, found := c.Labels[labelHost]; found { //nolint:nestif
 					const fullHostSuffix = ".indocker.app"
 
 					if strings.HasSuffix(host, fullHostSuffix) {

@@ -43,7 +43,7 @@ func NewContainerStateWatch(opts ...client.Opt) (*ContainerStateWatch, error) {
 	}, nil
 }
 
-func (w *ContainerStateWatch) Watch(ctx context.Context, cw ContainersWatcher) error {
+func (w *ContainerStateWatch) Watch(ctx context.Context, cw ContainersWatcher) error { //nolint:funlen,gocognit,gocyclo,lll
 	// create a subscription channel
 	var sub = make(ContainersSubscription)
 	defer close(sub)
@@ -66,7 +66,7 @@ func (w *ContainerStateWatch) Watch(ctx context.Context, cw ContainersWatcher) e
 			var subsCount = len(w.subs)
 			w.mu.Unlock()
 
-			if subsCount > 0 {
+			if subsCount > 0 { //nolint:nestif
 				var (
 					details = make(map[string]*ContainerState, len(containers))
 					wg      sync.WaitGroup
@@ -78,6 +78,7 @@ func (w *ContainerStateWatch) Watch(ctx context.Context, cw ContainersWatcher) e
 
 				for _, c := range containers {
 					wg.Add(1)
+
 					go func(id string) { // inspect
 						defer wg.Done()
 
@@ -89,6 +90,7 @@ func (w *ContainerStateWatch) Watch(ctx context.Context, cw ContainersWatcher) e
 					}(c.ID)
 
 					wg.Add(1)
+
 					go func(id string) { // stats
 						defer wg.Done()
 

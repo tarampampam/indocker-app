@@ -24,13 +24,13 @@ func NewCommand() *cli.Command {
 			&cli.UintFlag{
 				Name:    httpPortFlagName,
 				Usage:   "HTTP server port",
-				Value:   8080,
+				Value:   8080, //nolint:gomnd
 				EnvVars: []string{env.HTTPPort.String()},
 			},
 			&cli.UintFlag{
 				Name:    httpsPortFlagName,
 				Usage:   "HTTPS server port",
-				Value:   8443,
+				Value:   8443, //nolint:gomnd
 				EnvVars: []string{env.HTTPSPort.String()},
 			},
 		},

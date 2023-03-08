@@ -26,7 +26,7 @@ type LatestVersion struct {
 
 // GetLatestVersion returns the latest version from GitHub releases. If GitHub API key provided, it will be used for
 // authentication. If not, then GitHub API will be used with anonymous access.
-func GetLatestVersion(ctx context.Context, client httpClient, gitHubApiKey ...string) (*LatestVersion, error) {
+func GetLatestVersion(ctx context.Context, client httpClient, gitHubApiKey ...string) (*LatestVersion, error) { //nolint:funlen,lll
 	const repo = "tarampampam/indocker-app"
 
 	req, err := http.NewRequestWithContext(ctx,
