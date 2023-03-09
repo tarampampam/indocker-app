@@ -118,7 +118,7 @@ func (mp *MixPanelSender) Send(ctx context.Context, userID string, events ...Eve
 		return err
 	}
 
-	const endpoint = "https://x-collect-v1.indocker.app/track?ip=1"
+	const endpoint = "https://api.mixpanel.com/track?ip=1"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, buf)
 	if err != nil {
@@ -140,7 +140,7 @@ func (mp *MixPanelSender) Send(ctx context.Context, userID string, events ...Eve
 	}
 
 	if strings.Trim(string(body), " \r\n\t") != "1" {
-		return errors.New("invalid response")
+		return fmt.Errorf("invalid response: %s", string(body))
 	}
 
 	return nil

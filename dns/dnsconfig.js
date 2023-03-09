@@ -10,8 +10,6 @@ D('indocker.app', NewRegistrar('none'), DnsProvider(NewDnsProvider('cloudflare')
   // special case for the docker (https://habr.com/en/post/714916/#comment_25196630)
   A('*.x-docker', '172.17.0.1'),
 
-  CNAME('x-collect-v1', 'api.mixpanel.com', CF_PROXY_ON), // mixpanel.com
-
   // index page
   ALIAS('@', 'indocker-app-index.pages.dev.', CF_PROXY_ON), // aka CNAME for the CF
 

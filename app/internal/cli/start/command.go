@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/docker/docker/client"
@@ -251,45 +252,44 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 		appHttp.WithIDLETimeout(opt.IDLETimeout),
 	)
 
-	{ // prepare dependencies for the http server and register routes
-		var dockerWatcher, dwErr = docker.NewContainersWatch(opt.Docker.WatchInterval, client.WithHost(opt.Docker.Host))
-		if dwErr != nil {
-			return errors.Wrap(dwErr, "failed to create docker watcher")
+	// prepare dependencies for the http server and register routes
+	var dockerWatcher, dwErr = docker.NewContainersWatch(opt.Docker.WatchInterval, client.WithHost(opt.Docker.Host))
+	if dwErr != nil {
+		return errors.Wrap(dwErr, "failed to create docker watcher")
+	}
+
+	go func() { // start a docker containers watcher in a separate goroutine
+		if err := dockerWatcher.Watch(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			log.Error("Failed to watch docker containers", zap.Error(err))
+
+			cancel() // this is a critical error for us
 		}
+	}()
 
-		go func() { // start a docker containers watcher in a separate goroutine
-			if err := dockerWatcher.Watch(ctx); err != nil && !errors.Is(err, context.Canceled) {
-				log.Error("Failed to watch docker containers", zap.Error(err))
+	var dockerRouter = docker.NewContainersRoute()
 
-				cancel() // this is a critical error for us
-			}
-		}()
+	go func() { // start a docker routes watching in a separate goroutine
+		if err := dockerRouter.Watch(ctx, dockerWatcher); err != nil && !errors.Is(err, context.Canceled) {
+			log.Error("Failed to start watching for the docker router", zap.Error(err))
 
-		var dockerRouter = docker.NewContainersRoute()
-
-		go func() { // start a docker routes watching in a separate goroutine
-			if err := dockerRouter.Watch(ctx, dockerWatcher); err != nil && !errors.Is(err, context.Canceled) {
-				log.Error("Failed to start watching for the docker router", zap.Error(err))
-
-				cancel() // this is a critical error for us
-			}
-		}()
-
-		var dockerStateWatcher, swErr = docker.NewContainerStateWatch(client.WithHost(opt.Docker.Host))
-		if swErr != nil {
-			return errors.Wrap(swErr, "failed to create docker state watcher")
+			cancel() // this is a critical error for us
 		}
+	}()
 
-		go func() { // start a docker containers state watcher in a separate goroutine
-			if err := dockerStateWatcher.Watch(ctx, dockerWatcher); err != nil && !errors.Is(err, context.Canceled) {
-				log.Error("Failed to watch docker containers state updates", zap.Error(err))
-			}
-		}()
+	var dockerStateWatcher, swErr = docker.NewContainerStateWatch(client.WithHost(opt.Docker.Host))
+	if swErr != nil {
+		return errors.Wrap(swErr, "failed to create docker state watcher")
+	}
 
-		// register all routes
-		if err := server.Register(ctx, dockerRouter, dockerStateWatcher, opt.Proxy.RequestTimeout); err != nil {
-			return err
+	go func() { // start a docker containers state watcher in a separate goroutine
+		if err := dockerStateWatcher.Watch(ctx, dockerWatcher); err != nil && !errors.Is(err, context.Canceled) {
+			log.Error("Failed to watch docker containers state updates", zap.Error(err))
 		}
+	}()
+
+	// register all routes
+	if err := server.Register(ctx, dockerRouter, dockerStateWatcher, opt.Proxy.RequestTimeout); err != nil {
+		return err
 	}
 
 	startingErrCh := make(chan error, 1) // channel for server starting error
@@ -339,18 +339,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 			zap.String("please", "leave it enabled, it helps us to improve the project"),
 		)
 	} else {
-		const (
-			initDelay, interval = 5 * time.Second, 30 * time.Minute
-			mixPanelProjectID   = "e39a1eb7c7732fef947e07c4caf6a844"
-		)
-
-		var collect = collector.NewCollector(ctx, initDelay, interval,
-			collector.NewMixPanelSender(mixPanelProjectID, version.Version()),
-			collector.HardwareMACResolver{},
-		)
-
-		collect.Schedule(collector.Event{Name: "app_run"})
-
+		collect := cmd.runStatsCollector(ctx, log, dockerRouter)
 		defer collect.Stop()
 	}
 
@@ -371,4 +360,44 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 	}
 
 	return nil
+}
+
+func (cmd *command) runStatsCollector(
+	ctx context.Context, log *zap.Logger, dr *docker.ContainersRoute,
+) collector.Collector {
+	const (
+		initDelay, interval = 5 * time.Second, 30 * time.Minute
+		mixPanelProjectID   = "e39a1eb7c7732fef947e07c4caf6a844"
+	)
+
+	var collect = collector.NewCollector(ctx, log, initDelay, interval,
+		collector.NewMixPanelSender(mixPanelProjectID, version.Version()),
+		collector.HardwareMACResolver{},
+	)
+
+	collect.Schedule(collector.Event{Name: "app_run"})
+
+	go func() { // schedule heartbeat event sending every 14 minutes
+		const hbInterval = 14 * time.Minute
+
+		var t = time.NewTicker(hbInterval)
+		defer t.Stop()
+
+		for {
+			select {
+			case <-t.C:
+				collect.Schedule(collector.Event{
+					Name: "app_heartbeat",
+					Properties: map[string]string{
+						"routes_count": strconv.Itoa(dr.RoutesCount()),
+					}},
+				)
+
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	return collect
 }

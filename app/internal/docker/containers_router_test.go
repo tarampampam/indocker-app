@@ -32,16 +32,16 @@ func TestContainersRoute_RouteToContainer(t *testing.T) {
 
 	route, err := router.RouteToContainerByHostname("foo")
 	assert.Empty(t, route)
-	assert.ErrorContains(t, err, "no routes registered")
+	assert.ErrorIs(t, err, docker.ErrNoRegisteredRoutes)
 
 	watcher.Push(map[string]types.Container{
 		"3176a2479c92": {
 			ID: "3176a2479c92",
 			Labels: map[string]string{
 				"indocker.host":    "foo",
-				"indocker.Port":    "123",
-				"indocker.Network": "bar-Network",
-				"indocker.Scheme":  "ftp",
+				"indocker.port":    "123",
+				"indocker.network": "bar-Network",
+				"indocker.scheme":  "ftp",
 			},
 			NetworkSettings: &types.SummaryNetworkSettings{
 				Networks: map[string]*network.EndpointSettings{
@@ -68,7 +68,7 @@ func TestContainersRoute_RouteToContainer(t *testing.T) {
 			ID: "bazbaz",
 			Labels: map[string]string{
 				"indocker.host":   "baz.indocker.app",
-				"indocker.Scheme": "https",
+				"indocker.scheme": "https",
 			},
 			NetworkSettings: &types.SummaryNetworkSettings{
 				Networks: map[string]*network.EndpointSettings{
@@ -92,11 +92,11 @@ func TestContainersRoute_RouteToContainer(t *testing.T) {
 	assert.Equal(t, "http://3.4.5.6:80", route)
 
 	// test with full hostname
-	route, err = router.RouteToContainerByHostname("baz")
+	route, err = router.RouteToContainerByHostname("baz.InDoCkEr.aPp") // with a postfix
 	assert.NoError(t, err)
 	assert.Equal(t, "https://8.8.9.9:80", route)
 
 	route, err = router.RouteToContainerByHostname("blah404")
 	assert.Empty(t, route)
-	assert.ErrorContains(t, err, "no Route found")
+	assert.ErrorIs(t, err, docker.ErrNoRouteFound)
 }
