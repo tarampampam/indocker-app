@@ -26,7 +26,7 @@ func TestMixPanelSender_Send(t *testing.T) {
 
 	var httpMock httpClientFunc = func(req *http.Request) (*http.Response, error) {
 		assert.Equal(t, http.MethodPost, req.Method)
-		assert.Equal(t, "https://x-collect-v1.indocker.app/track?ip=1", req.URL.String())
+		assert.Equal(t, "https://api.mixpanel.com/track?ip=1", req.URL.String())
 		assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
 
 		j, _ := io.ReadAll(req.Body)

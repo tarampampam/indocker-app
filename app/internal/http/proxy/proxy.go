@@ -3,19 +3,22 @@ package proxy
 import (
 	"crypto/tls"
 	_ "embed"
-	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
+
+	"gh.tarampamp.am/indocker-app/app/internal/docker"
+	"gh.tarampamp.am/indocker-app/app/internal/version"
 )
 
 type dockerRouter interface {
 	RouteToContainerByHostname(hostname string) (string, error)
+	Routes() map[string]docker.Route
 }
 
 type Proxy struct {
@@ -37,25 +40,34 @@ func NewProxy(router dockerRouter, clientTimeout time.Duration) *Proxy {
 	}
 }
 
+var errInvalidHostRequested = errors.New("invalid host requested")
+
 func (c *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := c.handle(w, r); err != nil {
-		c.error(w, http.StatusInternalServerError, err)
+	var host string
+
+	if hostPort := strings.Split(r.Host, ":"); len(hostPort) > 0 {
+		host = hostPort[0]
+	} else {
+		c.error(w, "unknown", errInvalidHostRequested)
+
+		return
+	}
+
+	const trimHostSuffix = ".indocker.app"
+
+	if strings.HasSuffix(strings.ToLower(host), trimHostSuffix) {
+		host = host[:len(host)-len(trimHostSuffix)]
+	}
+
+	if err := c.handle(w, r, host); err != nil {
+		c.error(w, host, err)
 	}
 }
 
-func (c *Proxy) handle(w http.ResponseWriter, r *http.Request) error {
-	var host string
-
-	var hostPort = strings.Split(r.Host, ":")
-	if len(hostPort) > 0 {
-		host = hostPort[0]
-	} else {
-		return fmt.Errorf("invalid host (%s) requested", r.Host)
-	}
-
+func (c *Proxy) handle(w http.ResponseWriter, r *http.Request, host string) error {
 	route, err := c.router.RouteToContainerByHostname(host)
 	if err != nil {
-		return errors.Wrap(err, "route finding")
+		return err
 	}
 
 	newUrl, err := url.Parse(route + r.RequestURI)
@@ -70,7 +82,7 @@ func (c *Proxy) handle(w http.ResponseWriter, r *http.Request) error {
 
 	resp, err := c.client.Do(r)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to proxy request")
 	}
 
 	defer func() { _ = resp.Body.Close() }()
@@ -90,22 +102,55 @@ func (c *Proxy) handle(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-//go:embed error.html
-var errorTemplate string
+//go:embed error.tpl.html
+var errorTplHtml string
 
-func (c *Proxy) error(w http.ResponseWriter, code int, err error) {
-	w.WriteHeader(code)
+var errorTemplate, _ = template.New("").Parse(errorTplHtml) //nolint:gochecknoglobals
 
-	var message string
+func (c *Proxy) error(w http.ResponseWriter, host string, err error) {
+	var (
+		message = "Houston, we have a problem"
+		code    = http.StatusInternalServerError
+	)
 
-	if err != nil {
-		message = err.Error()
-	} else {
-		message = http.StatusText(code)
+	switch {
+	case errors.Is(err, docker.ErrNoRegisteredRoutes):
+		code, message = http.StatusUnprocessableEntity, "No registered routes"
+
+	case errors.Is(err, docker.ErrNoRouteFound):
+		code, message = http.StatusNotFound, "No route found"
+
+	case errors.Is(err, errInvalidHostRequested):
+		code, message = http.StatusBadRequest, "Invalid host requested"
+
+	default:
+		if err != nil {
+			message = err.Error()
+		}
 	}
 
-	content := strings.ReplaceAll(errorTemplate, "{{ code }}", strconv.Itoa(code))
-	content = strings.ReplaceAll(content, "{{ message }}", message)
+	w.WriteHeader(code)
 
-	_, _ = w.Write([]byte(content))
+	var (
+		routes = c.router.Routes()
+		hosts  = make([]string, 0, len(routes))
+	)
+
+	for h := range routes {
+		hosts = append(hosts, h)
+	}
+
+	_ = errorTemplate.Execute(w, struct {
+		Code            int
+		Message         string
+		Domain          string
+		Version         string
+		RegisteredHosts []string
+	}{
+		Code:            code,
+		Message:         message,
+		Domain:          host,
+		Version:         version.Version(),
+		RegisteredHosts: hosts,
+	})
 }

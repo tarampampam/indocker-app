@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -41,6 +42,10 @@ func LogReq(log *zap.Logger, next http.Handler) http.Handler {
 				zap.String("useragent", r.UserAgent()),
 				zap.Duration("duration", time.Since(start)),
 				zap.Int("size", obs.metrics.size),
+			}
+
+			if hostPort := strings.Split(r.Host, ":"); len(hostPort) > 0 {
+				fields = append(fields, zap.String("domain", hostPort[0]))
 			}
 
 			if id := w.Header().Get("X-Request-Id"); id != "" {

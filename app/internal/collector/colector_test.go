@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
+	"go.uber.org/zap"
 
 	"gh.tarampamp.am/indocker-app/app/internal/collector"
 )
@@ -49,7 +50,7 @@ func TestRealCollector_Schedule(t *testing.T) {
 
 	var (
 		sender = senderMock{}
-		c      = collector.NewCollector(ctx, time.Millisecond, time.Millisecond*10, &sender, &uidResolverMock{})
+		c      = collector.NewCollector(ctx, zap.NewNop(), time.Millisecond, time.Millisecond*10, &sender, &uidResolverMock{})
 	)
 
 	defer c.Stop()

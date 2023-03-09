@@ -24,6 +24,9 @@ type (
 		// RouteToContainerByHostname returns a URL to the container with the given hostname (from the docker
 		// label, of course).
 		RouteToContainerByHostname(hostname string) (string, error)
+
+		// Routes returns a copy of the internal routing table.
+		Routes() map[string]Route
 	}
 
 	Route struct {
@@ -91,15 +94,17 @@ func NewContainersRoute(opt ...ContainersRouteOption) *ContainersRoute {
 	return &router
 }
 
+const fullHostSuffix = ".indocker.app"
+
 // Watch starts watching for changes in the docker containers and updates the internal routing table.
 func (r *ContainersRoute) Watch(ctx context.Context, watcher ContainersWatcher) error { //nolint:funlen,gocognit,gocyclo,lll
 	const (
 		labelsPrefix = "indocker."
 
 		labelHost    = labelsPrefix + "host"
-		labelPort    = labelsPrefix + "Port"
-		labelNetwork = labelsPrefix + "Network"
-		labelScheme  = labelsPrefix + "Scheme"
+		labelPort    = labelsPrefix + "port"
+		labelNetwork = labelsPrefix + "network"
+		labelScheme  = labelsPrefix + "scheme"
 	)
 
 	// create a subscription channel
@@ -131,10 +136,8 @@ func (r *ContainersRoute) Watch(ctx context.Context, watcher ContainersWatcher) 
 			for _, c := range containers {
 				// check if the container has a host label (this is the only required label)
 				if host, found := c.Labels[labelHost]; found { //nolint:nestif
-					const fullHostSuffix = ".indocker.app"
-
-					if strings.HasSuffix(host, fullHostSuffix) {
-						host = strings.TrimSuffix(host, fullHostSuffix)
+					if strings.HasSuffix(strings.ToLower(host), fullHostSuffix) {
+						host = host[:len(host)-len(fullHostSuffix)]
 					}
 
 					var newRoute = r.defaults
@@ -185,18 +188,48 @@ func (r *ContainersRoute) Watch(ctx context.Context, watcher ContainersWatcher) 
 	}
 }
 
+var (
+	ErrNoRegisteredRoutes = errors.New("no routes registered")
+	ErrNoRouteFound       = errors.New("no route found")
+)
+
 // RouteToContainerByHostname returns a URL to the container with the given hostname (from the docker label, of course).
 func (r *ContainersRoute) RouteToContainerByHostname(hostname string) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	if len(r.hosts) == 0 {
-		return "", errors.New("no routes registered")
+		return "", ErrNoRegisteredRoutes
+	}
+
+	if strings.HasSuffix(strings.ToLower(hostname), fullHostSuffix) {
+		hostname = hostname[:len(hostname)-len(fullHostSuffix)]
 	}
 
 	if rt, exists := r.hosts[hostname]; exists {
 		return r.builder(rt), nil
 	}
 
-	return "", errors.New("no Route found for " + hostname)
+	return "", ErrNoRouteFound
+}
+
+// RoutesCount returns the number of registered routes (hosts).
+func (r *ContainersRoute) RoutesCount() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	return len(r.hosts)
+}
+
+// Routes returns a copy of the internal routing table.
+func (r *ContainersRoute) Routes() map[string]Route {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var routes = make(map[string]Route, len(r.hosts))
+	for host, route := range r.hosts { // copy the map
+		routes[host] = route
+	}
+
+	return routes
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type Collector interface {
@@ -39,7 +41,13 @@ type RealCollector struct {
 // Otherwise, it returns NoopCollector. If user ID can't be resolved, it uses "unknown" as user ID.
 //
 // Note: Do fot forget to call Stop() method to stop worker goroutine.
-func NewCollector(ctx context.Context, initDelay, interval time.Duration, sender Sender, uid UIDResolver) Collector {
+func NewCollector(
+	ctx context.Context,
+	log *zap.Logger,
+	initDelay, interval time.Duration,
+	sender Sender,
+	uid UIDResolver,
+) Collector {
 	id, err := uid.Resolve()
 	if err != nil || id == "" {
 		id = "unknown"
@@ -62,13 +70,13 @@ func NewCollector(ctx context.Context, initDelay, interval time.Duration, sender
 		stop:  make(chan struct{}),
 	}
 
-	go c.worker() // start worker
+	go c.worker(log) // start worker
 
 	return &c
 }
 
 // worker periodically sends events to the remote server.
-func (c *RealCollector) worker() {
+func (c *RealCollector) worker(log *zap.Logger) {
 	defer c.Stop()
 
 	var t = time.NewTimer(c.initDelay)
@@ -101,7 +109,11 @@ func (c *RealCollector) worker() {
 
 				for _, chunk := range chunks {
 					go func(events []Event) {
-						_ = c.sender.Send(c.ctx, c.uid, events...) // TODO: log error
+						if err := c.sender.Send(c.ctx, c.uid, events...); err != nil {
+							log.Debug("Failed to send events", zap.Error(err))
+						} else {
+							log.Debug("Collected events sent", zap.Any("events", events))
+						}
 					}(chunk)
 				}
 
