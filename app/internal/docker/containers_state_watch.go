@@ -31,6 +31,7 @@ type (
 	}
 )
 
+// NewContainerStateWatch creates a new ContainerStateWatch.
 func NewContainerStateWatch(opts ...client.Opt) (*ContainerStateWatch, error) {
 	c, err := client.NewClientWithOpts(opts...)
 	if err != nil {
@@ -43,6 +44,7 @@ func NewContainerStateWatch(opts ...client.Opt) (*ContainerStateWatch, error) {
 	}, nil
 }
 
+// Watch starts watching for containers state changes.
 func (w *ContainerStateWatch) Watch(ctx context.Context, cw ContainersWatcher) error { //nolint:funlen,gocognit,gocyclo,lll
 	// create a subscription channel
 	var sub = make(ContainersSubscription)
@@ -133,6 +135,7 @@ func (w *ContainerStateWatch) Watch(ctx context.Context, cw ContainersWatcher) e
 	}
 }
 
+// Subscribe adds a new subscription.
 // Note: do not forget to Unsubscribe when you are done.
 func (w *ContainerStateWatch) Subscribe(ch ContainersStateSubscription) error {
 	w.mu.Lock()
@@ -147,6 +150,7 @@ func (w *ContainerStateWatch) Subscribe(ch ContainersStateSubscription) error {
 	return nil
 }
 
+// Unsubscribe removes the subscription.
 func (w *ContainerStateWatch) Unsubscribe(ch ContainersStateSubscription) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
