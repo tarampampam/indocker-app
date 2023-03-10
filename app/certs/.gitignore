@@ -1,1 +1,7 @@
-*.pem
+## Ignore all
+*
+
+## Except the following
+!.gitignore
+*.go
+*.md

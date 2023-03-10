@@ -1,5 +1,28 @@
 # App (daemon)
 
+## How to compile
+
+To compile the app, you need to have the Go installed. Firstly, you need to compile and run the certificate resolver:
+
+```bash
+$ go build -trimpath -ldflags "-s -w" ./cmd/mkcert
+
+$ ./mkcert --help
+$ ./mkcert --email %cf_email% --api-key %cf_api_key% --production
+```
+
+> To avoid this operation, you can issue a self-signed certificate and put it into the `./certs` directory.
+
+After this operation, you will have the `fullchain.pem` and `privkey.pem` files in the `./certs` directory. Then, you
+can compile the app:
+
+```bash
+$ go generate ./...
+$ CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" ./cmd/app
+
+$ ./app --help
+```
+
 ## A few words about the usage statistics collecting
 
 By default, the app sends a usage report each time it is run so that we can track how often people use it and how to
