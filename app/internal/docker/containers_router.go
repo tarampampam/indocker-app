@@ -99,12 +99,10 @@ const fullHostSuffix = ".indocker.app"
 // Watch starts watching for changes in the docker containers and updates the internal routing table.
 func (r *ContainersRoute) Watch(ctx context.Context, watcher ContainersWatcher) error { //nolint:funlen,gocognit,gocyclo,lll
 	const (
-		labelsPrefix = "indocker."
-
-		labelHost    = labelsPrefix + "host"
-		labelPort    = labelsPrefix + "port"
-		labelNetwork = labelsPrefix + "network"
-		labelScheme  = labelsPrefix + "scheme"
+		labelHost    = "indocker.host"
+		labelPort    = "indocker.port"
+		labelNetwork = "indocker.network"
+		labelScheme  = "indocker.scheme"
 	)
 
 	// create a subscription channel

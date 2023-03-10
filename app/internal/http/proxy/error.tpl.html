@@ -25,14 +25,15 @@
     @media (prefers-color-scheme: dark) {
       :root {
         --color-bg-primary: #202124;
+        /* {{- if ge .Code 500 -}} */
+        --color-bg-secondary: #3a1d1e;
+        /* {{- else -}} */
+        --color-bg-secondary: #17303a;
+        /* {{- end -}} */
         --color-bg-hint: #2e2f31;
         --color-text-primary: #f5f6f8;
         --color-text-secondary: #9b9b9b;
         --color-borders-primary: #565656;
-      }
-
-      .picture .container .img svg {
-        filter: grayscale(20%);
       }
     }
 

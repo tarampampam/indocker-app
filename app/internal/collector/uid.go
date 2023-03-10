@@ -1,8 +1,10 @@
 package collector
 
 import (
-	"errors"
-	"net"
+	"context"
+
+	"github.com/docker/docker/client"
+	"github.com/pkg/errors"
 )
 
 type UIDResolver interface {
@@ -10,33 +12,31 @@ type UIDResolver interface {
 	Resolve() (string, error)
 }
 
-type HardwareMACResolver struct{}
+// DockerIDResolver resolves the host ID from the Docker daemon.
+type DockerIDResolver struct {
+	ctx    context.Context
+	client *client.Client
+}
 
-var _ UIDResolver = (*HardwareMACResolver)(nil) // ensure interface is implemented
+var _ UIDResolver = (*DockerIDResolver)(nil) // ensure interface is implemented
 
-// Resolve returns the MAC address of the first non-loopback interface that is up.
-// If no such interface is found, an error is returned. This is used to generate a unique ID for the host.
-func (HardwareMACResolver) Resolve() (string, error) {
-	ifas, err := net.Interfaces()
+// NewDockerIDResolver creates a new DockerIDResolver.
+func NewDockerIDResolver(ctx context.Context, opts ...client.Opt) (*DockerIDResolver, error) {
+	c, err := client.NewClientWithOpts(opts...)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	for _, ifa := range ifas {
-		if ifa.Flags&net.FlagLoopback != 0 {
-			continue
-		}
+	return &DockerIDResolver{ctx: ctx, client: c}, nil
+}
 
-		if ifa.Flags&net.FlagUp == 0 {
-			continue
-		}
-
-		if ifa.HardwareAddr == nil {
-			continue
-		}
-
-		return ifa.HardwareAddr.String(), nil
+// Resolve returns a unique ID for the host.
+func (r *DockerIDResolver) Resolve() (string, error) {
+	// https://docs.docker.com/engine/api/v1.42/#tag/System/operation/SystemInfo
+	info, err := r.client.Info(r.ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get docker info")
 	}
 
-	return "", errors.New("no interfaces found")
+	return info.ID, nil
 }

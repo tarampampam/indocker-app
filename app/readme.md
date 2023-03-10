@@ -2,28 +2,24 @@
 
 ## A few words about the usage statistics collecting
 
-This app periodically sends anonymous usage statistics to the statistics server. It helps us to understand how the
-app is used and how to improve it. Statistics are sent after a few seconds after the server starts and every 30
-minutes after that, and doesn't contain any sensitive information. Usually, it takes less than 1KB of traffic.
+By default, the app sends a usage report each time it is run so that we can track how often people use it and how to
+improve it. This feature can be turned off by adding the option `--dont-send-anonymous-usage` when executing the app
+server, but we will be very grateful if you leave it enabled 💕.
 
-It's like Google Analytics, but for the backend app.
+The usage report is sent after a few seconds after the server starts and every 30 minutes after that and doesn't
+contain any sensitive information. Usually, it takes less than 1KB of traffic. To identify the app instance, this app
+uses the first 16 bytes of the SHA256 hash of the Docker ID. It's like Google Analytics, but for the backend.
 
 The following information is collected:
 
-- Application version
-- Operating system (just type and architecture, e.g.: `linux/arm64`)
+- Application version (e.g. `2.0.1`)
+- Operating system (just type and architecture, e.g. `linux/arm64`)
+- How many routes (hosts) are configured (just a number, e.g. `3`)
 
 > At any time you can inspect the source code to see what and how data is collected.
 
-For identification purposes, the first 16 bytes of the SHA256 hash of the hardware MAC address of the first network
-adapter is used: `sha256(net.Interfaces()[0].HardwareAddr)[:16]`. It doesn't allow anyone to identify you, but it helps
-us to understand how many users use the app.
-
 The data is sent to the server via HTTPS and is not stored anywhere except the [statistics server][mixpanel], and is
 not used for any other purposes.
-
-You can disable the statistics collecting by passing the `--dont-send-anonymous-usage` flag to the app, but we will
-be very grateful if you leave it enabled 💕.
 
 [mixpanel]:https://eu.mixpanel.com/project/2933933
 

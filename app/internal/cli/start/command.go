@@ -339,7 +339,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 			zap.String("please", "leave it enabled, it helps us to improve the project"),
 		)
 	} else {
-		collect := cmd.runStatsCollector(ctx, log, dockerRouter)
+		collect := cmd.runStatsCollector(ctx, log, dockerRouter, opt.Docker.Host)
 		defer collect.Stop()
 	}
 
@@ -363,18 +363,29 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 }
 
 func (cmd *command) runStatsCollector(
-	ctx context.Context, log *zap.Logger, dr *docker.ContainersRoute,
+	ctx context.Context, log *zap.Logger, dr *docker.ContainersRoute, dockerHost string,
 ) collector.Collector {
 	const (
 		initDelay, interval = 5 * time.Second, 30 * time.Minute
 		mixPanelProjectID   = "e39a1eb7c7732fef947e07c4caf6a844"
 	)
 
+	// create docker ID resolver (ID from this resolver will be used to generate a unique user ID hash)
+	resolver, rErr := collector.NewDockerIDResolver(ctx, client.WithHost(dockerHost))
+	if rErr != nil {
+		log.Debug("Failed to create docker ID resolver", zap.Error(rErr))
+
+		// return noop collector if we failed above
+		return &collector.NoopCollector{}
+	}
+
+	// create a new collector
 	var collect = collector.NewCollector(ctx, log, initDelay, interval,
 		collector.NewMixPanelSender(mixPanelProjectID, version.Version()),
-		collector.HardwareMACResolver{},
+		resolver,
 	)
 
+	// schedule initial event
 	collect.Schedule(collector.Event{Name: "app_run"})
 
 	go func() { // schedule heartbeat event sending every 14 minutes
@@ -389,6 +400,7 @@ func (cmd *command) runStatsCollector(
 				collect.Schedule(collector.Event{
 					Name: "app_heartbeat",
 					Properties: map[string]string{
+						// routes count is used to understanding how actively the project is used
 						"routes_count": strconv.Itoa(dr.RoutesCount()),
 					}},
 				)
