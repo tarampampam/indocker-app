@@ -20,6 +20,7 @@ app-generate: ## Generate app assets
 	docker-compose run $(DC_RUN_ARGS) --no-deps app sh -c "go generate ./... && go generate -tags docs ./docs ./internal/cli"
 
 app-build: app-generate ## Build app binary file
+	docker-compose run $(DC_RUN_ARGS) -e "CGO_ENABLED=0" --no-deps app go build -trimpath -ldflags $(LDFLAGS) ./cmd/mkcert
 	docker-compose run $(DC_RUN_ARGS) -e "CGO_ENABLED=0" --no-deps app go build -trimpath -ldflags $(LDFLAGS) ./cmd/app
 	./app/app --version
 
