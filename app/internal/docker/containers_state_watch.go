@@ -10,24 +10,24 @@ import (
 	"github.com/docker/docker/client"
 )
 
-type ContainerStateWatch struct {
-	client *client.Client
-
-	mu   sync.Mutex
-	subs map[ContainersStateSubscription]chan struct{}
+type ContainersStateWatcher interface {
+	Subscribe(ContainersStateSubscription) error
+	Unsubscribe(ContainersStateSubscription) error
 }
 
 type (
+	ContainerStateWatch struct {
+		client *client.Client
+
+		mu   sync.Mutex
+		subs map[ContainersStateSubscription]chan struct{}
+	}
+
 	ContainersStateSubscription chan map[string]*ContainerState // map[container_id]container_state
 
 	ContainerState struct {
 		Inspect *types.ContainerJSON `json:"inspect"`
 		Stats   *types.StatsJSON     `json:"stats"`
-	}
-
-	ContainersStateWatcher interface {
-		Subscribe(ch ContainersStateSubscription) error
-		Unsubscribe(ch ContainersStateSubscription) error
 	}
 )
 

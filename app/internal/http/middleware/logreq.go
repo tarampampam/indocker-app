@@ -44,7 +44,7 @@ func LogReq(log *zap.Logger, next http.Handler) http.Handler {
 				zap.Int("size", obs.metrics.size),
 			}
 
-			if hostPort := strings.Split(r.Host, ":"); len(hostPort) > 0 {
+			if hostPort := strings.Split(r.Host, ":"); len(hostPort) > 0 { // TODO write and reuse a better function for this
 				fields = append(fields, zap.String("domain", hostPort[0]))
 			}
 
@@ -65,6 +65,13 @@ type observer struct {
 		size   int
 	}
 }
+
+var ( // verify interface implementations
+	_ http.ResponseWriter = (*observer)(nil)
+	_ http.Flusher        = (*observer)(nil)
+	_ http.Hijacker       = (*observer)(nil)
+	_ http.Pusher         = (*observer)(nil)
+)
 
 func (o *observer) Write(b []byte) (int, error) {
 	size, err := o.ResponseWriter.Write(b) // write response using original http.ResponseWriter
@@ -90,4 +97,11 @@ func (o *observer) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	}
 
 	return nil, nil, errors.New("observer does not implement http.Hijacker")
+}
+
+func (o *observer) Push(target string, opts *http.PushOptions) error {
+	if p, ok := o.ResponseWriter.(http.Pusher); ok {
+		return p.Push(target, opts)
+	}
+	return errors.New("observer does not implement http.Pusher")
 }

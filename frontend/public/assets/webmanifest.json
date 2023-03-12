@@ -1,0 +1,15 @@
+{
+  "name": "indocker.app",
+  "short_name": "indocker.app",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#222222",
+  "background_color": "#222222",
+  "display": "standalone"
+}

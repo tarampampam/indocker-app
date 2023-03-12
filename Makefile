@@ -38,14 +38,27 @@ app-fmt: ## Run source code formatting tools
 app-shell: ## Start shell inside app environment
 	docker-compose run $(DC_RUN_ARGS) app sh
 
+# Frontend stuff
+
+frontend-install: ## Install frontend dependencies
+	docker-compose run $(DC_RUN_ARGS) --no-deps frontend npm install
+
+frontend-lint: ## Lint the frontend sources
+	docker-compose run $(DC_RUN_ARGS) --no-deps frontend npm run lint
+
+frontend-shell: ## Start shell inside frontend environment
+	docker-compose run $(DC_RUN_ARGS) frontend sh
+
+# Overall stuff
+
 test: app-lint app-test ## Run all tests
 
 up: app-generate ## Start the app in the development mode
-	docker-compose up --detach app-web whoami
-	@printf "\n   \e[30;42m %s \033[0m"     'HTTP  ⇒ http://app.indocker.app';
-	@printf "\n   \e[30;42m %s \033[0m\n"   'HTTPS ⇒ https://app.indocker.app';
-	@printf "\n   \e[30;42m %s \033[0m\n\n" 'Press CTRL+C to stop logs watching ';
-	docker-compose logs -f app-web
+	docker-compose up --detach app-web whoami frontend
+	@printf "\n   \e[30;42m %s \033[0m"     'HTTP  ⇒ http://frontend.indocker.app ';
+	@printf "\n   \e[30;42m %s \033[0m\n"   'HTTPS ⇒ https://frontend.indocker.app';
+	@printf "\n   \e[30;42m %s \033[0m\n\n" 'Press CTRL+C to stop logs watching';
+	docker-compose logs -f app-web frontend
 
 down: ## Stop the app
 	docker-compose down --remove-orphans
@@ -54,5 +67,4 @@ restart: down up ## Restart all containers
 
 clean: ## Make clean
 	docker-compose down -v -t 1
-	-docker rmi $(APP_NAME):local -f
-	-rm -R ./webhook-tester ./web/node_modules ./web/dist
+	-rm -R ./app/app ./app/mkcert ./frontend/dist
