@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"gh.tarampamp.am/indocker-app/app/internal/http/middleware"
+	"gh.tarampamp.am/indocker-app/app/internal/httptools"
 )
 
 type Router struct {
@@ -50,11 +51,11 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (router *Router) isInAllowedOrigins(r *http.Request) bool {
 	// r.Host can be "localhost:8080" or "localhost"
-	if hostPort := strings.Split(r.Host, ":"); len(hostPort) > 0 {
-		for _, origin := range router.origins {
-			if hostPort[0] == origin {
-				return true
-			}
+	host := httptools.TrimHostPortSuffix(r.Host)
+
+	for _, origin := range router.origins {
+		if host == origin {
+			return true
 		}
 	}
 

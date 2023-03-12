@@ -5,10 +5,11 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"go.uber.org/zap"
+
+	"gh.tarampamp.am/indocker-app/app/internal/httptools"
 )
 
 func LogReq(log *zap.Logger, next http.Handler) http.Handler {
@@ -36,16 +37,13 @@ func LogReq(log *zap.Logger, next http.Handler) http.Handler {
 		if ce := log.Check(level, message); ce != nil {
 			var fields = []zap.Field{
 				zap.Int("status", obs.metrics.status),
+				zap.String("domain", httptools.TrimHostPortSuffix(r.Host)),
 				zap.String("uri", r.URL.String()),
 				zap.String("method", r.Method),
 				zap.String("remote_addr", r.RemoteAddr),
 				zap.String("useragent", r.UserAgent()),
 				zap.Duration("duration", time.Since(start)),
 				zap.Int("size", obs.metrics.size),
-			}
-
-			if hostPort := strings.Split(r.Host, ":"); len(hostPort) > 0 { // TODO write and reuse a better function for this
-				fields = append(fields, zap.String("domain", hostPort[0]))
 			}
 
 			if id := w.Header().Get("X-Request-Id"); id != "" {
@@ -103,5 +101,6 @@ func (o *observer) Push(target string, opts *http.PushOptions) error {
 	if p, ok := o.ResponseWriter.(http.Pusher); ok {
 		return p.Push(target, opts)
 	}
+
 	return errors.New("observer does not implement http.Pusher")
 }

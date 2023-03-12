@@ -4,17 +4,18 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"html/template"
-	"io"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"gh.tarampamp.am/indocker-app/app/internal/docker"
+	"gh.tarampamp.am/indocker-app/app/internal/httptools"
 	"gh.tarampamp.am/indocker-app/app/internal/version"
 )
 
@@ -26,41 +27,17 @@ type dockerRouter interface {
 type Proxy struct {
 	log    *zap.Logger
 	router dockerRouter
-	client *http.Client
 }
 
-func NewProxy(log *zap.Logger, router dockerRouter, clientTimeout time.Duration) *Proxy {
+func NewProxy(log *zap.Logger, router dockerRouter) *Proxy {
 	return &Proxy{
 		log:    log,
 		router: router,
-		client: &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, //nolint:gosec
-				},
-			},
-			Timeout: clientTimeout,
-		},
 	}
 }
 
-var errInvalidHostRequested = errors.New("invalid host requested")
-
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var host string
-
-	if hostPort := strings.Split(r.Host, ":"); len(hostPort) > 0 {
-		host = hostPort[0]
-	} else {
-		p.renderError(w, "unknown", errInvalidHostRequested)
-
-		return
-	}
-
-	const trimHostSuffix = ".indocker.app"
-	if strings.HasSuffix(strings.ToLower(host), trimHostSuffix) {
-		host = host[:len(host)-len(trimHostSuffix)]
-	}
+	var host = httptools.TrimHostPortSuffix(r.Host) // foo.indocker.app -> foo
 
 	if err := p.handle(w, r, host); err != nil {
 		p.renderError(w, host, err)
@@ -68,34 +45,43 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Proxy) handle(w http.ResponseWriter, r *http.Request, host string) error {
-	newUrl, err := url.Parse(host + r.RequestURI)
+	route, err := p.router.RouteToContainerByHostname(host)
 	if err != nil {
 		return err
 	}
 
-	// http: Request.RequestURI can't be set in client requests
-	r.RequestURI = ""
+	var s strings.Builder
+	s.Grow(len(route.Scheme) + 3 + len(route.IPAddr) + 5 + len(r.RequestURI)) //nolint:wsl
 
-	r.URL = newUrl
+	s.WriteString(route.Scheme)
+	s.WriteString("://")
+	s.WriteString(route.IPAddr)
 
-	resp, err := p.client.Do(r)
+	if route.Port > 0 {
+		s.WriteRune(':')
+		s.WriteString(strconv.FormatUint(uint64(route.Port), 10))
+	}
+
+	if !strings.HasPrefix(r.RequestURI, "/") {
+		s.WriteRune('/')
+	}
+
+	s.WriteString(r.RequestURI)
+
+	newUrl, err := url.Parse(s.String())
 	if err != nil {
-		return errors.Wrap(err, "failed to proxy request")
-	}
-
-	defer func() { _ = resp.Body.Close() }()
-
-	for k, vv := range resp.Header {
-		for _, v := range vv {
-			w.Header().Add(k, v)
-		}
-	}
-
-	w.WriteHeader(resp.StatusCode)
-
-	if _, err = io.Copy(w, resp.Body); err != nil {
 		return err
 	}
+
+	(&httputil.ReverseProxy{
+		Director: func(pr *http.Request) { pr.URL = newUrl },
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, //nolint:gosec
+			},
+		},
+		ErrorLog: zap.NewStdLog(p.log),
+	}).ServeHTTP(w, r)
 
 	return nil
 }
@@ -118,9 +104,6 @@ func (p *Proxy) renderError(w http.ResponseWriter, host string, err error) {
 
 	case errors.Is(err, docker.ErrNoRouteFound):
 		code, message = http.StatusNotFound, "No route found"
-
-	case errors.Is(err, errInvalidHostRequested):
-		code, message = http.StatusBadRequest, "Invalid host requested"
 
 	default:
 		if err != nil {
