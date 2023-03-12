@@ -50,8 +50,10 @@ func (p *Proxy) handle(w http.ResponseWriter, r *http.Request, host string) erro
 		return err
 	}
 
+	var requestURL = r.URL.RequestURI()
+
 	var s strings.Builder
-	s.Grow(len(route.Scheme) + 3 + len(route.IPAddr) + 5 + len(r.RequestURI)) //nolint:wsl
+	s.Grow(len(route.Scheme) + 3 + len(route.IPAddr) + 5 + len(requestURL)) //nolint:wsl
 
 	s.WriteString(route.Scheme)
 	s.WriteString("://")
@@ -62,11 +64,11 @@ func (p *Proxy) handle(w http.ResponseWriter, r *http.Request, host string) erro
 		s.WriteString(strconv.FormatUint(uint64(route.Port), 10))
 	}
 
-	if !strings.HasPrefix(r.RequestURI, "/") {
+	if !strings.HasPrefix(requestURL, "/") {
 		s.WriteRune('/')
 	}
 
-	s.WriteString(r.RequestURI)
+	s.WriteString(requestURL)
 
 	newUrl, err := url.Parse(s.String())
 	if err != nil {
