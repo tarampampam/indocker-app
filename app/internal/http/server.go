@@ -61,7 +61,7 @@ func (s *Server) Register(
 	dsw docker.ContainersStateWatcher,
 	proxyClientTimeout time.Duration,
 ) error {
-	var router = NewRouter("/indocker", proxy.NewProxy(drw, proxyClientTimeout))
+	var router = NewRouter("/indocker", proxy.NewProxy(s.log, drw, proxyClientTimeout))
 
 	router.Register(http.MethodGet, "/api/version/current", api.VersionCurrent(version.Version()))
 	router.Register(http.MethodGet, "/api/version/latest", api.VersionLatest(func() (*version.LatestVersion, error) {

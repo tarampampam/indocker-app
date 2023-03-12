@@ -10,33 +10,30 @@ import (
 	"github.com/docker/docker/api/types/network"
 )
 
-// ContainersRoute is a docker containers router. It allows you to get the Route of a docker container by its labels.
-type ContainersRoute struct {
-	defaults Route
-	builder  RouteBuilder
+type ContainersRouter interface {
+	// RouteToContainerByHostname returns a URL to the container with the given hostname (from the docker
+	// label, of course).
+	RouteToContainerByHostname(hostname string) (*Route, error)
 
-	mu    sync.RWMutex
-	hosts map[string]Route // map[hostname]container_id
+	// Routes returns a copy of the internal routing table.
+	Routes() map[string]Route
 }
 
 type (
-	ContainersRouter interface {
-		// RouteToContainerByHostname returns a URL to the container with the given hostname (from the docker
-		// label, of course).
-		RouteToContainerByHostname(hostname string) (string, error)
+	// ContainersRoute is a docker containers router. It allows you to get the Route of a docker container by its labels.
+	ContainersRoute struct {
+		defaults Route
 
-		// Routes returns a copy of the internal routing table.
-		Routes() map[string]Route
+		mu    sync.RWMutex
+		hosts map[string]Route // map[hostname]container_id
 	}
 
 	Route struct {
-		Scheme  string // http, https or something like that (default: http)
+		Scheme  string // http, https or something like that (default: http) // TODO: is this needed?
 		Port    uint16 // port number (default: 80)
 		Network string // network name (default: bridge)
 		IPAddr  string // IP address
 	}
-
-	RouteBuilder func(Route) string
 )
 
 // ContainersRouteOption is a function that configures a ContainersRoute.
@@ -57,30 +54,10 @@ func WithContainersRouteDefaultNetwork(network string) ContainersRouteOption {
 	return func(r *ContainersRoute) { r.defaults.Network = network }
 }
 
-// WithContainersRouteBuilder sets the RouteBuilder for the containers' router.
-func WithContainersRouteBuilder(b RouteBuilder) ContainersRouteOption {
-	return func(r *ContainersRoute) { r.builder = b }
-}
-
-// defaultRouteBuilder is used by default to build the route.
-var defaultRouteBuilder RouteBuilder = func(r Route) string { //nolint:gochecknoglobals
-	var s strings.Builder
-	s.Grow(len(r.Scheme) + 3 + len(r.IPAddr) + 1 + 5) //nolint:gomnd
-
-	s.WriteString(r.Scheme)
-	s.WriteString("://")
-	s.WriteString(r.IPAddr)
-	s.WriteString(":")
-	s.WriteString(strconv.FormatUint(uint64(r.Port), 10))
-
-	return s.String()
-}
-
 // NewContainersRoute creates a new ContainersRoute.
 func NewContainersRoute(opt ...ContainersRouteOption) *ContainersRoute {
 	var router = ContainersRoute{
-		hosts:   make(map[string]Route),
-		builder: defaultRouteBuilder,
+		hosts: make(map[string]Route),
 	}
 
 	router.defaults.Scheme = "http"
@@ -134,6 +111,7 @@ func (r *ContainersRoute) Watch(ctx context.Context, watcher ContainersWatcher) 
 			for _, c := range containers {
 				// check if the container has a host label (this is the only required label)
 				if host, found := c.Labels[labelHost]; found { //nolint:nestif
+					// drop the ".indocker.app" if it exists
 					if strings.HasSuffix(strings.ToLower(host), fullHostSuffix) {
 						host = host[:len(host)-len(fullHostSuffix)]
 					}
@@ -164,8 +142,8 @@ func (r *ContainersRoute) Watch(ctx context.Context, watcher ContainersWatcher) 
 							net = namedNet
 						} else {
 							// pick random value from the map
-							for _, rndNet := range c.NetworkSettings.Networks {
-								net = rndNet
+							for name, rndNet := range c.NetworkSettings.Networks {
+								newRoute.Network, net = name, rndNet
 
 								break
 							}
@@ -192,23 +170,24 @@ var (
 )
 
 // RouteToContainerByHostname returns a URL to the container with the given hostname (from the docker label, of course).
-func (r *ContainersRoute) RouteToContainerByHostname(hostname string) (string, error) {
+func (r *ContainersRoute) RouteToContainerByHostname(hostname string) (*Route, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	if len(r.hosts) == 0 {
-		return "", ErrNoRegisteredRoutes
+		return nil, ErrNoRegisteredRoutes
 	}
 
+	// drop the ".indocker.app" if it exists
 	if strings.HasSuffix(strings.ToLower(hostname), fullHostSuffix) {
 		hostname = hostname[:len(hostname)-len(fullHostSuffix)]
 	}
 
-	if rt, exists := r.hosts[hostname]; exists {
-		return r.builder(rt), nil
+	if route, exists := r.hosts[hostname]; exists {
+		return &route, nil
 	}
 
-	return "", ErrNoRouteFound
+	return nil, ErrNoRouteFound
 }
 
 // RoutesCount returns the number of registered routes (hosts).

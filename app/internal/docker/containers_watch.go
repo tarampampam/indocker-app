@@ -11,26 +11,26 @@ import (
 	"github.com/docker/docker/client"
 )
 
-// ContainersWatch is a running docker containers watcher. It allows you to subscribe to changes in the status of
-// running docker containers.
-type ContainersWatch struct {
-	interval time.Duration
-	client   *client.Client
+type ContainersWatcher interface {
+	// Subscribe subscribes to changes in the status of running docker containers.
+	Subscribe(ContainersSubscription) error
 
-	mu   sync.Mutex
-	subs map[ContainersSubscription]chan struct{}
+	// Unsubscribe unsubscribes from changes in the status of running docker containers.
+	Unsubscribe(ContainersSubscription) error
 }
 
+// ContainersWatch is a running docker containers watcher. It allows you to subscribe to changes in the status of
+// running docker containers.
 type (
-	ContainersSubscription chan map[string]types.Container // map[container_id]container_data
+	ContainersWatch struct {
+		interval time.Duration
+		client   *client.Client
 
-	ContainersWatcher interface {
-		// Subscribe subscribes to changes in the status of running docker containers.
-		Subscribe(ch ContainersSubscription) error
-
-		// Unsubscribe unsubscribes from changes in the status of running docker containers.
-		Unsubscribe(ch ContainersSubscription) error
+		mu   sync.Mutex
+		subs map[ContainersSubscription]chan struct{}
 	}
+
+	ContainersSubscription chan map[string]types.Container // map[container_id]container_data
 )
 
 // NewContainersWatch creates a new ContainersWatch.

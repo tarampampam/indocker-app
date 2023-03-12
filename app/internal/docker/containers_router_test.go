@@ -4,6 +4,7 @@ import (
 	"context"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
@@ -13,90 +14,169 @@ import (
 	"gh.tarampamp.am/indocker-app/app/internal/docker"
 )
 
-func TestContainersRoute_RouteToContainer(t *testing.T) {
+func TestContainersRoute_RouteToContainerByHostname(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	var (
-		router  = docker.NewContainersRoute()
-		watcher = &watcherMock{}
-	)
-
-	// create a context with cancel
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// run the watcher in a goroutine
-	go func() { assert.ErrorIs(t, router.Watch(ctx, watcher), context.Canceled) }()
-
-	runtime.Gosched() // wait for the router to start
-
-	route, err := router.RouteToContainerByHostname("foo")
-	assert.Empty(t, route)
-	assert.ErrorIs(t, err, docker.ErrNoRegisteredRoutes)
-
-	watcher.Push(map[string]types.Container{
-		"3176a2479c92": {
-			ID: "3176a2479c92",
-			Labels: map[string]string{
-				"indocker.host":    "foo",
-				"indocker.port":    "123",
-				"indocker.network": "bar-Network",
-				"indocker.scheme":  "ftp",
-			},
-			NetworkSettings: &types.SummaryNetworkSettings{
-				Networks: map[string]*network.EndpointSettings{
-					"bar-Network": {
-						IPAddress: "1.2.3.4",
+	for name, testCase := range map[string]struct {
+		giveEvents   map[string]types.Container
+		giveHostname string
+		wantRoute    *docker.Route
+		wantErr      error
+	}{
+		"no containers": {
+			giveHostname: "foo",
+			wantErr:      docker.ErrNoRegisteredRoutes,
+		},
+		"one container with all properties": {
+			giveEvents: map[string]types.Container{
+				"3176a2479c92": {
+					ID: "3176a2479c92",
+					Labels: map[string]string{
+						"indocker.host":    "foo",
+						"indocker.port":    "123",
+						"indocker.network": "bar-Network",
+						"indocker.scheme":  "ftp",
+					},
+					NetworkSettings: &types.SummaryNetworkSettings{
+						Networks: map[string]*network.EndpointSettings{
+							"bar-Network": {IPAddress: "1.2.3.4"},
+							"bridge":      {IPAddress: "18.8.8.18"},
+						},
 					},
 				},
 			},
-		},
-		"4cb07b47f9fb": {
-			ID: "4cb07b47f9fb",
-			Labels: map[string]string{
-				"indocker.host": "bar",
+			giveHostname: "foo",
+			wantRoute: &docker.Route{
+				Scheme:  "ftp",
+				Port:    123,
+				Network: "bar-Network",
+				IPAddr:  "1.2.3.4",
 			},
-			NetworkSettings: &types.SummaryNetworkSettings{
-				Networks: map[string]*network.EndpointSettings{
-					"blah-blah-Network": {
-						IPAddress: "3.4.5.6",
+		},
+		"check defaults": {
+			giveEvents: map[string]types.Container{
+				"4cb07b47f9fb": {
+					ID: "4cb07b47f9fb",
+					Labels: map[string]string{
+						"indocker.host": "bar",
+					},
+					NetworkSettings: &types.SummaryNetworkSettings{
+						Networks: map[string]*network.EndpointSettings{
+							"un-existent-network": {
+								IPAddress: "3.4.5.6",
+							},
+						},
 					},
 				},
 			},
-		},
-		"bazbaz": {
-			ID: "bazbaz",
-			Labels: map[string]string{
-				"indocker.host":   "baz.indocker.app",
-				"indocker.scheme": "https",
+			giveHostname: "bar",
+			wantRoute: &docker.Route{
+				Scheme:  "http",
+				Port:    80,
+				Network: "un-existent-network",
+				IPAddr:  "3.4.5.6",
 			},
-			NetworkSettings: &types.SummaryNetworkSettings{
-				Networks: map[string]*network.EndpointSettings{
-					"bridge": {
-						IPAddress: "8.8.9.9",
+		},
+		"with postfix in docker label": {
+			giveEvents: map[string]types.Container{
+				"4cb07b47f9fb": {
+					ID: "4cb07b47f9fb",
+					Labels: map[string]string{
+						"indocker.host": "foo.InDoCkEr.aPp",
+					},
+					NetworkSettings: &types.SummaryNetworkSettings{
+						Networks: map[string]*network.EndpointSettings{
+							"bridge": {
+								IPAddress: "3.4.5.6",
+							},
+						},
 					},
 				},
 			},
+			giveHostname: "foo",
+			wantRoute: &docker.Route{
+				Scheme:  "http",
+				Port:    80,
+				Network: "bridge",
+				IPAddr:  "3.4.5.6",
+			},
 		},
-	})
+		"with postfix in hostname": {
+			giveEvents: map[string]types.Container{
+				"4cb07b47f9fb": {
+					ID: "4cb07b47f9fb",
+					Labels: map[string]string{
+						"indocker.host": "foo",
+					},
+					NetworkSettings: &types.SummaryNetworkSettings{
+						Networks: map[string]*network.EndpointSettings{
+							"bridge": {
+								IPAddress: "3.4.5.6",
+							},
+						},
+					},
+				},
+			},
+			giveHostname: "foo.InDoCkEr.aPp",
+			wantRoute: &docker.Route{
+				Scheme:  "http",
+				Port:    80,
+				Network: "bridge",
+				IPAddr:  "3.4.5.6",
+			},
+		},
+		"not found": {
+			giveEvents: map[string]types.Container{
+				"4cb07b47f9fb": {
+					ID: "4cb07b47f9fb",
+					Labels: map[string]string{
+						"indocker.host": "foo",
+					},
+					NetworkSettings: &types.SummaryNetworkSettings{
+						Networks: map[string]*network.EndpointSettings{
+							"bridge": {
+								IPAddress: "3.4.5.6",
+							},
+						},
+					},
+				},
+			},
+			giveHostname: "bar",
+			wantErr:      docker.ErrNoRouteFound,
+		},
+	} {
+		tt := testCase
 
-	runtime.Gosched() // wait for the router to process the update
+		t.Run(name, func(t *testing.T) {
+			var (
+				router  = docker.NewContainersRoute()
+				watcher = &watcherMock{}
+			)
 
-	route, err = router.RouteToContainerByHostname("foo")
-	assert.NoError(t, err)
-	assert.Equal(t, "ftp://1.2.3.4:123", route)
+			// create a context with cancel
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-	// test the default values
-	route, err = router.RouteToContainerByHostname("bar")
-	assert.NoError(t, err)
-	assert.Equal(t, "http://3.4.5.6:80", route)
+			// run the watcher in a goroutine
+			go func() { assert.ErrorIs(t, router.Watch(ctx, watcher), context.Canceled) }()
 
-	// test with full hostname
-	route, err = router.RouteToContainerByHostname("baz.InDoCkEr.aPp") // with a postfix
-	assert.NoError(t, err)
-	assert.Equal(t, "https://8.8.9.9:80", route)
+			runtime.Gosched() // wait for the router to start
 
-	route, err = router.RouteToContainerByHostname("blah404")
-	assert.Empty(t, route)
-	assert.ErrorIs(t, err, docker.ErrNoRouteFound)
+			watcher.Push(tt.giveEvents)
+
+			timer := time.NewTicker(10 * time.Millisecond)
+			<-timer.C
+			timer.Stop()
+
+			runtime.Gosched() // wait for the router to process the update
+
+			route, err := router.RouteToContainerByHostname(tt.giveHostname)
+
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+			}
+
+			assert.Equal(t, tt.wantRoute, route)
+		})
+	}
 }
