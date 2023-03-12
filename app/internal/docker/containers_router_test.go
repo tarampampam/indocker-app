@@ -160,15 +160,11 @@ func TestContainersRoute_RouteToContainerByHostname(t *testing.T) {
 			// run the watcher in a goroutine
 			go func() { assert.ErrorIs(t, router.Watch(ctx, watcher), context.Canceled) }()
 
-			runtime.Gosched() // wait for the router to start
+			pause(10 * time.Millisecond) // wait for the router to start
 
 			watcher.Push(tt.giveEvents)
 
-			timer := time.NewTicker(10 * time.Millisecond)
-			<-timer.C
-			timer.Stop()
-
-			runtime.Gosched() // wait for the router to process the update
+			pause(10 * time.Millisecond) // wait for the router to process the update
 
 			route, err := router.RouteToContainerByHostname(tt.giveHostname)
 
@@ -179,4 +175,12 @@ func TestContainersRoute_RouteToContainerByHostname(t *testing.T) {
 			assert.Equal(t, tt.wantRoute, route)
 		})
 	}
+}
+
+func pause(d time.Duration) {
+	timer := time.NewTicker(d)
+	<-timer.C
+	timer.Stop()
+
+	runtime.Gosched() // wait for the router to start
 }
