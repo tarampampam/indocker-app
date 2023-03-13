@@ -2,8 +2,8 @@
 *
 
 ## Except the following files and directories
-!/certs
-!/cmd
-!/internal
-!/web
-!/go.*
+!/public
+!/src
+!/webpack
+!/package*.json
+!/tsconfig.json

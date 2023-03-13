@@ -95,15 +95,8 @@ func TestProxy_ServeHTTP(t *testing.T) {
 		_, _ = w.Write([]byte("_baz"))
 	}))
 
-	// listen on a free port
-	l, err := net.Listen("tcp", "127.0.0.1:0") // let the OS choose a free port
-	require.NoError(t, err)
-
-	// close the listener at the end of the test
+	l, port := newListener(t)
 	defer func() { _ = l.Close() }()
-
-	// get the port number
-	var portNumber = l.Addr().(*net.TCPAddr).Port
 
 	// start the server in a goroutine
 	go func() { assert.ErrorIs(t, server.Serve(l), http.ErrServerClosed) }()
@@ -113,7 +106,7 @@ func TestProxy_ServeHTTP(t *testing.T) {
 
 	var serverRoute = docker.Route{
 		Scheme: "http",
-		Port:   uint16(portNumber),
+		Port:   port,
 		IPAddr: "127.0.0.1",
 	}
 
@@ -121,7 +114,6 @@ func TestProxy_ServeHTTP(t *testing.T) {
 		giveRoutes    map[string]docker.Route
 		giveRouterErr error
 		giveRequest   func() *http.Request
-		wantStatus    int
 		checkResponse func(t *testing.T, rr *httptest.ResponseRecorder)
 	}{
 		"route not found": {
@@ -131,8 +123,9 @@ func TestProxy_ServeHTTP(t *testing.T) {
 
 				return r
 			},
-			wantStatus: http.StatusNotFound,
 			checkResponse: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusNotFound, rr.Code)
+
 				assert.Contains(t, rr.Body.String(), "<html")
 				assert.Contains(t, rr.Body.String(), "<head>")
 				assert.Contains(t, rr.Body.String(), "<body>")
@@ -148,8 +141,9 @@ func TestProxy_ServeHTTP(t *testing.T) {
 
 				return r
 			},
-			wantStatus: http.StatusUnprocessableEntity,
 			checkResponse: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+
 				assert.Contains(t, rr.Body.String(), "<html")
 				assert.Contains(t, rr.Body.String(), "<head>")
 				assert.Contains(t, rr.Body.String(), "<body>")
@@ -166,8 +160,9 @@ func TestProxy_ServeHTTP(t *testing.T) {
 
 				return r
 			},
-			wantStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rr.Code)
+
 				assert.Equal(t, "pong", rr.Body.String())
 			},
 		},
@@ -178,8 +173,9 @@ func TestProxy_ServeHTTP(t *testing.T) {
 
 				return r
 			},
-			wantStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rr.Code)
+
 				assert.Equal(t, "pong", rr.Body.String())
 			},
 		},
@@ -194,8 +190,9 @@ func TestProxy_ServeHTTP(t *testing.T) {
 
 				return r
 			},
-			wantStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rr.Code)
+
 				assert.Equal(t, "pong", rr.Body.String())
 			},
 		},
@@ -206,8 +203,9 @@ func TestProxy_ServeHTTP(t *testing.T) {
 
 				return r
 			},
-			wantStatus: http.StatusInternalServerError,
 			checkResponse: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusInternalServerError, rr.Code)
+
 				assert.Equal(t, "foo error 123", rr.Body.String())
 			},
 		},
@@ -218,8 +216,9 @@ func TestProxy_ServeHTTP(t *testing.T) {
 
 				return r
 			},
-			wantStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rr.Code)
+
 				assert.Equal(t, "foo_bar_baz", rr.Body.String())
 			},
 		},
@@ -239,11 +238,16 @@ func TestProxy_ServeHTTP(t *testing.T) {
 
 			handler.ServeHTTP(rr, tt.giveRequest())
 
-			assert.Equal(t, tt.wantStatus, rr.Code)
-
-			if tt.checkResponse != nil {
-				tt.checkResponse(t, rr)
-			}
+			tt.checkResponse(t, rr)
 		})
 	}
+}
+
+func newListener(t *testing.T) (net.Listener, uint16) {
+	t.Helper()
+
+	l, err := net.Listen("tcp", "127.0.0.1:0") // let the OS choose a free port
+	require.NoError(t, err)
+
+	return l, uint16(l.Addr().(*net.TCPAddr).Port)
 }

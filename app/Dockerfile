@@ -1,5 +1,25 @@
 # syntax=docker/dockerfile:1.3
 
+# this stage is used to build the frontend
+FROM docker.io/library/node:19-alpine as frontend
+
+RUN mkdir -p /src
+
+COPY ./web/package*.json /src/
+
+WORKDIR /src
+
+# install node dependencies
+RUN set -x \
+    && npm config set update-notifier false \
+    && npm ci --no-audit --prefer-offline
+
+COPY ./web /src
+
+# build the frontend (built artifact can be found in /src/dist)
+RUN set -x \
+    && npm run build
+
 # this stage is used to build the application
 FROM docker.io/library/golang:1.20-alpine as builder
 
@@ -34,6 +54,9 @@ ARG APP_VERSION="undefined@docker"
 ENV \
   # arguments to pass on each go tool link invocation
   LDFLAGS="-s -w -X gh.tarampamp.am/indocker-app/app/internal/version.version=${APP_VERSION}"
+
+# copy the frontend build artifact
+COPY --from=frontend /src/dist /src/web/dist
 
 RUN set -x \
     && go generate ./... \

@@ -94,10 +94,16 @@ func (s *Server) Start(http, https net.Listener) error {
 		return errors.New("HTTPS server: TLS config was not set")
 	}
 
-	var errCh = make(chan error, 2) //nolint:gomnd
+	var errCh = make(chan error)
 
 	go func() { errCh <- s.http.Serve(http) }()
 	go func() { errCh <- s.https.ServeTLS(https, "", "") }()
+
+	if err := <-errCh; err != nil {
+		defer func() { <-errCh }()
+
+		return err
+	}
 
 	return <-errCh
 }
