@@ -12,10 +12,12 @@ import (
 
 	"gh.tarampamp.am/indocker-app/app/internal/docker"
 	"gh.tarampamp.am/indocker-app/app/internal/http/api"
+	"gh.tarampamp.am/indocker-app/app/internal/http/fileserver"
 	"gh.tarampamp.am/indocker-app/app/internal/http/middleware"
 	"gh.tarampamp.am/indocker-app/app/internal/http/proxy"
 	"gh.tarampamp.am/indocker-app/app/internal/http/ws"
 	"gh.tarampamp.am/indocker-app/app/internal/version"
+	"gh.tarampamp.am/indocker-app/app/web"
 )
 
 type Server struct {
@@ -59,8 +61,12 @@ func (s *Server) Register(
 	ctx context.Context,
 	drw docker.ContainersRouter,
 	dsw docker.ContainersStateWatcher,
+	dashboardDomain string,
 ) error {
-	var router = NewRouter("/indocker", proxy.NewProxy(s.log, drw))
+	var (
+		router = NewRouter("/indocker", proxy.NewProxy(s.log, drw))
+		static = fileserver.NewHandler(http.FS(web.Content()))
+	)
 
 	router.Register(http.MethodGet, "/api/version/current", api.VersionCurrent(version.Version()))
 	router.Register(http.MethodGet, "/api/version/latest", api.VersionLatest(func() (*version.LatestVersion, error) {
@@ -77,7 +83,7 @@ func (s *Server) Register(
 		s.http:  s.log.Named("http"),
 		s.https: s.log.Named("https"),
 	} {
-		server.ErrorLog = zap.NewStdLog(namedLogger)       // replace the default logger with named
+		server.ErrorLog = zap.NewStdLog(namedLogger) // replace the default logger with named
 		server.Handler = middleware.HealthcheckMiddleware( // healthcheck requests will not be logged
 			middleware.LogReq(namedLogger, // named loggers for each server
 				router,
@@ -100,10 +106,12 @@ func (s *Server) Start(http, https net.Listener) error {
 	go func() { errCh <- s.https.ServeTLS(https, "", "") }()
 
 	if err := <-errCh; err != nil {
-		defer func() { <-errCh }()
+		defer func() { <-errCh; close(errCh) }()
 
 		return err
 	}
+
+	defer close(errCh)
 
 	return <-errCh
 }
@@ -111,6 +119,8 @@ func (s *Server) Start(http, https net.Listener) error {
 // Stop the server.
 func (s *Server) Stop(ctx context.Context) error {
 	if err := s.http.Shutdown(ctx); err != nil {
+		defer func() { _ = s.https.Shutdown(ctx) }()
+
 		return err
 	}
 

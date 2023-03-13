@@ -47,6 +47,9 @@ type (
 			Host          string
 			WatchInterval time.Duration
 		}
+		Dashboard struct {
+			Domain string
+		}
 		DontSendUsageStats bool
 	}
 )
@@ -66,6 +69,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 		shutdownTimeoutFlagName        = "shutdown-timeout"
 		dockerHostFlagName             = "docker-socket"
 		dockerWatchIntervalFlagName    = "docker-watch-interval"
+		dashboardDomainFlagName        = "dashboard-domain"
 		dontSendAnonymousUsageFlagName = "dont-send-anonymous-usage"
 	)
 
@@ -87,6 +91,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			opt.ShutdownTimeout = c.Duration(shutdownTimeoutFlagName)
 			opt.Docker.Host = c.String(dockerHostFlagName)
 			opt.Docker.WatchInterval = c.Duration(dockerWatchIntervalFlagName)
+			opt.Dashboard.Domain = c.String(dashboardDomainFlagName)
 			opt.DontSendUsageStats = c.Bool(dontSendAnonymousUsageFlagName)
 
 			if opt.HTTP.Port == 0 || opt.HTTP.Port > 65535 {
@@ -192,6 +197,12 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 				Value:   time.Second,
 				EnvVars: []string{env.DockerWatchInterval.String()},
 			},
+			&cli.StringFlag{
+				Name:    dashboardDomainFlagName,
+				Usage:   "dashboard domain name (set empty to disable)",
+				Value:   "monitor",
+				EnvVars: []string{env.DashboardDomain.String()},
+			},
 			&cli.BoolFlag{
 				Name:  dontSendAnonymousUsageFlagName,
 				Usage: "Don't send anonymous usage statistics (please, leave it enabled, it helps us to improve the project)",
@@ -277,7 +288,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 	}()
 
 	// register all routes
-	if err := server.Register(ctx, dockerRouter, dockerStateWatcher); err != nil {
+	if err := server.Register(ctx, dockerRouter, dockerStateWatcher, opt.Dashboard.Domain); err != nil {
 		return err
 	}
 
@@ -313,6 +324,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 			zap.Duration("read timeout", opt.ReadTimeout),
 			zap.Duration("write timeout", opt.WriteTimeout),
 			zap.Duration("idle timeout", opt.IDLETimeout),
+			zap.String("dashboard domain name", opt.Dashboard.Domain),
 		)
 
 		var startingError = server.Start(httpListener, httpsListener)
