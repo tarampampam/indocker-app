@@ -25,6 +25,7 @@ const (
 
 	UserAgent = "HealthChecker/indocker"
 	Route     = "/healthz"
+	Method    = http.MethodGet
 )
 
 // NewHealthChecker creates heals checker.
@@ -58,7 +59,7 @@ func (c *HealthChecker) Check(httpPort, httpsPort uint) error {
 		uri := _uri
 
 		eg.Go(func() error {
-			req, err := http.NewRequestWithContext(egCtx, http.MethodGet, uri, http.NoBody)
+			req, err := http.NewRequestWithContext(egCtx, Method, uri, http.NoBody)
 			if err != nil {
 				return err
 			}
