@@ -7,7 +7,7 @@ import (
 )
 
 // HealthcheckMiddleware is a middleware that handles healthcheck requests.
-// It is used to check if the application is alive. Only for internal usage.
+// It is used to check if the application is alive on ANY subdomain. Only for internal usage.
 func HealthcheckMiddleware(next http.Handler) http.Handler {
 	const (
 		needUa     = healthcheck.UserAgent
