@@ -199,7 +199,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			},
 			&cli.StringFlag{
 				Name:    dashboardDomainFlagName,
-				Usage:   "dashboard domain name (set empty to disable)",
+				Usage:   "dashboard domain name (set empty to disable; it will disable the API too)",
 				Value:   "monitor",
 				EnvVars: []string{env.DashboardDomain.String()},
 			},

@@ -18,7 +18,7 @@ fake-web-dist: # is needed for the backend (embedding)
 # App stuff
 
 go-generate: fake-web-dist ## Generate app assets
-	docker-compose run $(DC_RUN_ARGS) --no-deps app sh -c "go generate ./... && go generate -tags docs ./docs ./internal/cli"
+	docker-compose run $(DC_RUN_ARGS) --no-deps app sh -c "go generate ./... && go generate -tags docs ./internal/cli"
 
 go-build: go-generate ## Build app binary file(s)
 	docker-compose run $(DC_RUN_ARGS) -e "CGO_ENABLED=0" --no-deps go go build -trimpath -ldflags $(LDFLAGS) ./cmd/mkcert

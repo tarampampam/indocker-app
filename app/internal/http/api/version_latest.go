@@ -11,6 +11,7 @@ import (
 
 type latestVersionFetcher func() (*version.LatestVersion, error)
 
+// TODO: remove this?
 func VersionLatest(fetcher latestVersionFetcher, invalidateCacheAfter time.Duration) http.HandlerFunc {
 	var (
 		mu        sync.Mutex

@@ -16,6 +16,7 @@ import (
 	"gh.tarampamp.am/indocker-app/app/internal/http/middleware"
 	"gh.tarampamp.am/indocker-app/app/internal/http/proxy"
 	"gh.tarampamp.am/indocker-app/app/internal/http/ws"
+	"gh.tarampamp.am/indocker-app/app/internal/httptools"
 	"gh.tarampamp.am/indocker-app/app/internal/version"
 	"gh.tarampamp.am/indocker-app/app/web"
 )
@@ -42,11 +43,12 @@ func WithIDLETimeout(timeout time.Duration) ServerOption {
 
 func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...ServerOption) *Server {
 	var (
-		baseCtx = func(ln net.Listener) context.Context { return ctx }
-		server  = Server{
+		baseCtx   = func(ln net.Listener) context.Context { return ctx }
+		logBridge = zap.NewStdLog(log)
+		server    = Server{
 			log:   log,
-			http:  &http.Server{BaseContext: baseCtx},                //nolint:gosec
-			https: &http.Server{BaseContext: baseCtx, TLSConfig: tc}, //nolint:gosec
+			http:  &http.Server{BaseContext: baseCtx, ErrorLog: logBridge},                //nolint:gosec
+			https: &http.Server{BaseContext: baseCtx, ErrorLog: logBridge, TLSConfig: tc}, //nolint:gosec
 		}
 	)
 
@@ -64,29 +66,49 @@ func (s *Server) Register(
 	dashboardDomain string,
 ) error {
 	var (
-		router = NewRouter("/indocker", proxy.NewProxy(s.log, drw))
-		static = fileserver.NewHandler(http.FS(web.Content()))
+		proxyHandler = proxy.NewProxy(s.log, drw)
+		apiRouter    *Router
 	)
 
-	router.Register(http.MethodGet, "/api/version/current", api.VersionCurrent(version.Version()))
-	router.Register(http.MethodGet, "/api/version/latest", api.VersionLatest(func() (*version.LatestVersion, error) {
-		return version.GetLatestVersion(ctx, &http.Client{
-			Timeout: time.Second * 30, //nolint:gomnd
-			Transport: &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
-			},
-		})
-	}, time.Minute*30)) //nolint:gomnd
-	router.Register(http.MethodGet, "/ws/docker/state", ws.DockerState(dsw))
+	if dashboardDomain != "" {
+		apiRouter = NewRouter(
+			WithPrefix("/api"),                                          // handle all requests with /api prefix
+			WithMiddleware(middleware.Cors),                             // enable CORS
+			WithNotFound(NotFoundJSONHandler()),                         // respond with JSON for not found requests
+			WithFallback(fileserver.NewHandler(http.FS(web.Content()))), // and if nothing matches, serve the static files
+		)
+
+		latestVersionHandler := api.VersionLatest(func() (*version.LatestVersion, error) {
+			return version.GetLatestVersion(ctx, &http.Client{
+				Timeout: time.Second * 30, //nolint:gomnd
+				Transport: &http.Transport{
+					Proxy: http.ProxyFromEnvironment,
+				},
+			})
+		}, time.Minute*30)
+
+		apiRouter.
+			Register(http.MethodGet, "/api/version/current", api.VersionCurrent(version.Version())).
+			Register(http.MethodGet, "/api/version/latest", latestVersionHandler).
+			Register(http.MethodGet, "/ws/docker/state", ws.DockerState(dsw))
+	}
 
 	for server, namedLogger := range map[*http.Server]*zap.Logger{
 		s.http:  s.log.Named("http"),
 		s.https: s.log.Named("https"),
 	} {
-		server.ErrorLog = zap.NewStdLog(namedLogger) // replace the default logger with named
+		server.ErrorLog = zap.NewStdLog(namedLogger)       // replace the default logger with named
 		server.Handler = middleware.HealthcheckMiddleware( // healthcheck requests will not be logged
 			middleware.LogReq(namedLogger, // named loggers for each server
-				router,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if dashboardDomain != "" && httptools.TrimHostPortSuffix(r.Host) == dashboardDomain && apiRouter != nil {
+						apiRouter.ServeHTTP(w, r)
+
+						return
+					}
+
+					proxyHandler.ServeHTTP(w, r)
+				}),
 			),
 		)
 	}
@@ -94,7 +116,7 @@ func (s *Server) Register(
 	return nil
 }
 
-// Start the server.
+// Start the server(s).
 func (s *Server) Start(http, https net.Listener) error {
 	if s.https.TLSConfig == nil || s.https.TLSConfig.Certificates == nil {
 		return errors.New("HTTPS server: TLS config was not set")
@@ -116,7 +138,7 @@ func (s *Server) Start(http, https net.Listener) error {
 	return <-errCh
 }
 
-// Stop the server.
+// Stop the server(s).
 func (s *Server) Stop(ctx context.Context) error {
 	if err := s.http.Shutdown(ctx); err != nil {
 		defer func() { _ = s.https.Shutdown(ctx) }()

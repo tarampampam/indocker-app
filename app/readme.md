@@ -91,6 +91,7 @@ The following flags are supported:
 | `--shutdown-timeout="…"`      | maximum duration for graceful shutdown                                                               |             `15s`             |   `SHUTDOWN_TIMEOUT`    |
 | `--docker-socket="…"`         | docker host (or path to the docker socket)                                                           | `unix:///var/run/docker.sock` |      `DOCKER_HOST`      |
 | `--docker-watch-interval="…"` | how often to ask Docker for changes (minimum 100ms)                                                  |             `1s`              | `DOCKER_WATCH_INTERVAL` |
+| `--dashboard-domain="…"`      | dashboard domain name (set empty to disable; it will disable the API too)                            |           `monitor`           |   `DASHBOARD_DOMAIN`    |
 | `--dont-send-anonymous-usage` | Don't send anonymous usage statistics (please, leave it enabled, it helps us to improve the project) |            `false`            |         *none*          |
 
 ### `start healthcheck` subcommand (aliases: `chk`, `health`, `check`)
