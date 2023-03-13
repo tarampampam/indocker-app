@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -104,7 +105,7 @@ func (mp *MixPanelSender) Send(ctx context.Context, userID string, events ...Eve
 		}
 
 		if !events[i].Timestamp.IsZero() {
-			props[timeKey] = fmt.Sprintf("%d", events[i].Timestamp.Unix())
+			props[timeKey] = strconv.Itoa(int(events[i].Timestamp.Unix()))
 		}
 
 		mixEvents = append(mixEvents, mixEvent{

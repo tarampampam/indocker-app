@@ -3,72 +3,90 @@ package http
 import (
 	"net/http"
 	"strings"
-
-	"gh.tarampamp.am/indocker-app/app/internal/http/middleware"
-	"gh.tarampamp.am/indocker-app/app/internal/httptools"
 )
 
 type Router struct {
-	routes   map[string]http.Handler
 	prefix   string
-	origins  []string
-	fallback http.Handler
 	notFound http.Handler
+	fallback http.Handler
+	mw       []func(next http.Handler) http.Handler
+
+	// no mutex, so it's thread safe only if you don't register routes after the server starts
+	routes map[string]http.Handler
 }
 
-func NewRouter(prefix string, fallback http.Handler) *Router {
+type RouterOption func(*Router)
+
+// WithPrefix sets the prefix for the router.
+func WithPrefix(p string) RouterOption { return func(r *Router) { r.prefix = p } }
+
+// WithNotFound sets the handler for not found routes.
+func WithNotFound(h http.Handler) RouterOption { return func(r *Router) { r.notFound = h } }
+
+// WithFallback sets the handler for routes that don't match any registered route.
+func WithFallback(h http.Handler) RouterOption { return func(r *Router) { r.fallback = h } }
+
+// WithMiddleware adds middleware to the router.
+func WithMiddleware(mw ...func(http.Handler) http.Handler) RouterOption {
+	return func(r *Router) { r.mw = append(r.mw, mw...) }
+}
+
+// NewRouter creates a new Router.
+func NewRouter(opts ...RouterOption) *Router {
 	var r = Router{
-		routes:   make(map[string]http.Handler), // map[method+prefix+route]handler
-		prefix:   prefix,
-		origins:  []string{"indocker.app", "frontend.indocker.app" /* for local development */}, // TODO make configurable?
-		fallback: fallback,
+		routes: make(map[string]http.Handler), // map[method+prefix+route]handler
 	}
 
-	r.notFound = r.defaultNotFoundHandler()
+	for _, opt := range opts {
+		opt(&r)
+	}
 
 	return &r
 }
 
-func (router *Router) Register(method, route string, handler http.Handler) {
-	router.routes[method+router.prefix+route] = handler
+// Register registers a new route.
+func (router *Router) Register(method, route string, h http.Handler) *Router {
+	router.routes[strings.ToUpper(method)+router.prefix+route] = h
+
+	return router
 }
 
+// ServeHTTP implements the http.Handler interface.
 func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if url := r.URL.Path; strings.HasPrefix(url, router.prefix) {
-		if router.isInAllowedOrigins(r) {
-			if handler, ok := router.routes[r.Method+url]; ok {
-				middleware.Cors(handler).ServeHTTP(w, r)
-			} else {
-				router.notFound.ServeHTTP(w, r)
-			}
+	var urlPath = r.URL.Path
 
-			return
+	if router.prefix == "" || strings.HasPrefix(urlPath, router.prefix) {
+		var handler http.Handler
+
+		if h, ok := router.routes[r.Method+router.prefix+urlPath]; ok && h != nil {
+			handler = h
+		} else if router.notFound != nil {
+			handler = router.notFound
+		} else {
+			handler = http.NotFoundHandler()
 		}
+
+		// wrap the handler with the middleware
+		for _, mw := range router.mw {
+			handler = mw(handler)
+		}
+
+		handler.ServeHTTP(w, r)
+
+		return
 	}
 
 	router.fallback.ServeHTTP(w, r)
 }
 
-func (router *Router) isInAllowedOrigins(r *http.Request) bool {
-	// r.Host can be "localhost:8080" or "localhost"
-	host := httptools.TrimHostPortSuffix(r.Host)
+var notFoundJSONBody = []byte(`{"error":"not found"}`) //nolint:gochecknoglobals
 
-	for _, origin := range router.origins {
-		if host == origin {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (*Router) defaultNotFoundHandler() http.Handler {
-	var body = []byte(`{"error":"not found"}`)
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+// NotFoundJSONHandler returns a simple request handler that returns a 404 Not Found JSON response.
+func NotFoundJSONHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
 
-		_, _ = w.Write(body)
+		_, _ = w.Write(notFoundJSONBody)
 	})
 }
