@@ -15,5 +15,4 @@ module.exports = {
   rules: {
     "no-control-regex": 0,
   },
-  ignorePatterns: ["schema.gen.ts"],
 }

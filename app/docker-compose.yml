@@ -7,10 +7,8 @@ volumes:
   golint-cache: {}
 
 services:
-  app: &app
-    build:
-      context: app
-      target: builder
+  go: &go
+    build: {target: builder}
     environment:
       PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@go] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
       HOME: /tmp
@@ -20,25 +18,13 @@ services:
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
       - tmp-data:/tmp:rw
-      - ./app:/src:rw
+      - .:/src:rw
       - /var/run/docker.sock:/var/run/docker.sock:ro
     working_dir: /src
     security_opt: [no-new-privileges:true]
 
-  app-web:
-    <<: *app
-    ports:
-      - '80:8080/tcp' # Open <http://app.indocker.app>
-      - '443:8443/tcp' # Open <https://app.indocker.app>
-    entrypoint: sh -c 'go build -buildvcs=false -o /tmp/app ./cmd/app/ && exec $0 "$@"'
-    command: /tmp/app start
-    healthcheck:
-      test: ['CMD', '/tmp/app', 'start', 'healthcheck']
-      interval: 5s
-      start_period: 2s
-
-  frontend: # frontend - https://frontend.indocker.app/
-    image: node:18-alpine
+  node: &node
+    build: {target: frontend}
     environment:
       PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@node] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
       HOME: /tmp
@@ -47,8 +33,25 @@ services:
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
       - node-data:/tmp:rw
-      - ./frontend:/src:rw
-    working_dir: /src
+      - .:/src:rw
+    working_dir: /src/web
+    security_opt: [no-new-privileges:true]
+
+  app:
+    <<: *go
+    ports: ['80:8080/tcp', '443:8443/tcp']
+    entrypoint: sh -c 'go build -buildvcs=false -o /tmp/app ./cmd/app/ && exec $0 "$@"'
+    command: /tmp/app start
+    healthcheck:
+      test: ['CMD', '/tmp/app', 'start', 'healthcheck']
+      interval: 5s
+      start_period: 2s
+
+  monitor: # frontend - https://frontend.indocker.app/
+    <<: *node
+    labels:
+      indocker.host: monitor # Open <https://monitor.indocker.app>
+      indocker.port: 8080
     command: npm run serve -- --client-web-socket-url 'auto://0.0.0.0:0/ws'
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://127.0.0.1:8080/']
@@ -56,12 +59,8 @@ services:
       timeout: 2s
       start_period: 5s
       retries: 15
-    labels:
-      indocker.host: frontend
-      indocker.port: 8080
-    security_opt: [no-new-privileges:true]
 
-  whoami:
+  whoami: # just for a test
     image: containous/whoami:latest
     labels:
       indocker.host: whoami.indocker.app # Open <https://whoami.indocker.app>
@@ -76,10 +75,6 @@ services:
     volumes:
       - golint-go:/go:rw # go dependencies will be downloaded on each run without this
       - golint-cache:/tmp/golint:rw
-      - ./app:/src:ro
+      - .:/src:ro
     working_dir: /src
     security_opt: [no-new-privileges:true]
-
-networks:
-  indocker-app-network:
-    external: true
