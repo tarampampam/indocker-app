@@ -15,7 +15,7 @@ func NewCommand() *cli.Command {
 
 	return &cli.Command{
 		Name:    "healthcheck",
-		Aliases: []string{"chk", "health", "check"},
+		Aliases: []string{"hc", "health", "check"},
 		Usage:   "Health checker for the HTTP(S) servers. Use case - docker healthcheck",
 		Action: func(c *cli.Context) error {
 			return NewHealthChecker(c.Context).Check(c.Uint(httpPortFlagName), c.Uint(httpsPortFlagName))

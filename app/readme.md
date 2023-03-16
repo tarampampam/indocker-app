@@ -92,9 +92,10 @@ The following flags are supported:
 | `--docker-socket="…"`         | docker host (or path to the docker socket)                                                           | `unix:///var/run/docker.sock` |      `DOCKER_HOST`      |
 | `--docker-watch-interval="…"` | how often to ask Docker for changes (minimum 100ms)                                                  |             `1s`              | `DOCKER_WATCH_INTERVAL` |
 | `--dashboard-domain="…"`      | dashboard sub-domain name (set empty to disable; it will disable the API too)                        |           `monitor`           |   `DASHBOARD_DOMAIN`    |
+| `--dont-use-embedded-front`   | don't use embedded front-end files (useful for development)                                          |            `false`            |         *none*          |
 | `--dont-send-anonymous-usage` | don't send anonymous usage statistics (please, leave it enabled, it helps us to improve the project) |            `false`            |         *none*          |
 
-### `start healthcheck` subcommand (aliases: `chk`, `health`, `check`)
+### `start healthcheck` subcommand (aliases: `hc`, `health`, `check`)
 
 Health checker for the HTTP(S) servers. Use case - docker healthcheck.
 
