@@ -6,13 +6,13 @@ import (
 	"sync"
 )
 
-func VersionCurrent(ver string) http.HandlerFunc {
+func VersionCurrent(ver string) Handler {
 	var (
 		once  sync.Once
 		cache []byte
 	)
 
-	return func(w http.ResponseWriter, _ *http.Request) {
+	return HandlerFunc(func(w http.ResponseWriter, _ *http.Request) error {
 		once.Do(func() {
 			cache, _ = json.Marshal(struct {
 				Version string `json:"version"`
@@ -21,9 +21,11 @@ func VersionCurrent(ver string) http.HandlerFunc {
 			})
 		})
 
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 
-		_, _ = w.Write(cache)
-	}
+		_, err := w.Write(cache)
+
+		return err
+	})
 }

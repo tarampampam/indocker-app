@@ -205,7 +205,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			},
 			&cli.BoolFlag{
 				Name:  dontSendAnonymousUsageFlagName,
-				Usage: "Don't send anonymous usage statistics (please, leave it enabled, it helps us to improve the project)",
+				Usage: "don't send anonymous usage statistics (please, leave it enabled, it helps us to improve the project)",
 			},
 		},
 		Subcommands: []*cli.Command{

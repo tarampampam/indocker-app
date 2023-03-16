@@ -17,7 +17,7 @@ import (
 	"gh.tarampamp.am/indocker-app/app/internal/http/proxy"
 	"gh.tarampamp.am/indocker-app/app/internal/http/ws"
 	"gh.tarampamp.am/indocker-app/app/internal/httptools"
-	"gh.tarampamp.am/indocker-app/app/internal/version"
+	ver "gh.tarampamp.am/indocker-app/app/internal/version"
 	"gh.tarampamp.am/indocker-app/app/web"
 )
 
@@ -67,29 +67,16 @@ func (s *Server) Register(
 ) error {
 	var (
 		proxyHandler = proxy.NewProxy(s.log, drw)
-		apiRouter    *Router
+		router       *api.Router
 	)
 
 	if dashboardDomain != "" {
-		apiRouter = NewRouter(
-			WithPrefix("/api"),                                          // handle all requests with /api prefix
-			WithMiddleware(middleware.Cors),                             // enable CORS
-			WithNotFound(NotFoundJSONHandler()),                         // respond with JSON for not found requests
-			WithFallback(fileserver.NewHandler(http.FS(web.Content()))), // and if nothing matches, serve the static files
-		)
+		_ = fileserver.NewHandler(http.FS(web.Content()))
+		router = api.NewRouter("/api", proxyHandler)
 
-		latestVersionHandler := api.VersionLatest(func() (*version.LatestVersion, error) {
-			return version.GetLatestVersion(ctx, &http.Client{
-				Timeout: time.Second * 30, //nolint:gomnd
-				Transport: &http.Transport{
-					Proxy: http.ProxyFromEnvironment,
-				},
-			})
-		}, time.Minute*30)
-
-		apiRouter.
-			Register(http.MethodGet, "/api/version/current", api.VersionCurrent(version.Version())).
-			Register(http.MethodGet, "/api/version/latest", latestVersionHandler).
+		router.
+			Register(http.MethodGet, "/version/current", api.VersionCurrent(ver.Version())).
+			Register(http.MethodGet, "/version/latest", api.VersionLatest(ver.NewLatest(ver.WithContext(ctx)), time.Minute*30)).
 			Register(http.MethodGet, "/ws/docker/state", ws.DockerState(dsw))
 	}
 
@@ -101,13 +88,13 @@ func (s *Server) Register(
 		server.Handler = middleware.HealthcheckMiddleware( // healthcheck requests will not be logged
 			middleware.LogReq(namedLogger, // named loggers for each server
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if dashboardDomain != "" && httptools.TrimHostPortSuffix(r.Host) == dashboardDomain && apiRouter != nil {
-						apiRouter.ServeHTTP(w, r)
+					if dashboardDomain != "" && httptools.TrimHostPortSuffix(r.Host) == dashboardDomain && router != nil {
+						router.ServeHTTP(w, r)
 
 						return
 					}
 
-					proxyHandler.ServeHTTP(w, r)
+					proxyHandler.ServeHTTP(w, r) // otherwise, proxy the request
 				}),
 			),
 		)
