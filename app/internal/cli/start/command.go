@@ -48,7 +48,8 @@ type (
 			WatchInterval time.Duration
 		}
 		Dashboard struct {
-			Domain string
+			Domain               string
+			DontUseEmbeddedFront bool
 		}
 		DontSendUsageStats bool
 	}
@@ -70,7 +71,13 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 		dockerHostFlagName             = "docker-socket"
 		dockerWatchIntervalFlagName    = "docker-watch-interval"
 		dashboardDomainFlagName        = "dashboard-domain"
+		dontUseEmbeddedFrontFlagName   = "dont-use-embedded-front"
 		dontSendAnonymousUsageFlagName = "dont-send-anonymous-usage"
+
+		httpCategory      = "http"
+		tlsCategory       = "tls"
+		dashboardCategory = "dashboard"
+		dockerCategory    = "docker"
 	)
 
 	cmd.c = &cli.Command{
@@ -92,6 +99,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			opt.Docker.Host = c.String(dockerHostFlagName)
 			opt.Docker.WatchInterval = c.Duration(dockerWatchIntervalFlagName)
 			opt.Dashboard.Domain = c.String(dashboardDomainFlagName)
+			opt.Dashboard.DontUseEmbeddedFront = c.Bool(dontUseEmbeddedFrontFlagName)
 			opt.DontSendUsageStats = c.Bool(dontSendAnonymousUsageFlagName)
 
 			if opt.HTTP.Port == 0 || opt.HTTP.Port > 65535 {
@@ -132,52 +140,60 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:    addrFlagName,
-				Usage:   "server address (hostname or port; 0.0.0.0 for all interfaces)",
-				Value:   "0.0.0.0",
-				EnvVars: []string{env.ServerAddress.String()},
+				Name:     addrFlagName,
+				Category: httpCategory,
+				Usage:    "server address (hostname or port; 0.0.0.0 for all interfaces)",
+				Value:    "0.0.0.0",
+				EnvVars:  []string{env.ServerAddress.String()},
 			},
 			&cli.UintFlag{
-				Name:    httpPortFlagName,
-				Usage:   "HTTP server port",
-				Value:   8080, //nolint:gomnd
-				EnvVars: []string{env.HTTPPort.String()},
+				Name:     httpPortFlagName,
+				Category: httpCategory,
+				Usage:    "HTTP server port",
+				Value:    8080, //nolint:gomnd
+				EnvVars:  []string{env.HTTPPort.String()},
 			},
 			&cli.UintFlag{
-				Name:    httpsPortFlagName,
-				Usage:   "HTTPS server port",
-				Value:   8443, //nolint:gomnd
-				EnvVars: []string{env.HTTPSPort.String()},
+				Name:     httpsPortFlagName,
+				Category: httpCategory,
+				Usage:    "HTTPS server port",
+				Value:    8443, //nolint:gomnd
+				EnvVars:  []string{env.HTTPSPort.String()},
 			},
 			&cli.StringFlag{
-				Name:    httpsCertFileFlagName,
-				Usage:   "TLS certificate file path (if empty, embedded certificate will be used)",
-				Value:   "",
-				EnvVars: []string{env.HTTPSCertFile.String()},
+				Name:     httpsCertFileFlagName,
+				Category: tlsCategory,
+				Usage:    "TLS certificate file path (if empty, embedded certificate will be used)",
+				Value:    "",
+				EnvVars:  []string{env.HTTPSCertFile.String()},
 			},
 			&cli.StringFlag{
-				Name:    httpsKeyFileFlagName,
-				Usage:   "TLS key file path (if empty, embedded key will be used)",
-				Value:   "",
-				EnvVars: []string{env.HTTPSKeyFile.String()},
+				Name:     httpsKeyFileFlagName,
+				Category: tlsCategory,
+				Usage:    "TLS key file path (if empty, embedded key will be used)",
+				Value:    "",
+				EnvVars:  []string{env.HTTPSKeyFile.String()},
 			},
 			&cli.DurationFlag{
-				Name:    readTimeoutFlagName,
-				Usage:   "maximum duration for reading the entire request, including the body (zero = no timeout)",
-				Value:   time.Second * 60, //nolint:gomnd
-				EnvVars: []string{env.ReadTimeout.String()},
+				Name:     readTimeoutFlagName,
+				Category: httpCategory,
+				Usage:    "maximum duration for reading the entire request, including the body (zero = no timeout)",
+				Value:    time.Second * 60, //nolint:gomnd
+				EnvVars:  []string{env.ReadTimeout.String()},
 			},
 			&cli.DurationFlag{
-				Name:    writeTimeoutFlagName,
-				Usage:   "maximum duration before timing out writes of the response (zero = no timeout)",
-				Value:   time.Second * 60, //nolint:gomnd
-				EnvVars: []string{env.WriteTimeout.String()},
+				Name:     writeTimeoutFlagName,
+				Category: httpCategory,
+				Usage:    "maximum duration before timing out writes of the response (zero = no timeout)",
+				Value:    time.Second * 60, //nolint:gomnd
+				EnvVars:  []string{env.WriteTimeout.String()},
 			},
 			&cli.DurationFlag{
-				Name:    idleTimeoutFlagName,
-				Usage:   "maximum amount of time to wait for the next request (keep-alive, zero = no timeout)",
-				Value:   time.Second * 60, //nolint:gomnd
-				EnvVars: []string{env.WriteTimeout.String()},
+				Name:     idleTimeoutFlagName,
+				Category: httpCategory,
+				Usage:    "maximum amount of time to wait for the next request (keep-alive, zero = no timeout)",
+				Value:    time.Second * 60, //nolint:gomnd
+				EnvVars:  []string{env.WriteTimeout.String()},
 			},
 			&cli.DurationFlag{
 				Name:    shutdownTimeoutFlagName,
@@ -186,22 +202,30 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 				EnvVars: []string{env.ShutdownTimeout.String()},
 			},
 			&cli.StringFlag{
-				Name:    dockerHostFlagName,
-				Usage:   "docker host (or path to the docker socket)",
-				Value:   client.DefaultDockerHost,
-				EnvVars: []string{env.DockerHost.String()},
+				Name:     dockerHostFlagName,
+				Category: dockerCategory,
+				Usage:    "docker host (or path to the docker socket)",
+				Value:    client.DefaultDockerHost,
+				EnvVars:  []string{env.DockerHost.String()},
 			},
 			&cli.DurationFlag{
-				Name:    dockerWatchIntervalFlagName,
-				Usage:   "how often to ask Docker for changes (minimum 100ms)",
-				Value:   time.Second,
-				EnvVars: []string{env.DockerWatchInterval.String()},
+				Name:     dockerWatchIntervalFlagName,
+				Category: dockerCategory,
+				Usage:    "how often to ask Docker for changes (minimum 100ms)",
+				Value:    time.Second,
+				EnvVars:  []string{env.DockerWatchInterval.String()},
 			},
 			&cli.StringFlag{
-				Name:    dashboardDomainFlagName,
-				Usage:   "dashboard sub-domain name (set empty to disable; it will disable the API too)",
-				Value:   "monitor",
-				EnvVars: []string{env.DashboardDomain.String()},
+				Name:     dashboardDomainFlagName,
+				Category: dashboardCategory,
+				Usage:    "dashboard sub-domain name (set empty to disable; it will disable the API too)",
+				Value:    "monitor",
+				EnvVars:  []string{env.DashboardDomain.String()},
+			},
+			&cli.BoolFlag{
+				Name:     dontUseEmbeddedFrontFlagName,
+				Category: dashboardCategory,
+				Usage:    "don't use embedded front-end files (useful for development)",
 			},
 			&cli.BoolFlag{
 				Name:  dontSendAnonymousUsageFlagName,
@@ -288,7 +312,12 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 	}()
 
 	// register all routes
-	if err := server.Register(ctx, dockerRouter, dockerStateWatcher, opt.Dashboard.Domain); err != nil {
+	if err := server.Register(ctx,
+		dockerRouter,
+		dockerStateWatcher,
+		opt.Dashboard.Domain,
+		opt.Dashboard.DontUseEmbeddedFront,
+	); err != nil {
 		return err
 	}
 
@@ -319,12 +348,12 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 
 		log.Info("HTTP(S) servers starting",
 			zap.String("address", opt.Addr),
-			zap.Uint("http port", opt.HTTP.Port),
-			zap.Uint("https port", opt.HTTPS.Port),
-			zap.Duration("read timeout", opt.ReadTimeout),
-			zap.Duration("write timeout", opt.WriteTimeout),
-			zap.Duration("idle timeout", opt.IDLETimeout),
-			zap.String("dashboard domain name", opt.Dashboard.Domain),
+			zap.Uint("http_port", opt.HTTP.Port),
+			zap.Uint("https_port", opt.HTTPS.Port),
+			zap.Duration("read_timeout", opt.ReadTimeout),
+			zap.Duration("write_timeout", opt.WriteTimeout),
+			zap.Duration("idle_timeout", opt.IDLETimeout),
+			zap.String("dashboard_domain", opt.Dashboard.Domain),
 		)
 
 		var startingError = server.Start(httpListener, httpsListener)

@@ -41,7 +41,7 @@ services:
     <<: *go
     ports: ['80:8080/tcp', '443:8443/tcp']
     entrypoint: sh -c 'go build -buildvcs=false -o /tmp/app ./cmd/app/ && exec $0 "$@"'
-    command: /tmp/app start
+    command: /tmp/app start --dont-use-embedded-front
     healthcheck:
       test: ['CMD', '/tmp/app', 'start', 'healthcheck']
       interval: 5s

@@ -64,6 +64,7 @@ func (s *Server) Register(
 	drw docker.ContainersRouter,
 	dsw docker.ContainersStateWatcher,
 	dashboardDomain string,
+	dontUseEmbeddedFront bool,
 ) error {
 	var (
 		proxyHandler = proxy.NewProxy(s.log, drw)
@@ -71,8 +72,15 @@ func (s *Server) Register(
 	)
 
 	if dashboardDomain != "" {
-		_ = fileserver.NewHandler(http.FS(web.Content()))
-		router = api.NewRouter("/api", proxyHandler)
+		var fallback http.Handler
+
+		if dontUseEmbeddedFront {
+			fallback = proxyHandler // if the embedded front is disabled, proxy the request
+		} else {
+			fallback = fileserver.NewHandler(http.FS(web.Content())) // otherwise, serve the embedded front
+		}
+
+		router = api.NewRouter("/api", fallback)
 
 		router.
 			Register(http.MethodGet, "/version/current", api.VersionCurrent(ver.Version())).
