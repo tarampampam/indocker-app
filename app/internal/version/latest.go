@@ -15,23 +15,72 @@ type httpClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// LatestVersion represents the latest version from GitHub releases.
-type LatestVersion struct {
-	Version   string    // release version (with "v" prefix)
-	URL       string    // URL to release page
-	Name      string    // release name
-	Body      string    // release body
-	CreatedAt time.Time // release creation date
+// OwnGithubRepo is a GitHub repository name, where the application is hosted.
+const OwnGithubRepo = "tarampampam/indocker-app"
+
+type (
+	// Latest is a struct, that can be used to fetch the latest release information from GitHub.
+	Latest struct {
+		http httpClient
+		ctx  context.Context
+		repo string
+
+		githubAPIKey string
+	}
+
+	// Release represents GitHub release information.
+	Release struct {
+		Version   string    // release version (with "v" prefix)
+		URL       string    // URL to release page
+		Name      string    // release name
+		Body      string    // release body (description)
+		CreatedAt time.Time // release creation date
+	}
+
+	// LatestOption is a function, that can be used to configure the Latest instance.
+	LatestOption func(*Latest)
+)
+
+// WithHTTPClient allows to set custom HTTP client.
+func WithHTTPClient(c httpClient) LatestOption { return func(l *Latest) { l.http = c } }
+
+// WithContext allows to set custom context (context.Background will be used by default).
+func WithContext(ctx context.Context) LatestOption { return func(l *Latest) { l.ctx = ctx } }
+
+// WithGithubAPIKey allows to set GitHub API key (without this key, GitHub API will be limited to 60 requests per hour).
+func WithGithubAPIKey(key string) LatestOption { return func(l *Latest) { l.githubAPIKey = key } }
+
+// WithGithubRepo allows to set custom GitHub repository name.
+func WithGithubRepo(repo string) LatestOption { return func(l *Latest) { l.repo = repo } }
+
+// NewLatest creates new Latest instance.
+func NewLatest(opts ...LatestOption) *Latest {
+	latest := &Latest{
+		ctx:  context.Background(),
+		repo: OwnGithubRepo,
+	}
+
+	for _, opt := range opts {
+		opt(latest)
+	}
+
+	if latest.http == nil {
+		latest.http = &http.Client{
+			Timeout: time.Second * 30, //nolint:gomnd
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+			},
+		}
+	}
+
+	return latest
 }
 
-// GetLatestVersion returns the latest version from GitHub releases. If GitHub API key provided, it will be used for
-// authentication. If not, then GitHub API will be used with anonymous access.
-func GetLatestVersion(ctx context.Context, client httpClient, gitHubApiKey ...string) (*LatestVersion, error) { //nolint:funlen,lll
-	const repo = "tarampampam/indocker-app"
-
-	req, err := http.NewRequestWithContext(ctx,
+// Fetch fetches the latest release information from GitHub.
+func (l *Latest) Fetch() (*Release, error) {
+	req, err := http.NewRequestWithContext(l.ctx,
 		// https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#list-releases
-		http.MethodGet, fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=99&page=1", repo), http.NoBody,
+		http.MethodGet, fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=99&page=1", l.repo), http.NoBody,
 	)
 	if err != nil {
 		return nil, err
@@ -40,11 +89,11 @@ func GetLatestVersion(ctx context.Context, client httpClient, gitHubApiKey ...st
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
-	if len(gitHubApiKey) > 0 && gitHubApiKey[0] != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", gitHubApiKey[0]))
+	if l.githubAPIKey != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", l.githubAPIKey))
 	}
 
-	resp, err := client.Do(req)
+	resp, err := l.http.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -56,15 +105,11 @@ func GetLatestVersion(ctx context.Context, client httpClient, gitHubApiKey ...st
 	}
 
 	var payload []struct {
-		Url         string    `json:"url"`
-		HtmlUrl     string    `json:"html_url"`
-		TagName     string    `json:"tag_name"`
-		Name        string    `json:"name"`
-		Body        string    `json:"body"`
-		Draft       bool      `json:"draft"`
-		Prerelease  bool      `json:"prerelease"`
-		CreatedAt   time.Time `json:"created_at"`
-		PublishedAt time.Time `json:"published_at"`
+		HtmlUrl   string    `json:"html_url"`
+		TagName   string    `json:"tag_name"`
+		Name      string    `json:"name"`
+		Body      string    `json:"body"`
+		CreatedAt time.Time `json:"created_at"`
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&payload)
@@ -84,7 +129,7 @@ func GetLatestVersion(ctx context.Context, client httpClient, gitHubApiKey ...st
 	}
 
 	if len(payload) == 1 {
-		return &LatestVersion{
+		return &Release{
 			Version:   payload[0].TagName,
 			URL:       payload[0].HtmlUrl,
 			Name:      payload[0].Name,
@@ -104,7 +149,7 @@ func GetLatestVersion(ctx context.Context, client httpClient, gitHubApiKey ...st
 
 	for _, release := range payload { // search for the latest release
 		if release.TagName == allVersions[len(allVersions)-1] {
-			return &LatestVersion{
+			return &Release{
 				Version:   release.TagName,
 				URL:       release.HtmlUrl,
 				Name:      release.Name,

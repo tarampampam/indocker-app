@@ -9,51 +9,63 @@ import (
 	"gh.tarampamp.am/indocker-app/app/internal/version"
 )
 
-type latestVersionFetcher func() (*version.LatestVersion, error)
+type versionFetcher interface {
+	Fetch() (*version.Release, error)
+}
 
-// TODO: remove this?
-func VersionLatest(fetcher latestVersionFetcher, invalidateCacheAfter time.Duration) http.HandlerFunc {
+func VersionLatest(vf versionFetcher, cacheTTL time.Duration) Handler {
 	var (
 		mu        sync.Mutex
 		updatedAt time.Time
 		cache     []byte
-		lastError error
 	)
 
-	return func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+	return HandlerFunc(func(w http.ResponseWriter, _ *http.Request) error {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		mu.Lock()
 		defer mu.Unlock()
 
-		if time.Since(updatedAt) > invalidateCacheAfter || lastError != nil {
-			if l, err := fetcher(); err == nil {
-				cache, _ = json.Marshal(struct {
-					Version   string `json:"version"`
-					URL       string `json:"url"`
-					Name      string `json:"name"`
-					Body      string `json:"body"`
-					CreatedAt string `json:"created_at"`
-				}{
-					Version:   l.Version,
-					URL:       l.URL,
-					Name:      l.Name,
-					Body:      l.Body,
-					CreatedAt: l.CreatedAt.Format(time.RFC3339),
-				})
-
-				updatedAt, lastError = time.Now(), nil
-			} else {
-				lastError, cache = err, []byte(`{"error":"`+err.Error()+`"}`)
-			}
-		}
-
-		if lastError == nil {
+		// check if cache is not expired
+		if time.Since(updatedAt) < cacheTTL { // cache is not expired
+			w.Header().Set("X-Cache", "HIT")
 			w.WriteHeader(http.StatusOK)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
+
+			_, _ = w.Write(cache)
+
+			return nil
 		}
 
-		_, _ = w.Write(cache)
-	}
+		w.Header().Set("X-Cache", "MISS")
+
+		// cache is expired, fetch new version
+		latest, err := vf.Fetch()
+		if err != nil {
+			return err
+		}
+
+		// cache new version
+		cache, _ = json.Marshal(struct {
+			Version   string `json:"version"`
+			URL       string `json:"url"`
+			Name      string `json:"name"`
+			Body      string `json:"body"`
+			CreatedAt string `json:"created_at"`
+		}{
+			Version:   latest.Version,
+			URL:       latest.URL,
+			Name:      latest.Name,
+			Body:      latest.Body,
+			CreatedAt: latest.CreatedAt.Format(time.RFC3339),
+		})
+
+		// update timestamp
+		updatedAt = time.Now()
+
+		w.WriteHeader(http.StatusOK)
+
+		_, err = w.Write(cache)
+
+		return err
+	})
 }
