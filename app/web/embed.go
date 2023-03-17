@@ -5,6 +5,9 @@ import (
 	"io/fs"
 )
 
+// Generate mock distributive files, if needed.
+//go:generate go run dist.go
+
 //go:embed dist
 var content embed.FS
 
