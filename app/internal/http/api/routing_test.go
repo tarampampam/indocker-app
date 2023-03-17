@@ -76,7 +76,7 @@ func TestRouter_ServeHTTP(t *testing.T) {
 		},
 		"ok handler with prefix": {
 			givePrefix:  "/prefix",
-			giveRoutes:  map[[2]string]api.Handler{[2]string{http.MethodGet, "/foo"}: okHandler},
+			giveRoutes:  map[[2]string]api.Handler{{http.MethodGet, "/foo"}: okHandler},
 			giveRequest: httptest.NewRequest(http.MethodGet, "https://unit:123/prefix/foo", http.NoBody),
 			checkResult: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rr.Code)
@@ -90,7 +90,7 @@ func TestRouter_ServeHTTP(t *testing.T) {
 		},
 		"error handler with prefix": {
 			givePrefix:  "/prefix",
-			giveRoutes:  map[[2]string]api.Handler{[2]string{http.MethodGet, "/foo"}: errHandler},
+			giveRoutes:  map[[2]string]api.Handler{{http.MethodGet, "/foo"}: errHandler},
 			giveRequest: httptest.NewRequest(http.MethodGet, "http://unit:123/prefix/foo", http.NoBody),
 			checkResult: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusInternalServerError, rr.Code)
