@@ -52,7 +52,7 @@ services:
     labels:
       indocker.host: monitor # Open <https://monitor.indocker.app>
       indocker.port: 8080
-    command: npm run serve -- --client-web-socket-url 'auto://0.0.0.0:0/ws'
+    command: npm run serve
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://127.0.0.1:8080/']
       interval: 2s
