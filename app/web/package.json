@@ -5,13 +5,8 @@
     "lint": "eslint ./src --ext .ts,.vue"
   },
   "dependencies": {
-    "bootstrap": "^5.2.3",
-    "chart.js": "^4.2.1",
-    "js-base64": "^3.7.5",
     "mitt": "^3.0.0",
-    "string-to-color": "^2.2.2",
-    "vue": "^3.2.47",
-    "vue-chartjs": "^5.2.0"
+    "vue": "^3.2.47"
   },
   "devDependencies": {
     "@types/bootstrap": "^5.2.6",
