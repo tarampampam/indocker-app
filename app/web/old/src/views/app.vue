@@ -1,6 +1,6 @@
 <template>
   <div>
-    12332111321
+    --- app.vue ---
   </div>
 </template>
 

@@ -12,12 +12,9 @@ help: ## Show this help
 	@printf "\033[33m%s:\033[0m\n" 'Available commands'
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[32m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-fake-web-dist: # is needed for the backend (embedding)
-	test -d ./web/dist || ( mkdir ./web/dist && touch ./web/dist/index.html )
-
 # App stuff
 
-go-generate: fake-web-dist ## Generate app assets
+go-generate: ## Generate app assets
 	docker-compose run $(DC_RUN_ARGS) --no-deps app sh -c "go generate ./... && go generate -tags docs ./internal/cli"
 
 go-build: go-generate ## Build app binary file(s)
@@ -25,13 +22,13 @@ go-build: go-generate ## Build app binary file(s)
 	docker-compose run $(DC_RUN_ARGS) -e "CGO_ENABLED=0" --no-deps go go build -trimpath -ldflags $(LDFLAGS) ./cmd/app
 	./app --version
 
-go-test: fake-web-dist ## Run app tests
+go-test: ## Run app tests
 	docker-compose run $(DC_RUN_ARGS) --no-deps go gotestsum --format testname -- -race -timeout 10s ./...
 
-go-lint: fake-web-dist ## Lint the app sources
+go-lint: ## Lint the app sources
 	docker-compose run --rm golint golangci-lint run
 
-go-fmt: fake-web-dist ## Run source code formatting tools
+go-fmt: ## Run source code formatting tools
 	docker-compose run $(DC_RUN_ARGS) --no-deps go gofmt -s -w -d .
 	docker-compose run $(DC_RUN_ARGS) --no-deps go goimports -d -w .
 	docker-compose run $(DC_RUN_ARGS) --no-deps go go mod tidy
