@@ -1,47 +1,98 @@
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
+  <n-config-provider :theme="theme">
+    <n-tabs class="main" default-value="containers" justify-content="space-around" type="line">
+      <n-tab-pane name="containers" tab="Containers">
+        <view-containers />
+      </n-tab-pane>
+      <n-tab-pane name="stats-monitor" tab="Stats monitor">
+        <view-stats-monitor />
+      </n-tab-pane>
+      <n-tab-pane name="ports" tab="Ports">
+        <view-ports />
+      </n-tab-pane>
+      <n-tab-pane name="preferences" tab="Preferences">
+        <view-preferences />
+      </n-tab-pane>
+    </n-tabs>
+    <n-card class="footer">
+      <template #header>
+        <page-footer />
+      </template>
+    </n-card>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main>
+    <n-global-style />
+  </n-config-provider>
 </template>
 
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+<script lang="ts">
+import { defineComponent, ref } from 'vue'
+import {
+  darkTheme,
+  lightTheme,
+  NCard,
+  NConfigProvider,
+  NGlobalStyle,
+  NTabPane,
+  NTabs
+} from 'naive-ui'
+import ViewContainers from './components/ViewContainers.vue'
+import ViewStatsMonitor from './components/ViewStatsMonitor.vue'
+import ViewPorts from './components/ViewPorts.vue'
+import ViewPreferences from './components/ViewPreferences.vue'
+import PageFooter from './components/PageFooter.vue'
+
+export default defineComponent({
+  components: {
+    NConfigProvider,
+    NGlobalStyle,
+    NTabPane,
+    NTabs,
+    NCard,
+    ViewContainers,
+    ViewStatsMonitor,
+    ViewPorts,
+    ViewPreferences,
+    PageFooter
+  },
+  setup() {
+    const dark = darkTheme,
+      light = lightTheme
+    const mediaSelector = '(prefers-color-scheme: dark)'
+    const theme = ref(light)
+
+    if (window.matchMedia) {
+      theme.value = window.matchMedia(mediaSelector).matches ? dark : light
+
+      window.matchMedia(mediaSelector).addEventListener('change', (event) => {
+        theme.value = event.matches ? dark : light
+      })
+    }
+
+    return {
+      theme: theme
+    }
+  }
+})
 </script>
 
-<style scoped>
-header {
-  line-height: 1.5;
-}
+<style lang="scss" scoped>
+.n-config-provider {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
+  .main {
+    flex: 1;
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
+    .n-tab-pane {
+      box-sizing: border-box;
+      padding: 20px 30px;
+    }
   }
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
+  .footer {
+    border: none;
+    border-radius: 0;
   }
 }
 </style>
