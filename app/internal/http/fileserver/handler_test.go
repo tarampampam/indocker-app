@@ -51,8 +51,8 @@ func TestHandler(t *testing.T) {
 		"not found": {
 			giveUrl:    "/foo",
 			giveMethod: http.MethodGet,
-			wantCode:   http.StatusNotFound,
-			wantInBody: "OLOLO 404",
+			wantCode:   http.StatusOK,
+			wantInBody: "<html><body>index</body></html>",
 		},
 		"not found (head)": {
 			giveUrl:               "/foo",

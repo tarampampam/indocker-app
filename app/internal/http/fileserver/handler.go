@@ -11,12 +11,13 @@ var fallback404 = []byte("<!doctype html><html><body><h1>Error 404</h1><h2>Not f
 
 func NewHandler(root http.FileSystem) http.Handler {
 	var (
-		fileServer       = http.FileServer(root)
-		errorPageContent []byte
+		fileServer = http.FileServer(root)
+		index      []byte
 	)
 
-	if f, err := root.Open("404.html"); err == nil {
-		errorPageContent, _ = io.ReadAll(f)
+	if f, err := root.Open("index.html"); err == nil {
+		index, _ = io.ReadAll(f)
+		_ = f.Close()
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -29,10 +30,9 @@ func NewHandler(root http.FileSystem) http.Handler {
 			}
 
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.WriteHeader(http.StatusNotFound)
 
-			if len(errorPageContent) > 0 {
-				_, _ = w.Write(errorPageContent)
+			if len(index) > 0 {
+				_, _ = w.Write(index)
 
 				return
 			}
@@ -42,7 +42,7 @@ func NewHandler(root http.FileSystem) http.Handler {
 			return
 		}
 
-		if err != nil { // looks like unneeded, but so looks better
+		if f != nil { // looks like unneeded, but so looks better
 			_ = f.Close()
 		}
 
