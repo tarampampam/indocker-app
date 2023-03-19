@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :theme="theme">
+  <n-config-provider :theme="theme" :hljs="hljs">
     <top-navigation />
     <main>
       <router-view></router-view>
@@ -15,10 +15,14 @@
 </template>
 
 <script lang="ts">
+import hljs from 'highlight.js/lib/core'
+import accesslog from 'highlight.js/lib/languages/accesslog'
 import { defineComponent, ref } from 'vue'
 import PageFooter from './components/PageFooter.vue'
 import TopNavigation from './components/TopNavigation.vue'
 import { darkTheme, lightTheme, NCard, NConfigProvider, NGlobalStyle } from 'naive-ui'
+
+hljs.registerLanguage('accesslog', accesslog)
 
 export default defineComponent({
   components: {
@@ -26,7 +30,7 @@ export default defineComponent({
     NGlobalStyle,
     NCard,
     PageFooter,
-    TopNavigation
+    TopNavigation,
   },
   setup() {
     const dark = darkTheme
@@ -43,6 +47,7 @@ export default defineComponent({
     }
 
     return {
+      hljs,
       theme: theme
     }
   }

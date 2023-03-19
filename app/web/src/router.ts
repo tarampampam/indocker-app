@@ -1,12 +1,12 @@
 import type { Router } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
-import ViewContainers from '@/components/ViewContainers.vue'
-import ViewPorts from '@/components/ViewPorts.vue'
-import ViewPreferences from '@/components/ViewPreferences.vue'
-import ViewStatsMonitor from '@/components/ViewStatsMonitor.vue'
+import ViewAllContainers from '@/components/containers/ViewAll.vue'
+import ViewPorts from '@/components/ports/ViewAll.vue'
+import ViewPreferences from '@/components/preferences/ViewAll.vue'
+import ViewStatsMonitor from '@/components/stats/ViewAll.vue'
 import ViewNotFound from '@/components/ViewNotFound.vue'
-import ViewContainerLogs from '@/components/ViewContainerLogs.vue'
-import ViewContainerStats from '@/components/ViewContainerStats.vue'
+import ViewContainerLogs from '@/components/containers/logs/ViewLogs.vue'
+import ViewContainerStats from '@/components/containers/stats/ViewStats.vue'
 import type { Component } from 'vue'
 import {
   Build as PreferencesIcon,
@@ -35,7 +35,7 @@ export function router(): Router {
       {
         path: '/containers/:id?',
         name: 'containers',
-        component: ViewContainers,
+        component: ViewAllContainers,
         meta: {
           visible: true,
           title: 'Containers',
