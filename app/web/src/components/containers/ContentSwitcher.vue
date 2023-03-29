@@ -3,17 +3,12 @@
     default-value="containers"
     justify-content="space-around"
     type="segment"
-    :value="this.$router.currentRoute.value.name === 'containers.logs' ? 'logs' : 'stats'"
+    :value="current() === RouteName.ContainerLogs ? 'logs' : 'stats'"
   >
     <n-tab
       name="logs"
       style="padding: 0.3em 3em"
-      v-on:click="
-        this.$router.push({
-          name: 'containers.logs',
-          params: { id: this.$router.currentRoute.value.params.id }
-        })
-      "
+      @click="goto(useRouter(), RouteName.ContainerLogs, { id: id() })"
     >
       <n-icon class="icon" :size="18">
         <logs-icon />
@@ -23,12 +18,7 @@
     <n-tab
       name="stats"
       style="padding: 0.3em 3em"
-      v-on:click="
-        this.$router.push({
-          name: 'containers.stats',
-          params: { id: this.$router.currentRoute.value.params.id }
-        })
-      "
+      @click="goto(useRouter(), RouteName.ContainerStats, { id: id() })"
     >
       <n-icon class="icon" :size="18">
         <stats-icon />
@@ -42,8 +32,19 @@
 import { defineComponent } from 'vue'
 import { NIcon, NTab, NTabs } from 'naive-ui'
 import { BarChart as StatsIcon, ChatboxEllipsesOutline as LogsIcon } from '@vicons/ionicons5'
+import { RouteName, goto, id, current } from '@/router'
+import { useRouter } from 'vue-router';
 
 export default defineComponent({
+  methods: {useRouter},
+  setup() {
+    return {
+      RouteName,
+      current,
+      goto,
+      id
+    }
+  },
   components: {
     NIcon,
     NTabs,

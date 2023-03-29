@@ -3,8 +3,8 @@
     <n-list-item
       v-for="container in containers"
       :key="container.id"
-      v-on:click="this.$router.push({ name: 'containers.logs', params: { id: container.id } })"
-      :class="{ active: this.$route.params.id === container.id }"
+      v-on:click="goto(useRouter(), RouteName.ContainerLogs, { id: container.id })"
+      :class="{ active: id() === container.id }"
     >
       <template #prefix>
         <n-icon-wrapper
@@ -14,11 +14,22 @@
         /><!-- change the color here -->
       </template>
       <template #default>
-        <n-thing :title="container.name">
+        <n-thing>
+          <template #header>
+            <div class="container-name">
+              <span class="wrap" :title="container.name.length > 10 ? container.name : undefined">
+                {{ container.name }}
+              </span>
+            </div>
+          </template>
           <template #description>
-            <n-space>
-              <n-tag v-for="tag in container.tags" :key="tag" type="info" size="small">
-                {{ tag }}
+            <n-space size="small" justify="start" class="container-tags">
+              <n-tag v-for="tag in container.tags" :key="tag" type="info" size="small" round>
+                <div class="tag">
+                  <span class="wrap" :title="tag.length > 7 ? tag : undefined">
+                    {{ tag }}
+                  </span>
+                </div>
               </n-tag>
             </n-space>
           </template>
@@ -38,12 +49,23 @@ import { defineComponent } from 'vue'
 import { NIcon, NIconWrapper, NList, NListItem, NSpace, NTag, NThing, useThemeVars } from 'naive-ui'
 import { ArrowForwardCircleOutline as ArrowIcon } from '@vicons/ionicons5'
 import type { Container } from '@/components/containers/ViewAll.vue'
+import { RouteName, current, goto, id } from '@/router'
+import { useRouter } from 'vue-router';
 
 export default defineComponent({
+  methods: {useRouter},
   props: {
     containers: {
       type: Array as () => Container[],
       required: true
+    }
+  },
+  setup() {
+    return {
+      RouteName,
+      current,
+      goto,
+      id
     }
   },
   components: {
@@ -81,11 +103,42 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+$width: 150px;
+
+.container-name {
+  width: $width;
+  display: inline-flex;
+  box-sizing: border-box;
+  padding-left: 0.4em;
+  font-size: 1.2em;
+
+  .wrap {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+}
+
+.container-tags {
+  width: $width;
+
+  .tag {
+    display: inline-flex;
+    max-width: $width - 15px; // 15px for "..."
+
+    .wrap {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+  }
+}
+
 .active {
   //box-shadow: 0 -2px v-bind('theme.activeColor') inset;
 
   &:after {
-    content: "";
+    content: '';
     position: absolute;
     width: 3px;
     height: 100%;
