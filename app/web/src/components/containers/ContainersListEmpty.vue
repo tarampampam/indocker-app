@@ -1,25 +1,16 @@
 <template>
-  <n-empty description="No containers found">
+  <NEmpty description="No containers found">
     <template #icon>
-      <n-icon>
-        <no-containers-icon />
-      </n-icon>
+      <NIcon>
+        <NoContainersIcon />
+      </NIcon>
     </template>
-  </n-empty>
+  </NEmpty>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue'
+<script setup lang="ts">
 import { NEmpty, NIcon } from 'naive-ui'
 import { AppsSharp as NoContainersIcon } from '@vicons/ionicons5'
-
-export default defineComponent({
-  components: {
-    NIcon,
-    NEmpty,
-    NoContainersIcon
-  }
-})
 </script>
 
 <style lang="scss" scoped></style>

@@ -1,117 +1,100 @@
 <template>
   <div class="content">
     <div class="hack">
-      <n-log :log="lines" ref="log" language="accesslog" style="height: 100%" trim />
+      <NLog :log="logLines" ref="logContainer" language="accesslog" style="height: 100%" trim/>
 
       <div class="controls">
-        <n-button-group size="tiny">
-          <n-button :focusable="false" @click="lines = ''" secondary round>
+        <NButtonGroup size="tiny">
+          <NButton :focusable="false" @click="clear" secondary round>
             <template #icon>
-              <n-icon>
-                <clean-icon />
-              </n-icon>
+              <NIcon>
+                <CleanIcon/>
+              </NIcon>
             </template>
             Clean logs
-          </n-button>
-          <n-button
-            v-if="!follow"
-            @click="
-              () => {
-                follow = true
-                scrollToBottom()
-              }
-            "
-            :focusable="false"
-            secondary
-            round
-          >
+          </NButton>
+          <NButton v-if="!follow" @click="enableFollowing" :focusable="false" secondary round>
             <template #icon>
-              <n-icon>
-                <follow-icon />
-              </n-icon>
+              <NIcon>
+                <FollowIcon/>
+              </NIcon>
             </template>
             Follow the logs
-          </n-button>
-          <n-button v-else @click="follow = false" :focusable="false" secondary round>
+          </NButton>
+          <NButton v-else @click="disableFollowing" :focusable="false" secondary round>
             <template #icon>
-              <n-icon>
-                <stop-icon />
-              </n-icon>
+              <NIcon>
+                <StopIcon/>
+              </NIcon>
             </template>
             Disable following
-          </n-button>
-        </n-button-group>
+          </NButton>
+        </NButtonGroup>
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { nextTick, defineComponent } from 'vue'
-import { NButton, NButtonGroup, NLog, NIcon } from 'naive-ui'
+<script setup lang="ts">
+import { nextTick, onMounted, ref, watch } from 'vue'
 import type { LogInst } from 'naive-ui'
-import { Stop as StopIcon, ArrowDown as FollowIcon, TrashBin as CleanIcon } from '@vicons/ionicons5'
+import { NButton, NButtonGroup, NIcon, NLog } from 'naive-ui'
+import { ArrowDown as FollowIcon, Stop as StopIcon, TrashBin as CleanIcon } from '@vicons/ionicons5'
 
-export default defineComponent({
-  components: {
-    NLog,
-    NIcon,
-    NButton,
-    NButtonGroup,
-    StopIcon,
-    FollowIcon,
-    CleanIcon
-  },
-  data(): {
-    lines: string
-    follow: boolean
-  } {
-    const lines: string[] = []
+const logContainer = ref<LogInst | null>(null) // ref to the log component
+const logLines = ref<string>('') // log lines as a string, for rendering
+const lines = ref<string[]>([]) // log lines as an array (source of truth)
+const follow = ref<boolean>(true) // whether to follow the logs
 
-    for (let i = 0; i < 50; i++) {
-      lines.push(
-        `20.164.151.111 - - [20/Aug/2015:22:20:18 -0400] "GET /mywebpage/index.php HTTP/1.1" 403 772 "-" ` +
-          `"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/535.1 (KHTML, like Gecko) ` +
-          `Chrome/13.0.782.220 Safari/535.1"`
-      )
-      lines.push(`{"message": "foo bar", "ts": 123456, "bool": true}`)
-    }
+/** Enable following the logs */
+function enableFollowing(): void {
+  follow.value = true
+  scrollToBottom()
+}
 
-    return {
-      lines: lines.join('\n'),
-      follow: true
-    }
-  },
-  mounted(): void {
-    window.setInterval(() => {
-      // TODO: just for demo
-      this.lines += 'new line. rnd = ' + Math.random() + '\n'
-    }, 1000)
+/** Disable following the logs */
+function disableFollowing(): void {
+  follow.value = false
+}
 
-    if (this.follow) {
-      this.scrollToBottom()
-    }
-  },
+/** Clear the logs */
+function clear(): void {
+  lines.value = []
+}
 
-  watch: {
-    lines(): void {
-      if (this.follow) {
-        this.scrollToBottom()
-      }
-    }
-  },
-
-  methods: {
-    scrollToBottom(): void {
-      const log = this.$refs.log as LogInst | undefined
-
-      if (log) {
-        nextTick(() => {
-          log.scrollTo({ position: 'bottom', slient: false })
-        })
-      }
-    }
+/** Scroll to the bottom of the log */
+function scrollToBottom(): void {
+  if (logContainer.value) {
+    nextTick(() => {
+      logContainer.value?.scrollTo({position: 'bottom', slient: false})
+    })
   }
+}
+
+/** Watch for changes in the log lines */
+watch(lines, (): void => {
+  logLines.value = lines.value.join('\n')
+
+  if (follow.value) {
+    scrollToBottom()
+  }
+}, {deep: true})
+
+onMounted((): void => {
+  for (let i = 0; i < 50; i++) { // TODO: just for a demo
+    lines.value.push(
+      `20.164.151.111 - - [20/Aug/2015:22:20:18 -0400] "GET /mywebpage/index.php HTTP/1.1" 403 772 "-" ` +
+      `"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/535.1 (KHTML, like Gecko) ` +
+      `Chrome/13.0.782.220 Safari/535.1"`,
+    )
+    lines.value.push(`{"message": "foo bar", "ts": 123456, "bool": true}`)
+  }
+
+  window.setInterval(() => { // TODO: just for demo
+    lines.value.push('new line. rnd = ' + Math.random())
+  }, 1000)
+
+  scrollToBottom()
 })
 </script>
 
