@@ -78,3 +78,6 @@ services:
       - .:/src:ro
     working_dir: /src
     security_opt: [no-new-privileges:true]
+
+#  k6:
+#    image: ghcr.io/grafana/k6
