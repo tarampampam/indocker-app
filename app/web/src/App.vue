@@ -1,57 +1,36 @@
 <template>
-  <n-config-provider :theme="theme" :hljs="hljs">
-    <top-navigation />
+  <NConfigProvider :theme="theme" :hljs="hljs">
+    <TopNavigation />
     <main>
       <router-view></router-view>
     </main>
-    <n-card class="footer">
+    <NCard class="footer">
       <template #header>
         <page-footer />
       </template>
-    </n-card>
+    </NCard>
 
-    <n-global-style />
-  </n-config-provider>
+    <NGlobalStyle />
+  </NConfigProvider>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import hljs from 'highlight.js/lib/core'
-import accesslog from 'highlight.js/lib/languages/accesslog'
-import { defineComponent, ref } from 'vue'
+import { ref } from 'vue'
 import PageFooter from './components/PageFooter.vue'
 import TopNavigation from './components/TopNavigation.vue'
 import { darkTheme, lightTheme, NCard, NConfigProvider, NGlobalStyle } from 'naive-ui'
 
-hljs.registerLanguage('accesslog', accesslog)
+const theme = ref(lightTheme)
 
-export default defineComponent({
-  components: {
-    NConfigProvider,
-    NGlobalStyle,
-    NCard,
-    PageFooter,
-    TopNavigation
-  },
-  setup() {
-    const dark = darkTheme
-    const light = lightTheme
-    const mediaSelector = '(prefers-color-scheme: dark)'
-    const theme = ref(light)
+if (window.matchMedia) { // is media query supported?
+  const mediaSelector = '(prefers-color-scheme: dark)'
+  theme.value = window.matchMedia(mediaSelector).matches ? darkTheme : lightTheme
 
-    if (window.matchMedia) {
-      theme.value = window.matchMedia(mediaSelector).matches ? dark : light
-
-      window.matchMedia(mediaSelector).addEventListener('change', (event) => {
-        theme.value = event.matches ? dark : light
-      })
-    }
-
-    return {
-      hljs,
-      theme: theme
-    }
-  }
-})
+  window.matchMedia(mediaSelector).addEventListener('change', (event) => {
+    theme.value = event.matches ? darkTheme : lightTheme
+  })
+}
 </script>
 
 <style lang="scss" scoped>
