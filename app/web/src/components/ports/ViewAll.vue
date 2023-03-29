@@ -1,21 +1,13 @@
 <template>
-  <n-icon size="40">
-    <ports-icon />
-  </n-icon>
+  <NIcon size="40">
+    <PortsIcon />
+  </NIcon>
   Ports
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue'
+<script setup lang="ts">
 import { NIcon } from 'naive-ui'
 import { SwapVertical as PortsIcon } from '@vicons/ionicons5'
-
-export default defineComponent({
-  components: {
-    NIcon,
-    PortsIcon
-  }
-})
 </script>
 
 <style lang="scss" scoped></style>
