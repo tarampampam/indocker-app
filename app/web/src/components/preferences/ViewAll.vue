@@ -1,21 +1,13 @@
 <template>
-  <n-icon size="40">
-    <preferences-icon />
-  </n-icon>
+  <NIcon size="40">
+    <PreferencesIcon />
+  </NIcon>
   Stats monitor
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue'
+<script setup lang="ts">
 import { NIcon } from 'naive-ui'
 import { Build as PreferencesIcon } from '@vicons/ionicons5'
-
-export default defineComponent({
-  components: {
-    NIcon,
-    PreferencesIcon
-  }
-})
 </script>
 
 <style lang="scss" scoped></style>

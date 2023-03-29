@@ -1,8 +1,3 @@
-<script setup lang="ts">
-import { NIcon, NTab, NTabs } from 'naive-ui'
-import { current, goto, visible } from '@/router'
-</script>
-
 <template>
   <NTabs
     default-value="containers"
@@ -27,5 +22,10 @@ import { current, goto, visible } from '@/router'
     </NTab>
   </NTabs>
 </template>
+
+<script setup lang="ts">
+import { NIcon, NTab, NTabs } from 'naive-ui'
+import { current, goto, visible } from '@/router'
+</script>
 
 <style lang="scss" scoped></style>
