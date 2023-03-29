@@ -30,7 +30,7 @@ export default defineComponent({
     NGlobalStyle,
     NCard,
     PageFooter,
-    TopNavigation,
+    TopNavigation
   },
   setup() {
     const dark = darkTheme
