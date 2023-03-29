@@ -1,33 +1,25 @@
 <template>
   <div class="center">
-    <n-result status="404" title="Not Found" size="huge" :description="randomDescription()" />
+    <NResult status="404" title="Not Found" size="huge" :description="randomDescription()" />
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue'
+<script setup lang="ts">
 import { NResult } from 'naive-ui'
 
-const descriptions: string[] = [
-  'Oops!',
-  'Are you lost?',
-  `Sorry, we can't find that page!`,
-  'Looks like this page got lost in the matrix',
-  'Sorry, looks like we sent you the wrong way',
-  `You're in the wrong place`,
-  `We're not quite sure what went wrong`
-]
+function randomDescription(): string {
+  const descriptions: string[] = [
+    'Oops!',
+    'Are you lost?',
+    `Sorry, we can't find that page!`,
+    'Looks like this page got lost in the matrix',
+    'Sorry, looks like we sent you the wrong way',
+    `You're in the wrong place`,
+    `We're not quite sure what went wrong`
+  ]
 
-export default defineComponent({
-  components: {
-    NResult
-  },
-  methods: {
-    randomDescription(): string {
-      return descriptions[Math.floor(Math.random() * descriptions.length)]
-    }
-  }
-})
+  return descriptions[Math.floor(Math.random() * descriptions.length)]
+}
 </script>
 
 <style lang="scss" scoped>
