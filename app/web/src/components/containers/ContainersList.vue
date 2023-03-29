@@ -1,20 +1,20 @@
 <template>
-  <n-list show-divider bordered hoverable clickable style="background-color: transparent">
-    <n-list-item
+  <NList show-divider bordered hoverable clickable style="background-color: transparent">
+    <NListItem
       v-for="container in containers"
       :key="container.id"
-      v-on:click="goto(useRouter(), RouteName.ContainerLogs, { id: container.id })"
-      :class="{ active: id() === container.id }"
+      :class="{ active: router.currentRoute.value.params.id === container.id }"
+      @click="router.push({ name: RouteName.ContainerLogs, params: { id: container.id } })"
     >
       <template #prefix>
-        <n-icon-wrapper
+        <NIconWrapper
           :size="14"
           :border-radius="14"
           :color="theme.defaultColor"
         /><!-- change the color here -->
       </template>
       <template #default>
-        <n-thing>
+        <NThing>
           <template #header>
             <div class="container-name">
               <span class="wrap" :title="container.name.length > 10 ? container.name : undefined">
@@ -23,83 +23,51 @@
             </div>
           </template>
           <template #description>
-            <n-space size="small" justify="start" class="container-tags">
-              <n-tag v-for="tag in container.tags" :key="tag" type="info" size="small" round>
+            <NSpace size="small" justify="start" class="container-tags">
+              <NTag v-for="tag in container.tags" :key="tag" type="info" size="small" round>
                 <div class="tag">
                   <span class="wrap" :title="tag.length > 7 ? tag : undefined">
                     {{ tag }}
                   </span>
                 </div>
-              </n-tag>
-            </n-space>
+              </NTag>
+            </NSpace>
           </template>
-        </n-thing>
+        </NThing>
       </template>
       <template #suffix>
-        <n-icon :size="25" :depth="4">
+        <NIcon :size="25" :depth="4">
           <arrow-icon />
-        </n-icon>
+        </NIcon>
       </template>
-    </n-list-item>
-  </n-list>
+    </NListItem>
+  </NList>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue'
+<script setup lang="ts">
+import { defineProps } from 'vue'
 import { NIcon, NIconWrapper, NList, NListItem, NSpace, NTag, NThing, useThemeVars } from 'naive-ui'
 import { ArrowForwardCircleOutline as ArrowIcon } from '@vicons/ionicons5'
-import type { Container } from '@/components/containers/ViewAll.vue'
-import { RouteName, current, goto, id } from '@/router'
-import { useRouter } from 'vue-router';
+import type { Container } from './types'
+import { RouteName } from '@/router'
+import { useRouter } from 'vue-router'
 
-export default defineComponent({
-  methods: {useRouter},
-  props: {
-    containers: {
-      type: Array as () => Container[],
-      required: true
-    }
-  },
-  setup() {
-    return {
-      RouteName,
-      current,
-      goto,
-      id
-    }
-  },
-  components: {
-    NIconWrapper,
-    NListItem,
-    NThing,
-    NSpace,
-    NList,
-    NIcon,
-    NTag,
-    ArrowIcon
-  },
-  data(): {
-    theme: {
-      activeColor: string
-      successColor: string
-      warningColor: string
-      errorColor: string
-      defaultColor: string
-    }
-  } {
-    const theme = useThemeVars()
-
-    return {
-      theme: {
-        activeColor: theme.value.infoColor,
-        successColor: theme.value.successColor,
-        warningColor: theme.value.warningColor,
-        errorColor: theme.value.errorColor,
-        defaultColor: theme.value.iconColorDisabled
-      }
-    }
+defineProps({
+  containers: {
+    type: Array as () => Container[],
+    required: true
   }
 })
+
+const router = useRouter()
+const themeVars = useThemeVars()
+const theme = {
+  activeColor: themeVars.value.infoColor,
+  successColor: themeVars.value.successColor,
+  warningColor: themeVars.value.warningColor,
+  errorColor: themeVars.value.errorColor,
+  defaultColor: themeVars.value.iconColorDisabled
+}
 </script>
 
 <style lang="scss" scoped>

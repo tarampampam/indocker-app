@@ -1,5 +1,4 @@
 import type { Router } from 'vue-router'
-import { useRouter } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
 import ViewAllContainers from '@/components/containers/ViewAll.vue'
 import ViewPorts from '@/components/ports/ViewAll.vue'
@@ -9,7 +8,8 @@ import ViewNotFound from '@/components/ViewNotFound.vue'
 import ViewContainerLogs from '@/components/containers/logs/ViewLogs.vue'
 import ViewContainerStats from '@/components/containers/stats/ViewStats.vue'
 import type { Component } from 'vue'
-import type { RouteParamsRaw, RouteRecord } from 'vue-router'
+import { shallowRef } from 'vue'
+import type { ShallowRef } from 'vue'
 import {
   Build as PreferencesIcon,
   LogoDocker as DockerIcon,
@@ -34,7 +34,7 @@ declare module 'vue-router' {
   interface RouteMeta {
     visible?: boolean // is displayed in the menu
     title?: string // title of the page
-    icon?: Component
+    icon?: ShallowRef<Component>
   }
 }
 
@@ -54,7 +54,7 @@ export function router(): Router {
         meta: {
           visible: true,
           title: 'Containers',
-          icon: DockerIcon
+          icon: shallowRef(DockerIcon)
         },
         children: [
           {
@@ -81,7 +81,7 @@ export function router(): Router {
         meta: {
           visible: true,
           title: 'Stats monitor',
-          icon: StatsIcon
+          icon: shallowRef(StatsIcon)
         }
       },
       {
@@ -91,7 +91,7 @@ export function router(): Router {
         meta: {
           visible: true,
           title: 'Ports',
-          icon: PortsIcon
+          icon: shallowRef(PortsIcon)
         }
       },
       {
@@ -101,46 +101,14 @@ export function router(): Router {
         meta: {
           visible: true,
           title: 'Preferences',
-          icon: PreferencesIcon
+          icon: shallowRef(PreferencesIcon)
         }
       },
       {
         path: '/:pathMatch(.*)*',
         name: RouteName.NotFound,
-        component: ViewNotFound
+        component: shallowRef(ViewNotFound)
       }
     ]
   })
-}
-
-/** Get the container ID from current route. */
-export function id(): string | undefined {
-  const currentParams = useRouter().currentRoute.value.params
-
-  if (Object.prototype.hasOwnProperty.call(currentParams, 'id')) {
-    return currentParams.id as string
-  }
-}
-
-/** Get the visible routes. */
-export function visible(): RouteRecord[] {
-  return useRouter().getRoutes().filter((route) => route.meta.visible)
-}
-
-/** Go to a route. */
-export function goto(router: Router, name: RouteName, params?: RouteParamsRaw): void {
-  router.push({ name: name, params: params })
-}
-
-/** Get the current route name. If `parentOnly` is true, only the parent route name is returned. */
-export function current(parentOnly?: boolean): RouteName | undefined {
-  const current = useRouter().currentRoute?.value?.name as RouteName
-
-  if (typeof current === 'string') {
-    if (parentOnly) {
-      return current.split('.')[0] as RouteName
-    }
-
-    return current
-  }
 }

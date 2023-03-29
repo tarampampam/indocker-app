@@ -1,47 +1,45 @@
 <template>
-  <n-layout class="container" has-sider>
-    <n-layout-sider>
-      <containers-list v-if="containers.length" :containers="containers" />
-      <containers-list-empty v-else />
-    </n-layout-sider>
-    <n-layout-content content-style="padding-left: 30px">
+  <NLayout class="container" has-sider>
+    <NLayoutSider>
+      <ContainersList v-if="containers.length" :containers="containers" />
+      <ContainersListEmpty v-else />
+    </NLayoutSider>
+    <NLayoutContent content-style="padding-left: 30px">
       <div v-if="containers.length && container" class="content">
         <div class="header">
           <div class="avatar">
-            <n-icon-wrapper :size="32" :border-radius="10" :color="stringToColor(container.id)">
-              <n-icon :size="18" :component="DockerIcon" />
-            </n-icon-wrapper>
+            <NIconWrapper :size="32" :border-radius="10" :color="stc(container?.id)">
+              <NIcon :size="18" :component="DockerIcon" />
+            </NIconWrapper>
           </div>
-          <div class="title" :title="container.name.length > 25 ? container.name : undefined">
-            {{ container.name }}
+          <div class="title" :title="container?.name.length > 25 ? container?.name : undefined">
+            {{ container?.name }}
           </div>
           <div class="extra">
-            <content-switcher />
+            <ContentSwitcher />
           </div>
         </div>
         <div class="body">
           <router-view />
         </div>
         <div class="footer">
-          <n-breadcrumb>
-            <n-breadcrumb-item :clickable="false">
-              Status: Up 57 minutes (healthy)
-            </n-breadcrumb-item>
-            <n-breadcrumb-item :clickable="false"> Created: 19 March 2023</n-breadcrumb-item>
-            <n-breadcrumb-item :clickable="false"> Project: App</n-breadcrumb-item>
-          </n-breadcrumb>
+          <NBreadcrumb>
+            <NBreadcrumbItem :clickable="false"> Status: Up 57 minutes (healthy) </NBreadcrumbItem>
+            <NBreadcrumbItem :clickable="false"> Created: 19 March 2023</NBreadcrumbItem>
+            <NBreadcrumbItem :clickable="false"> Project: App</NBreadcrumbItem>
+          </NBreadcrumb>
         </div>
       </div>
-      <n-layout v-else>
-        <n-skeleton text :repeat="3" />
-        <n-skeleton text :repeat="1" width="66%" />
-      </n-layout>
-    </n-layout-content>
-  </n-layout>
+      <NLayout v-else>
+        <NSkeleton text :repeat="3" />
+        <NSkeleton text :repeat="1" width="66%" />
+      </NLayout>
+    </NLayoutContent>
+  </NLayout>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import stc from 'string-to-color'
 import ContainersList from './ContainersList.vue'
 import ContainersListEmpty from './ContainersListEmpty.vue'
@@ -57,100 +55,58 @@ import {
   NSkeleton
 } from 'naive-ui'
 import { LogoDocker as DockerIcon } from '@vicons/ionicons5'
-import { RouteName, goto, id } from '@/router'
-import { useRouter } from 'vue-router';
+import { RouteName } from '@/router'
+import { useRouter } from 'vue-router'
+import type { Container } from './types'
 
-export interface Container {
-  id: string
-  name: string
-  tags: string[]
-}
+const router = useRouter()
 
-export default defineComponent({
-  components: {
-    NLayout,
-    NLayoutSider,
-    NLayoutContent,
-    NSkeleton,
-    ContainersList,
-    ContainersListEmpty,
-    ContentSwitcher,
-    NBreadcrumb,
-    NBreadcrumbItem,
-    NIcon,
-    NIconWrapper
+const containers = ref<Container[]>([
+  {
+    id: 'id-1',
+    name: 'app-app-1',
+    tags: ['docker-compose']
   },
-  setup() {
-    return {
-      DockerIcon
-    }
-  },
-  mounted(): void {
-    const router = useRouter()
-
-    if (this.containers && this.containers.length) {
-      const currentID = id()
-
-      // redirect to first container, if no container is selected
-      if (!currentID) {
-        goto(router, RouteName.ContainerLogs, { id: this.containers[0].id })
-
-        return
-      }
-
-      // redirect to first container, if selected container does not exist
-      if (!this.containers.find((c) => c.id === currentID)) {
-        goto(router, RouteName.ContainerLogs, { id: this.containers[0].id })
-
-        return
-      }
-    } else {
-      // redirect to containers overview, if no containers are available
-      goto(router, RouteName.Containers)
-    }
-  },
-  data(): {
-    containers: Container[]
-  } {
-    return {
-      containers: [
-        {
-          id: 'id-1',
-          name: 'app-app-1',
-          tags: ['docker-compose']
-        },
-        {
-          id: 'id-2-foo-bar-foo-bar-foo-bar-foo-bar-foo-bar-foo-bar',
-          name: 'id-2-foo-bar-foo-bar-foo-bar-foo-bar-foo-bar-foo-bar',
-          tags: [
-            'foo',
-            'bar',
-            'foo',
-            'bar',
-            'foofoofoofoo',
-            'foo foo foo foo foo foo foo foo foo bar bar bar',
-            'bar'
-          ]
-        }
-      ]
-    }
-  },
-  methods: {
-    stringToColor(str: string): string {
-      return stc(str)
-    }
-  },
-  computed: {
-    container(): Container | undefined {
-      const currentID = id()
-
-      if (currentID) {
-        return this.containers.find((c) => c.id === currentID)
-      }
-
-      return undefined
-    }
+  {
+    id: 'id-2-foo-bar-foo-bar-foo-bar-foo-bar-foo-bar-foo-bar',
+    name: 'id-2-foo-bar-foo-bar-foo-bar-foo-bar-foo-bar-foo-bar',
+    tags: [
+      'foo',
+      'bar',
+      'foo',
+      'bar',
+      'foofoofoofoo',
+      'foo foo foo foo foo foo foo foo foo bar bar bar',
+      'bar'
+    ]
   }
+])
+
+onMounted((): void => {
+  if (containers.value.length) {
+    const currentID = router.currentRoute.value.params.id
+
+    // redirect to first container, if no container is selected
+    if (!currentID) {
+      router.push({ name: RouteName.ContainerLogs, params: { id: containers.value[0].id } })
+
+      return
+    }
+
+    // redirect to first container, if selected container does not exist
+    if (!containers.value.find((c) => c.id === currentID)) {
+      router.push({ name: RouteName.ContainerLogs, params: { id: containers.value[0].id } })
+
+      return
+    }
+  } else {
+    // redirect to containers overview, if no containers are available
+    router.push({ name: RouteName.Containers })
+  }
+})
+
+const container = computed((): Container | undefined => {
+  return containers.value.find((c) => c.id === router.currentRoute.value.params.id) || undefined
 })
 </script>
 

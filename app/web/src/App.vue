@@ -23,7 +23,8 @@ import { darkTheme, lightTheme, NCard, NConfigProvider, NGlobalStyle } from 'nai
 
 const theme = ref(lightTheme)
 
-if (window.matchMedia) { // is media query supported?
+if (window.matchMedia) {
+  // is media query supported?
   const mediaSelector = '(prefers-color-scheme: dark)'
   theme.value = window.matchMedia(mediaSelector).matches ? darkTheme : lightTheme
 
