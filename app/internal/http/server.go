@@ -81,7 +81,7 @@ func (s *Server) Register(
 		}
 
 		router = api.NewRouter("/api", fallback)
-		// TODO: write "discover" for the API
+
 		router.
 			Register(http.MethodGet, "/version/current", api.VersionCurrent(ver.Version())).
 			Register(http.MethodGet, "/version/latest", api.VersionLatest(ver.NewLatest(ver.WithContext(ctx)), time.Minute*30)).
@@ -94,16 +94,18 @@ func (s *Server) Register(
 	} {
 		server.ErrorLog = zap.NewStdLog(namedLogger)       // replace the default logger with named
 		server.Handler = middleware.HealthcheckMiddleware( // healthcheck requests will not be logged
-			middleware.LogReq(namedLogger, // named loggers for each server
-				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if dashboardDomain != "" && httptools.TrimHostPortSuffix(r.Host) == dashboardDomain && router != nil {
-						router.ServeHTTP(w, r)
+			middleware.DiscoverMiddleware(dashboardDomain,
+				middleware.LogReq(namedLogger, // named loggers for each server
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						if dashboardDomain != "" && httptools.TrimHostPortSuffix(r.Host) == dashboardDomain && router != nil {
+							router.ServeHTTP(w, r)
 
-						return
-					}
+							return
+						}
 
-					proxyHandler.ServeHTTP(w, r) // otherwise, proxy the request
-				}),
+						proxyHandler.ServeHTTP(w, r) // otherwise, proxy the request
+					}),
+				),
 			),
 		)
 	}
