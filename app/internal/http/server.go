@@ -81,7 +81,7 @@ func (s *Server) Register(
 		}
 
 		router = api.NewRouter("/api", fallback)
-
+		// TODO: write "discover" for the API
 		router.
 			Register(http.MethodGet, "/version/current", api.VersionCurrent(ver.Version())).
 			Register(http.MethodGet, "/version/latest", api.VersionLatest(ver.NewLatest(ver.WithContext(ctx)), time.Minute*30)).

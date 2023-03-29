@@ -1,14 +1,14 @@
 <template>
   <div class="content">
     <div class="hack">
-      <NLog :log="logLines" ref="logContainer" language="accesslog" style="height: 100%" trim/>
+      <NLog :log="logLines" ref="logContainer" language="accesslog" style="height: 100%" trim />
 
       <div class="controls">
         <NButtonGroup size="tiny">
           <NButton :focusable="false" @click="clear" secondary round>
             <template #icon>
               <NIcon>
-                <CleanIcon/>
+                <CleanIcon />
               </NIcon>
             </template>
             Clean logs
@@ -16,7 +16,7 @@
           <NButton v-if="!follow" @click="enableFollowing" :focusable="false" secondary round>
             <template #icon>
               <NIcon>
-                <FollowIcon/>
+                <FollowIcon />
               </NIcon>
             </template>
             Follow the logs
@@ -24,7 +24,7 @@
           <NButton v-else @click="disableFollowing" :focusable="false" secondary round>
             <template #icon>
               <NIcon>
-                <StopIcon/>
+                <StopIcon />
               </NIcon>
             </template>
             Disable following
@@ -66,31 +66,37 @@ function clear(): void {
 function scrollToBottom(): void {
   if (logContainer.value) {
     nextTick(() => {
-      logContainer.value?.scrollTo({position: 'bottom', slient: false})
+      logContainer.value?.scrollTo({ position: 'bottom', slient: false })
     })
   }
 }
 
 /** Watch for changes in the log lines */
-watch(lines, (): void => {
-  logLines.value = lines.value.join('\n')
+watch(
+  lines,
+  (): void => {
+    logLines.value = lines.value.join('\n')
 
-  if (follow.value) {
-    scrollToBottom()
-  }
-}, {deep: true})
+    if (follow.value) {
+      scrollToBottom()
+    }
+  },
+  { deep: true }
+)
 
 onMounted((): void => {
-  for (let i = 0; i < 50; i++) { // TODO: just for a demo
+  for (let i = 0; i < 50; i++) {
+    // TODO: just for a demo
     lines.value.push(
       `20.164.151.111 - - [20/Aug/2015:22:20:18 -0400] "GET /mywebpage/index.php HTTP/1.1" 403 772 "-" ` +
-      `"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/535.1 (KHTML, like Gecko) ` +
-      `Chrome/13.0.782.220 Safari/535.1"`,
+        `"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/535.1 (KHTML, like Gecko) ` +
+        `Chrome/13.0.782.220 Safari/535.1"`
     )
     lines.value.push(`{"message": "foo bar", "ts": 123456, "bool": true}`)
   }
 
-  window.setInterval(() => { // TODO: just for demo
+  window.setInterval(() => {
+    // TODO: just for demo
     lines.value.push('new line. rnd = ' + Math.random())
   }, 1000)
 
