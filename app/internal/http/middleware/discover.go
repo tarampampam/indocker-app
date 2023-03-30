@@ -20,8 +20,8 @@ func DiscoverMiddleware(baseUrl string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == needMethod && r.URL.Path == needRoute && r.Header.Get("X-InDocker") == "true" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "*")
-			w.Header().Set("Access-Control-Allow-Headers", "*")
+			w.Header().Set("Access-Control-Allow-Methods", needMethod)
+			w.Header().Set("Access-Control-Allow-Headers", "X-InDocker")
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 			w.WriteHeader(http.StatusOK)
@@ -36,8 +36,8 @@ func DiscoverMiddleware(baseUrl string, next http.Handler) http.Handler {
 			}
 
 			if baseUrl != "" {
-				baseUrl = fmt.Sprintf("%s://%s.indocker.app", scheme, baseUrl)
-				data.BaseUrl = &baseUrl
+				u := fmt.Sprintf("%s://%s.indocker.app", scheme, baseUrl)
+				data.BaseUrl = &u
 			}
 
 			_ = json.NewEncoder(w).Encode(data)

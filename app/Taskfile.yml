@@ -46,6 +46,22 @@ tasks:
     cmds:
       - docker-compose run {{ .DC_RUN_ARGS }} go sh
 
+  k6:install:
+    desc: Install K6 dependencies
+    cmds:
+      - docker-compose run {{ .DC_RUN_ARGS }} -w /src/test/k6 --entrypoint npm --no-deps node install
+
+  k6:run:
+    desc: Run K6 tests
+    cmds:
+      - docker-compose run {{ .DC_RUN_ARGS }} k6 run ./test/k6/functional.js
+
+  k6:shell:
+    desc: Run a shell in the K6 container
+    silent: true
+    cmds:
+      - docker-compose run {{ .DC_RUN_ARGS }} --entrypoint sh k6
+
   node:install:
     desc: Install Node.js dependencies
     cmds:

@@ -79,5 +79,9 @@ services:
     working_dir: /src
     security_opt: [no-new-privileges:true]
 
-#  k6:
-#    image: ghcr.io/grafana/k6
+  k6: # https://k6.io/docs/using-k6/
+    image: ghcr.io/grafana/k6:0.43.1
+    volumes: [.:/src:ro]
+    working_dir: /src
+    network_mode: host
+    security_opt: [no-new-privileges:true]
