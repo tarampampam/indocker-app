@@ -10,6 +10,7 @@
   "dependencies": {
     "highlight.js": "^11.7.0",
     "naive-ui": "^2.34.3",
+    "semver": "^7.3.8",
     "string-to-color": "^2.2.2",
     "vue": "^3.2.47",
     "vue-router": "^4.1.6"
