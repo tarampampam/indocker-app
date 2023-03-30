@@ -101,5 +101,5 @@ tasks:
     ignore_error: true
     cmds:
       - docker-compose up --detach app monitor whoami
-      - defer: docker-compose down --remove-orphans
+      - defer: docker-compose down -t 2 --remove-orphans
       - docker-compose logs -f app monitor
