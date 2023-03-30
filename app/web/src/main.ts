@@ -14,8 +14,6 @@ const api = new API()
 
 api.version().then((version) => {
   console.log(version)
-
-
 })
 
 api.latestVersion().then((latest) => {
