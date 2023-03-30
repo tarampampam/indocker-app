@@ -27,25 +27,45 @@ export const options = {
 export default () => {
   ['http', 'https'].forEach((scheme) => {
     group('Discover the API', () => {
-      const resp = http.request('TRACE', `${scheme}://${randomString(8)}.indocker.app/discover`, null, {
+      const domain = randomString(8)
+
+      let resp = http.options(`${scheme}://${domain}.indocker.app/x/indocker/discover`, null, {
+        tags: {scheme},
+      })
+
+      check(resp, {
+        'status is 200': (r) => r.status === 204,
+        'body is empty': (r) => r.body.length === 0,
+        'CORS Methods header': (r) => r.headers['Access-Control-Allow-Methods'] === 'GET',
+        'CORS Headers header': (r) => r.headers['Access-Control-Allow-Headers'] === '*',
+        'CORS Origin header': (r) => r.headers['Access-Control-Allow-Origin'] === `${scheme}://monitor.indocker.app`,
+      })
+
+      resp = http.get(`${scheme}://${domain}.indocker.app/x/indocker/discover`, {
         headers: {'X-InDocker': 'true'},
         tags: {scheme},
       })
 
       check(resp, {
         'status is 200': (r) => r.status === 200,
-        'content-type is json': (r) => r.headers['Content-Type'].includes('application/json'),
-        'CORS Origin header': (r) => r.headers['Access-Control-Allow-Origin'] === '*',
-        'CORS Methods header': (r) => r.headers['Access-Control-Allow-Methods'] === 'TRACE',
-        'CORS Headers header': (r) => r.headers['Access-Control-Allow-Headers'] === 'X-InDocker',
+        'is json': (r) => r.headers['Content-Type'].includes('application/json'),
+        'CORS Methods header': (r) => r.headers['Access-Control-Allow-Methods'] === 'GET',
+        'CORS Headers header': (r) => r.headers['Access-Control-Allow-Headers'] === '*',
+        'CORS Origin header': (r) => {
+          return new RegExp(`^${scheme}:\\/\\/[a-zA-Z0-9-_]+\\.indocker\\.app$`).test(
+            r.headers['Access-Control-Allow-Origin'],
+          )
+        },
       })
 
-      /** @type {{base_url: string}} */
+      /** @type {{api: {base_url: string}}} */
       const body = JSON.parse(resp.body.toString())
 
       check(body, {
-        'base url is set': (b) => b.base_url !== undefined,
-        'base url is correct': (b) => new RegExp(`^${scheme}:\\/\\/[a-zA-Z0-9-_]+\\.indocker\\.app$`).test(b.base_url),
+        'base url is set': (b) => b.api.base_url !== undefined,
+        'base url is correct': (b) => {
+          return new RegExp(`^${scheme}:\\/\\/[a-zA-Z0-9-_]+\\.indocker\\.app\\/api$`).test(b.api.base_url)
+        },
       })
     })
 
