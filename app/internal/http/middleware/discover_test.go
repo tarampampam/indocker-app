@@ -12,6 +12,8 @@ import (
 )
 
 func TestDiscoverMiddlewareCORS(t *testing.T) {
+	t.Parallel()
+
 	var (
 		mw = middleware.DiscoverMiddleware("foobar", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t.Error("next handler must not be called")
@@ -31,6 +33,8 @@ func TestDiscoverMiddlewareCORS(t *testing.T) {
 }
 
 func TestDiscoverMiddlewareRealRequestWithTLS(t *testing.T) {
+	t.Parallel()
+
 	var (
 		mw = middleware.DiscoverMiddleware("foobar", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t.Error("next handler must not be called")
@@ -54,6 +58,8 @@ func TestDiscoverMiddlewareRealRequestWithTLS(t *testing.T) {
 }
 
 func TestDiscoverMiddlewareWrongMethod(t *testing.T) {
+	t.Parallel()
+
 	var (
 		mw = middleware.DiscoverMiddleware("foobar", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t.Error("next handler must not be called")
@@ -69,6 +75,8 @@ func TestDiscoverMiddlewareWrongMethod(t *testing.T) {
 }
 
 func TestDiscoverMiddlewareWithoutHeader(t *testing.T) {
+	t.Parallel()
+
 	var (
 		mw = middleware.DiscoverMiddleware("foobar", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t.Error("next handler must not be called")
