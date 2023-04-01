@@ -2,9 +2,11 @@ package fileserver
 
 import (
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 var fallback404 = []byte("<!doctype html><html><body><h1>Error 404</h1><h2>Not found</h2></body></html>") //nolint:lll,gochecknoglobals
@@ -21,8 +23,10 @@ func NewHandler(root http.FileSystem) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		f, err := root.Open(path.Clean(r.URL.Path))
-		if os.IsNotExist(err) {
+		var filePath = path.Clean(r.URL.Path)
+
+		f, fErr := root.Open(filePath)
+		if os.IsNotExist(fErr) { // requested file not found
 			if r.Method == http.MethodHead {
 				w.WriteHeader(http.StatusNotFound)
 
@@ -31,7 +35,7 @@ func NewHandler(root http.FileSystem) http.Handler {
 
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-			if len(index) > 0 {
+			if len(index) > 0 { // always return index.html if exists (required for SPA)
 				_, _ = w.Write(index)
 
 				return
@@ -40,16 +44,41 @@ func NewHandler(root http.FileSystem) http.Handler {
 			_, _ = w.Write(fallback404)
 
 			return
+		} else if fErr == nil { // file exists
+			if r.Method == http.MethodHead {
+				w.WriteHeader(http.StatusOK)
+
+				return
+			}
+
+			const gzFileExt = ".gz" // note: dot at the beginning is required
+
+			if gzFile, err := root.Open(filePath + gzFileExt); err == nil { // and we have a gzipped version
+				_ = gzFile.Close()
+
+				var contentType = mime.TypeByExtension(filepath.Ext(filePath)) // first try to detect by file extension
+
+				if contentType == "" { // if failed, try to detect by content
+					var buf = make([]byte, 32) //nolint:gomnd // 32 bytes are enough for "first bytes" checking
+
+					if _, err = io.ReadFull(f, buf); err == nil { // read first bytes to detect content type of original file
+						contentType = http.DetectContentType(buf) // if failed, try to detect by content
+					}
+				}
+
+				w.Header().Set("Content-Encoding", "gzip") // set content encoding to gzip
+				w.Header().Del("Content-Length")
+
+				if contentType != "" {
+					w.Header().Set("Content-Type", contentType) // set content type of original file
+				}
+
+				r.URL.Path += gzFileExt // force to serve gzipped version using http.FileServer below
+			}
 		}
 
 		if f != nil { // looks like unneeded, but so looks better
 			_ = f.Close()
-		}
-
-		if r.Method == http.MethodHead {
-			w.WriteHeader(http.StatusOK)
-
-			return
 		}
 
 		fileServer.ServeHTTP(w, r)
