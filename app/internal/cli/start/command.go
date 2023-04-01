@@ -259,6 +259,8 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 		oss.Stop() // stop system signals listening
 	}()
 
+	// TODO: use one docker client for all the app
+
 	// load certificate
 	cert, certErr := tls.X509KeyPair(opt.HTTPS.CertFile, opt.HTTPS.KeyFile)
 	if certErr != nil {
