@@ -52,7 +52,7 @@ import {
   NLayout,
   NLayoutContent,
   NLayoutSider,
-  NSkeleton
+  NSkeleton,
 } from 'naive-ui'
 import { LogoDocker as DockerIcon } from '@vicons/ionicons5'
 import { RouteName } from '@/router'
@@ -65,7 +65,7 @@ const containers = ref<Container[]>([
   {
     id: 'id-1',
     name: 'app-app-1',
-    tags: ['docker-compose']
+    tags: ['docker-compose'],
   },
   {
     id: 'id-2-foo-bar-foo-bar-foo-bar-foo-bar-foo-bar-foo-bar',
@@ -77,9 +77,9 @@ const containers = ref<Container[]>([
       'bar',
       'foofoofoofoo',
       'foo foo foo foo foo foo foo foo foo bar bar bar',
-      'bar'
-    ]
-  }
+      'bar',
+    ],
+  },
 ])
 
 onMounted((): void => {

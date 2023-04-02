@@ -11,7 +11,7 @@
       @click="
         router.push({
           name: RouteName.ContainerLogs,
-          params: { id: router.currentRoute.value.params.id }
+          params: { id: router.currentRoute.value.params.id },
         })
       "
     >
@@ -27,7 +27,7 @@
       @click="
         router.push({
           name: RouteName.ContainerStats,
-          params: { id: router.currentRoute.value.params.id }
+          params: { id: router.currentRoute.value.params.id },
         })
       "
     >

@@ -15,7 +15,7 @@ function randomDescription(): string {
     'Looks like this page got lost in the matrix',
     'Sorry, looks like we sent you the wrong way',
     `You're in the wrong place`,
-    `We're not quite sure what went wrong`
+    `We're not quite sure what went wrong`,
   ]
 
   return descriptions[Math.floor(Math.random() * descriptions.length)]

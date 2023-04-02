@@ -14,7 +14,7 @@ import {
   Build as PreferencesIcon,
   LogoDocker as DockerIcon,
   StatsChart as StatsIcon,
-  SwapVertical as PortsIcon
+  SwapVertical as PortsIcon,
 } from '@vicons/ionicons5'
 
 /**
@@ -27,7 +27,7 @@ export enum RouteName {
   Stats = 'stats',
   Ports = 'ports',
   Preferences = 'preferences',
-  NotFound = 'not-found'
+  NotFound = 'not-found',
 }
 
 declare module 'vue-router' {
@@ -45,7 +45,7 @@ export function router(): Router {
       {
         // "home" -> "containers" redirect
         path: '/',
-        redirect: { name: RouteName.Containers }
+        redirect: { name: RouteName.Containers },
       },
       {
         path: '/containers/:id?', // /containers/<ID>
@@ -54,25 +54,25 @@ export function router(): Router {
         meta: {
           visible: true,
           title: 'Containers',
-          icon: shallowRef(DockerIcon)
+          icon: shallowRef(DockerIcon),
         },
         children: [
           {
             path: 'logs', // /containers/<ID>/logs
             name: RouteName.ContainerLogs,
-            component: ViewContainerLogs
+            component: ViewContainerLogs,
           },
           {
             path: 'stats', // /containers/<ID>/stats
             name: RouteName.ContainerStats,
-            component: ViewContainerStats
-          }
-        ]
+            component: ViewContainerStats,
+          },
+        ],
       },
       {
         // "/containers/foo-id" -> "/containers/foo-id/logs" redirect
         path: '/containers/:id',
-        redirect: { name: RouteName.ContainerLogs }
+        redirect: { name: RouteName.ContainerLogs },
       },
       {
         path: '/stats',
@@ -81,8 +81,8 @@ export function router(): Router {
         meta: {
           visible: true,
           title: 'Stats monitor',
-          icon: shallowRef(StatsIcon)
-        }
+          icon: shallowRef(StatsIcon),
+        },
       },
       {
         path: '/ports',
@@ -91,8 +91,8 @@ export function router(): Router {
         meta: {
           visible: true,
           title: 'Ports',
-          icon: shallowRef(PortsIcon)
-        }
+          icon: shallowRef(PortsIcon),
+        },
       },
       {
         path: '/preferences',
@@ -101,14 +101,14 @@ export function router(): Router {
         meta: {
           visible: true,
           title: 'Preferences',
-          icon: shallowRef(PreferencesIcon)
-        }
+          icon: shallowRef(PreferencesIcon),
+        },
       },
       {
         path: '/:pathMatch(.*)*',
         name: RouteName.NotFound,
-        component: ViewNotFound
-      }
-    ]
+        component: ViewNotFound,
+      },
+    ],
   })
 }

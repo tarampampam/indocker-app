@@ -55,8 +55,8 @@ import { useRouter } from 'vue-router'
 defineProps({
   containers: {
     type: Array as () => Container[],
-    required: true
-  }
+    required: true,
+  },
 })
 
 const router = useRouter()
@@ -66,7 +66,7 @@ const theme = {
   successColor: themeVars.value.successColor,
   warningColor: themeVars.value.warningColor,
   errorColor: themeVars.value.errorColor,
-  defaultColor: themeVars.value.iconColorDisabled
+  defaultColor: themeVars.value.iconColorDisabled,
 }
 </script>
 

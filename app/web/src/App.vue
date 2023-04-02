@@ -20,6 +20,7 @@ import { ref, onMounted, onBeforeMount } from 'vue'
 import PageFooter from '@/components/PageFooter.vue'
 import TopNavigation from '@/components/TopNavigation.vue'
 import { darkTheme, lightTheme, NCard, NConfigProvider, NGlobalStyle } from 'naive-ui'
+import { useEmitter } from '@/events'
 
 const theme = ref(lightTheme)
 
@@ -37,9 +38,9 @@ onBeforeMount((): void => {
 })
 
 onMounted((): void => {
-  // useAPI().watchDockerState((map): void => {
-  //   // console.debug(map)
-  // })
+  useEmitter().on('dockerStateUpdated', (): void => {
+    console.debug('event received')
+  })
 })
 </script>
 

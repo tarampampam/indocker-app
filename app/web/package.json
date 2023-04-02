@@ -3,13 +3,14 @@
   "private": true,
   "scripts": {
     "serve": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "lint": "eslint --config package.json --ext .vue,.js,.ts .",
     "format": "prettier --config package.json --write ./src"
   },
   "dependencies": {
     "dexie": "^3.2.3",
     "highlight.js": "^11.7.0",
+    "mitt": "^3.0.0",
     "naive-ui": "^2.34.3",
     "reconnecting-websocket": "^4.4.0",
     "semver": "^7.3.8",
@@ -37,8 +38,10 @@
   "eslintConfig": {
     "extends": [
       "plugin:vue/vue3-essential",
+      "plugin:vue/vue3-strongly-recommended",
       "eslint:recommended",
       "@vue/eslint-config-typescript",
+      "@vue/typescript/recommended",
       "@vue/eslint-config-prettier/skip-formatting"
     ],
     "ignorePatterns": [
@@ -54,7 +57,7 @@
     "tabWidth": 2,
     "singleQuote": true,
     "printWidth": 100,
-    "trailingComma": "none"
+    "trailingComma": "es5"
   },
   "engines": {
     "node": ">=18"

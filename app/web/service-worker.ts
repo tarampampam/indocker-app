@@ -1,4 +1,4 @@
-const ctx: ServiceWorkerGlobalScope = self as any
+const ctx: ServiceWorkerGlobalScope = self as any // eslint-disable-line @typescript-eslint/no-explicit-any
 const CACHE = 'offline-fallback-v1' // https://habr.com/en/company/2gis/blog/345552/
 
 // execute ONLY in service worker context
@@ -86,3 +86,5 @@ if (typeof ctx === 'object' && ctx.constructor.name.toLowerCase().includes('work
     event.respondWith(networkOrCache(event.request).catch(() => useFallback()))
   })
 }
+
+export {}
