@@ -38,7 +38,7 @@ export class API {
     const rnd = (Math.random() + 1).toString(36).substring(3)
     const req = new Request(`${location.protocol}//x-${rnd}.indocker.app/x/indocker/discover`, {
       method: 'GET',
-      headers: { 'X-InDocker': 'true' }
+      headers: { 'X-InDocker': 'true' },
     })
 
     return Object.freeze((await fetch(req)).json())
@@ -91,7 +91,7 @@ export class API {
       url: resp.url,
       name: resp.name,
       body: resp.body,
-      created_at: Object.freeze(new Date(resp.created_at))
+      created_at: Object.freeze(new Date(resp.created_at)),
     })
   }
 
@@ -100,7 +100,7 @@ export class API {
     onMessage: (map: Readonly<{ [id: string]: ContainerState }>) => void
   ): ReconnectingWebSocket {
     const ws = new ReconnectingWebSocket(`${this.baseUrl('ws')}/ws/docker/state`, undefined, {
-      maxReconnectionDelay: 10000
+      maxReconnectionDelay: 10000,
     })
 
     ws.addEventListener('message', (msg): void => {

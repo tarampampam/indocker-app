@@ -3,26 +3,26 @@
   "include": [
     "src/env.d.ts",
     "src/**/*",
-    "src/**/*.vue"
-  ],
-  "exclude": [
-    "src/workers/*.ts",
-    "service-worker.js"
+    "src/**/*.vue",
+    "service-worker.ts"
   ],
   "compilerOptions": {
+    "strict": true,
+    "isolatedModules": true,
     "baseUrl": ".",
     "paths": {
       "@/*": [
         "./src/*"
       ]
-    }
+    },
+    "lib": [
+      "esnext",
+      "webworker"
+    ]
   },
   "references": [
     {
       "path": "./tsconfig.node.json"
-    },
-    {
-      "path": "./tsconfig.workers.json"
     }
   ]
 }
