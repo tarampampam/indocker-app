@@ -20,12 +20,12 @@ import { ref, onMounted, onBeforeMount } from 'vue'
 import PageFooter from '@/components/PageFooter.vue'
 import TopNavigation from '@/components/TopNavigation.vue'
 import { darkTheme, lightTheme, NCard, NConfigProvider, NGlobalStyle } from 'naive-ui'
-import { APIKey, safeInject } from '@/inject'
 
 const theme = ref(lightTheme)
 
 onBeforeMount((): void => {
-  if (window.matchMedia) { // is media query supported?
+  if (window.matchMedia) {
+    // is media query supported?
     const mediaSelector = '(prefers-color-scheme: dark)'
 
     theme.value = window.matchMedia(mediaSelector).matches ? darkTheme : lightTheme
@@ -37,9 +37,9 @@ onBeforeMount((): void => {
 })
 
 onMounted((): void => {
-  safeInject(APIKey).watchDockerState((map): void => {
-    console.log(map)
-  })
+  // useAPI().watchDockerState((map): void => {
+  //   // console.debug(map)
+  // })
 })
 </script>
 

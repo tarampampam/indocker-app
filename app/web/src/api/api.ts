@@ -2,6 +2,8 @@ import type { ContainerInspectInfo, ContainerStats } from 'dockerode'
 import semverParse from 'semver/functions/parse'
 import type { SemVer } from 'semver'
 import ReconnectingWebSocket from 'reconnecting-websocket'
+import type { InjectionKey } from 'vue'
+import { inject } from 'vue'
 
 interface DiscoverResponse {
   api: {
@@ -25,11 +27,10 @@ interface ContainerState {
 export class API {
   /** Returns the base URL of the API. */
   baseUrl(type: 'http' | 'ws' = 'http'): Readonly<string> {
-    const loc = window.location
-    const proto = type === 'http' ? loc.protocol : loc.protocol.replace('http', 'ws')
-    const port = loc.port ? `:${loc.port}` : ''
+    const proto = type === 'http' ? location.protocol : location.protocol.replace('http', 'ws')
+    const port = location.port ? `:${location.port}` : ''
 
-    return Object.freeze(`${proto}//${loc.host}${port}/api`) // without trailing slash
+    return Object.freeze(`${proto}//${location.host}${port}/api`) // without trailing slash
   }
 
   /** Discovers the API. */
@@ -106,14 +107,19 @@ export class API {
       onMessage(Object.freeze(JSON.parse(msg.data)))
     })
 
-    window.addEventListener('beforeunload', (): void => {
-      const state = ws.readyState
-
-      if(state !== ReconnectingWebSocket.CLOSED && state !== ReconnectingWebSocket.CLOSING) {
-        ws.close() // close the connection
-      }
-    })
-
     return ws
   }
+}
+
+export const APIKey: InjectionKey<API> = Symbol('API')
+
+/** Resolve the API instance in VUE context. */
+export function useAPI(): API {
+  const resolved = inject(APIKey)
+
+  if (!resolved) {
+    throw new Error(`Could not resolve ${APIKey.description}`)
+  }
+
+  return resolved
 }

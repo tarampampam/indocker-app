@@ -107,7 +107,7 @@ export function router(): Router {
       {
         path: '/:pathMatch(.*)*',
         name: RouteName.NotFound,
-        component: shallowRef(ViewNotFound)
+        component: ViewNotFound
       }
     ]
   })

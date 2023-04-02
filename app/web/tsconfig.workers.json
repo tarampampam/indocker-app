@@ -2,27 +2,20 @@
   "extends": "@vue/tsconfig/tsconfig.web.json",
   "include": [
     "src/env.d.ts",
-    "src/**/*",
-    "src/**/*.vue"
-  ],
-  "exclude": [
     "src/workers/*.ts",
-    "service-worker.js"
+    "service-worker.ts"
   ],
   "compilerOptions": {
+    "isolatedModules": false,
     "baseUrl": ".",
     "paths": {
       "@/*": [
         "./src/*"
       ]
-    }
-  },
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
     },
-    {
-      "path": "./tsconfig.workers.json"
-    }
-  ]
+    "lib": [
+      "esnext",
+      "webworker"
+    ]
+  }
 }

@@ -1,8 +1,10 @@
 {
   "short_name": "InDocker",
   "name": "InDocker",
+  "id": "app",
   "start_url": "/",
   "scope": "/",
+  "lang": "en",
   "icons": [
     {
       "src": "/favicon/favicon-32x32.png",
@@ -17,11 +19,12 @@
     {
       "src": "/favicon/android-chrome-512x512.png",
       "sizes": "512x512",
+      "purpose": "maskable",
       "type": "image/png"
     }
   ],
   "orientation": "natural",
-  "theme_color": "#ffffff",
+  "theme_color": "#202124",
   "background_color": "#ffffff",
   "display": "standalone"
 }
