@@ -28,7 +28,7 @@ var stats []byte
 func TestNewContainerStateWatch_Subscribe(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	w, err := docker.NewContainerStateWatch(client.WithHTTPClient(
+	dc, err := client.NewClientWithOpts(client.WithHTTPClient(
 		newMockClient(func(req *http.Request) (*http.Response, error) {
 			if strings.HasSuffix(req.URL.Path, "/stats") {
 				return &http.Response{
@@ -44,6 +44,8 @@ func TestNewContainerStateWatch_Subscribe(t *testing.T) {
 		}),
 	))
 	assert.NoError(t, err)
+
+	w := docker.NewContainerStateWatch(dc)
 
 	// create a context with cancel
 	ctx, cancel := context.WithCancel(context.Background())

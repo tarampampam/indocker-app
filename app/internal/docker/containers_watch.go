@@ -34,17 +34,12 @@ type (
 )
 
 // NewContainersWatch creates a new ContainersWatch.
-func NewContainersWatch(interval time.Duration, opts ...client.Opt) (*ContainersWatch, error) {
-	c, err := client.NewClientWithOpts(opts...)
-	if err != nil {
-		return nil, err
-	}
-
+func NewContainersWatch(interval time.Duration, dc *client.Client) *ContainersWatch {
 	return &ContainersWatch{
 		interval: interval,
-		client:   c,
+		client:   dc,
 		subs:     make(map[ContainersSubscription]chan struct{}),
-	}, nil
+	}
 }
 
 // Watch starts watching for changes in the status of running docker containers.

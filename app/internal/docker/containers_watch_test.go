@@ -22,7 +22,7 @@ var listContainers []byte
 func TestContainersWatch_Subscribe(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	w, err := docker.NewContainersWatch(time.Millisecond, client.WithHTTPClient(
+	dc, err := client.NewClientWithOpts(client.WithHTTPClient(
 		newMockClient(func(req *http.Request) (*http.Response, error) {
 			return &http.Response{
 				StatusCode: http.StatusOK,
@@ -31,6 +31,8 @@ func TestContainersWatch_Subscribe(t *testing.T) {
 		}),
 	))
 	assert.NoError(t, err)
+
+	w := docker.NewContainersWatch(time.Millisecond, dc)
 
 	// create a context with cancel
 	ctx, cancel := context.WithCancel(context.Background())

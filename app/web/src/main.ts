@@ -5,8 +5,9 @@ import App from '@/App.vue'
 import '@/assets/main.css'
 import { router } from '@/router'
 import { API, APIKey } from '@/api/api'
-import { DockerStateChannelName } from '@/workers/shared'
+import { DB, DBKey } from '@/db/db'
 import { EmitterKey } from '@/events'
+import { DockerStateChannelName } from '@/workers/shared'
 import type { AppEvents } from '@/events'
 import mitt from 'mitt'
 
@@ -42,4 +43,5 @@ createApp(App)
   .use(router())
   .use((app) => app.provide(APIKey, new API()))
   .use((app) => app.provide(EmitterKey, emitter))
+  .use((app) => app.provide(DBKey, new DB()))
   .mount('#app')

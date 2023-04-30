@@ -99,7 +99,7 @@ func TestLatest_Fetch_One(t *testing.T) {
 	assert.Equal(t, "v1.1.1", release.Version)
 	assert.Equal(t, "https://github.com/tarampampam/indocker-app/releases/tag/v1.1.1", release.URL)
 	assert.Equal(t, "Foo bar", release.Name)
-	assert.Equal(t, "**Full Changelog**: https://github.com/tarampampam/indocker-app/compare/v1.1.0...v1.1.1", release.Body)
+	assert.Equal(t, "**Full Changelog**: https://github.com/tarampampam/indocker-app/compare/v1.1.0...v1.1.1", release.Body) //nolint:lll
 
 	createdAt, err := time.Parse(time.RFC3339, "2023-02-06T08:45:16Z")
 	assert.NoError(t, err)

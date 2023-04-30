@@ -8,6 +8,7 @@
     "format": "prettier --config package.json --write ./src"
   },
   "dependencies": {
+    "chart.js": "^4.2.1",
     "dexie": "^3.2.3",
     "highlight.js": "^11.7.0",
     "mitt": "^3.0.0",
@@ -16,6 +17,7 @@
     "semver": "^7.3.8",
     "string-to-color": "^2.2.2",
     "vue": "^3.2.47",
+    "vue-chartjs": "^5.2.0",
     "vue-router": "^4.1.6"
   },
   "devDependencies": {

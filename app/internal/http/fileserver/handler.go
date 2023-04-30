@@ -11,7 +11,7 @@ import (
 
 var fallback404 = []byte("<!doctype html><html><body><h1>Error 404</h1><h2>Not found</h2></body></html>") //nolint:lll,gochecknoglobals
 
-func NewHandler(root http.FileSystem) http.Handler {
+func NewHandler(root http.FileSystem) http.Handler { //nolint:funlen
 	var (
 		fileServer = http.FileServer(root)
 		index      []byte
@@ -26,7 +26,7 @@ func NewHandler(root http.FileSystem) http.Handler {
 		var filePath = path.Clean(r.URL.Path)
 
 		f, fErr := root.Open(filePath)
-		if os.IsNotExist(fErr) { // requested file not found
+		if os.IsNotExist(fErr) { //nolint:nestif // requested file not found
 			if r.Method == http.MethodHead {
 				w.WriteHeader(http.StatusNotFound)
 

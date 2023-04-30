@@ -32,16 +32,11 @@ type (
 )
 
 // NewContainerStateWatch creates a new ContainerStateWatch.
-func NewContainerStateWatch(opts ...client.Opt) (*ContainerStateWatch, error) {
-	c, err := client.NewClientWithOpts(opts...)
-	if err != nil {
-		return nil, err
-	}
-
+func NewContainerStateWatch(dc *client.Client) *ContainerStateWatch {
 	return &ContainerStateWatch{
-		client: c,
+		client: dc,
 		subs:   make(map[ContainersStateSubscription]chan struct{}),
-	}, nil
+	}
 }
 
 // Watch starts watching for containers state changes.
