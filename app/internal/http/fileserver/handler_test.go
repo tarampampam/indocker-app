@@ -60,6 +60,7 @@ func TestHandler(t *testing.T) {
 			wantCode:              http.StatusNotFound,
 			wantEmptyResponseBody: true,
 		},
+		// TODO: add cases with GZipped files
 	} {
 		tt := testCase
 

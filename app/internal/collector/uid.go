@@ -21,13 +21,8 @@ type DockerIDResolver struct {
 var _ UIDResolver = (*DockerIDResolver)(nil) // ensure interface is implemented
 
 // NewDockerIDResolver creates a new DockerIDResolver.
-func NewDockerIDResolver(ctx context.Context, opts ...client.Opt) (*DockerIDResolver, error) {
-	c, err := client.NewClientWithOpts(opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	return &DockerIDResolver{ctx: ctx, client: c}, nil
+func NewDockerIDResolver(ctx context.Context, dc *client.Client) *DockerIDResolver {
+	return &DockerIDResolver{ctx: ctx, client: dc}
 }
 
 // Resolve returns a unique ID for the host.

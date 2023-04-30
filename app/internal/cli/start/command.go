@@ -241,7 +241,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 }
 
 // Run current command.
-func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options) error { //nolint:funlen,gocognit,gocyclo,lll
+func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options) error { //nolint:funlen,gocyclo
 	var (
 		ctx, cancel = context.WithCancel(parentCtx) // main context creation
 		oss         = breaker.NewOSSignals(ctx)     // OS signals listener
@@ -259,7 +259,12 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 		oss.Stop() // stop system signals listening
 	}()
 
-	// TODO: use one docker client for all the app
+	dc, dcErr := client.NewClientWithOpts(client.WithHost(opt.Docker.Host))
+	if dcErr != nil {
+		return errors.Wrap(dcErr, "failed to create docker client")
+	}
+
+	defer func() { _ = dc.Close() }()
 
 	// load certificate
 	cert, certErr := tls.X509KeyPair(opt.HTTPS.CertFile, opt.HTTPS.KeyFile)
@@ -279,10 +284,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 	)
 
 	// prepare dependencies for the http server and register routes
-	var dockerWatcher, dwErr = docker.NewContainersWatch(opt.Docker.WatchInterval, client.WithHost(opt.Docker.Host))
-	if dwErr != nil {
-		return errors.Wrap(dwErr, "failed to create docker watcher")
-	}
+	var dockerWatcher = docker.NewContainersWatch(opt.Docker.WatchInterval, dc)
 
 	go func() { // start a docker containers watcher in a separate goroutine
 		if err := dockerWatcher.Watch(ctx); err != nil && !errors.Is(err, context.Canceled) {
@@ -302,10 +304,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 		}
 	}()
 
-	var dockerStateWatcher, swErr = docker.NewContainerStateWatch(client.WithHost(opt.Docker.Host))
-	if swErr != nil {
-		return errors.Wrap(swErr, "failed to create docker state watcher")
-	}
+	var dockerStateWatcher = docker.NewContainerStateWatch(dc)
 
 	go func() { // start a docker containers state watcher in a separate goroutine
 		if err := dockerStateWatcher.Watch(ctx, dockerWatcher); err != nil && !errors.Is(err, context.Canceled) {
@@ -371,7 +370,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 			zap.String("please", "leave it enabled, it helps us to improve the project"),
 		)
 	} else {
-		collect := cmd.runStatsCollector(ctx, log, dockerRouter, opt.Docker.Host)
+		collect := cmd.runStatsCollector(ctx, log, dockerRouter, dc)
 		defer collect.Stop()
 	}
 
@@ -395,7 +394,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 }
 
 func (cmd *command) runStatsCollector(
-	ctx context.Context, log *zap.Logger, dr *docker.ContainersRoute, dockerHost string,
+	ctx context.Context, log *zap.Logger, dr *docker.ContainersRoute, dc *client.Client,
 ) collector.Collector {
 	const (
 		initDelay, interval = 5 * time.Second, 30 * time.Minute
@@ -403,13 +402,7 @@ func (cmd *command) runStatsCollector(
 	)
 
 	// create docker ID resolver (ID from this resolver will be used to generate a unique user ID hash)
-	resolver, rErr := collector.NewDockerIDResolver(ctx, client.WithHost(dockerHost))
-	if rErr != nil {
-		log.Debug("Failed to create docker ID resolver", zap.Error(rErr))
-
-		// return noop collector if we failed above
-		return &collector.NoopCollector{}
-	}
+	resolver := collector.NewDockerIDResolver(ctx, dc)
 
 	// create a new collector
 	var collect = collector.NewCollector(ctx, log, initDelay, interval,

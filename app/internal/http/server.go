@@ -15,7 +15,6 @@ import (
 	"gh.tarampamp.am/indocker-app/app/internal/http/fileserver"
 	"gh.tarampamp.am/indocker-app/app/internal/http/middleware"
 	"gh.tarampamp.am/indocker-app/app/internal/http/proxy"
-	"gh.tarampamp.am/indocker-app/app/internal/http/ws"
 	"gh.tarampamp.am/indocker-app/app/internal/httptools"
 	ver "gh.tarampamp.am/indocker-app/app/internal/version"
 	"gh.tarampamp.am/indocker-app/app/web"
@@ -82,10 +81,12 @@ func (s *Server) Register(
 
 		router = api.NewRouter("/api", fallback)
 
+		const latestVerCacheTTL = time.Minute * 30
+
 		router.
+			// Register(http.MethodGet, "/ws/docker/state", ws.DockerState(dsw)) // TODO: under construction
 			Register(http.MethodGet, "/version/current", api.VersionCurrent(ver.Version())).
-			Register(http.MethodGet, "/version/latest", api.VersionLatest(ver.NewLatest(ver.WithContext(ctx)), time.Minute*30)).
-			Register(http.MethodGet, "/ws/docker/state", ws.DockerState(dsw))
+			Register(http.MethodGet, "/version/latest", api.VersionLatest(ver.NewLatest(ver.WithContext(ctx)), latestVerCacheTTL)) //nolint:lll
 	}
 
 	for server, namedLogger := range map[*http.Server]*zap.Logger{

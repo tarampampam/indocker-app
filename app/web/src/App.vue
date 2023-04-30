@@ -1,5 +1,8 @@
 <template>
-  <NConfigProvider :theme="theme" :hljs="hljs">
+  <div v-if="isUnderConstruction" style="display: flex; height: 100vh; align-items: center; justify-content: center">
+    Monitor is under construction
+  </div>
+  <NConfigProvider v-else :theme="theme" :hljs="hljs">
     <TopNavigation />
     <main>
       <router-view></router-view>
@@ -20,9 +23,10 @@ import { ref, onMounted, onBeforeMount } from 'vue'
 import PageFooter from '@/components/PageFooter.vue'
 import TopNavigation from '@/components/TopNavigation.vue'
 import { darkTheme, lightTheme, NCard, NConfigProvider, NGlobalStyle } from 'naive-ui'
-import { useEmitter } from '@/events'
 
 const theme = ref(lightTheme)
+
+const isUnderConstruction = true // set false to enable
 
 onBeforeMount((): void => {
   if (window.matchMedia) {
@@ -31,16 +35,14 @@ onBeforeMount((): void => {
 
     theme.value = window.matchMedia(mediaSelector).matches ? darkTheme : lightTheme
 
-    window.matchMedia(mediaSelector).addEventListener('change', (event) => {
+    window.matchMedia(mediaSelector).addEventListener('change', (event): void => {
       theme.value = event.matches ? darkTheme : lightTheme
     })
   }
 })
 
 onMounted((): void => {
-  useEmitter().on('dockerStateUpdated', (): void => {
-    console.debug('event received')
-  })
+  //
 })
 </script>
 

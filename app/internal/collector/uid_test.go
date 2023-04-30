@@ -31,7 +31,7 @@ func newMockClient(doer func(*http.Request) (*http.Response, error)) *http.Clien
 func TestDockerIDResolver_Resolve(t *testing.T) {
 	t.Parallel()
 
-	r, err := collector.NewDockerIDResolver(context.Background(), client.WithHTTPClient(
+	dc, err := client.NewClientWithOpts(client.WithHTTPClient(
 		newMockClient(func(req *http.Request) (*http.Response, error) {
 			if strings.HasSuffix(req.URL.Path, "/info") {
 				return &http.Response{
@@ -49,6 +49,8 @@ func TestDockerIDResolver_Resolve(t *testing.T) {
 		}),
 	))
 	assert.NoError(t, err)
+
+	r := collector.NewDockerIDResolver(context.Background(), dc)
 
 	id, err := r.Resolve()
 

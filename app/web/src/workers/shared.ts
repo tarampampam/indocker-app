@@ -15,6 +15,7 @@ if (typeof ctx === 'object' && ctx.constructor.name.toLowerCase().includes('work
   api.watchDockerState((map) => {
     db.putDockerState(map)
       .then((dbKey) => br.postMessage(dbKey))
+      .then(() => console.debug('docker state updated'))
       .catch(console.error)
   })
 

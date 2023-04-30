@@ -77,7 +77,7 @@ func NewLatest(opts ...LatestOption) *Latest {
 }
 
 // Fetch fetches the latest release information from GitHub.
-func (l *Latest) Fetch() (*Release, error) {
+func (l *Latest) Fetch() (*Release, error) { //nolint:funlen
 	req, err := http.NewRequestWithContext(l.ctx,
 		// https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#list-releases
 		http.MethodGet, fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=99&page=1", l.repo), http.NoBody,
