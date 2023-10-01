@@ -17,7 +17,7 @@ jobs:
     name: 🔐 Check for GitLeaks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with: {fetch-depth: 0}
 
       - uses: gacts/gitleaks@v1
@@ -26,7 +26,7 @@ jobs:
     name: 🌐 DNSControl check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: gacts/install-dnscontrol@v1
 
@@ -37,7 +37,7 @@ jobs:
     name: 🧪 Run GolangCI-lint (docker-info plugin)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: gacts/setup-go-with-cache@v1
         with: {go-version: 1.18}
@@ -49,7 +49,7 @@ jobs:
     name: 🏗️ Build and scan the docker image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/github-script@v6
         id: date
