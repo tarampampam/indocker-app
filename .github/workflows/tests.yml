@@ -72,7 +72,7 @@ jobs:
           push: false
           tags: app:local
 
-      - uses: aquasecurity/trivy-action@0.13.1
+      - uses: aquasecurity/trivy-action@0.14.0
         with:
           image-ref: app:local
           format: sarif
