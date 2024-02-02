@@ -28,7 +28,7 @@ jobs:
         id: date
         with: {script: 'return (new Date()).getMonth()', result-encoding: string}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: certs-cache # yea, I know about the sensitive data caching, bla bla bla
         with: {path: traefik/certs, key: 'config-certs-month-${{ steps.date.outputs.result }}'}
 
