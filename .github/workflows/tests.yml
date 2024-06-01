@@ -42,7 +42,7 @@ jobs:
       - uses: gacts/setup-go-with-cache@v1
         with: {go-version: 1.18}
 
-      - uses: golangci/golangci-lint-action@v4
+      - uses: golangci/golangci-lint-action@v6
         with: {skip-pkg-cache: true, skip-build-cache: true, working-directory: ./traefik/plugins/docker-info}
 
   build-and-scan-docker-image:
