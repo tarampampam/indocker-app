@@ -66,7 +66,7 @@ jobs:
           CF_EMAIL: ${{ secrets.CF_EMAIL }}
           DRY_RUN: 'true'
 
-      - uses: docker/build-push-action@v4
+      - uses: docker/build-push-action@v6
         with:
           context: .
           push: false
