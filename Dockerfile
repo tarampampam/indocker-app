@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.3
 
-FROM traefik:v3.0 as builder
+FROM traefik:3.1 as builder
 
 # prepare rootfs for runtime
 WORKDIR /tmp/rootfs
