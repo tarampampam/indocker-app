@@ -7,208 +7,176 @@ import (
 	"crypto/rand"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/lego"
-	"github.com/go-acme/lego/v4/log"
 	"github.com/go-acme/lego/v4/providers/dns/cloudflare"
 	"github.com/go-acme/lego/v4/registration"
 	"github.com/urfave/cli/v2"
 )
 
-type MyUser struct {
-	Email        string
-	Registration *registration.Resource
-	key          crypto.PrivateKey
-}
+var defaultDomains = func() []string { //nolint:gochecknoglobals
+	const rootDomain = "indocker.app"
 
-func (u *MyUser) GetEmail() string                        { return u.Email }
-func (u *MyUser) GetRegistration() *registration.Resource { return u.Registration }
-func (u *MyUser) GetPrivateKey() crypto.PrivateKey        { return u.key }
+	var domains = make([]string, 0)
 
-const rootDomain = "indocker.app"
+	for _, subDomain := range []string{
+		"*", "*.app", "*.apps", "*.www", "*.http", "*.mail", "*.m", "*.go", "*.static", "*.img", "*.media",
+		"*.admin", "*.api", "*.back", "*.backend", "*.front", "*.frontend", "*.srv", "*.service", "*.dev",
+		"*.db", "*.test", "*.demo", "*.alpha", "*.beta", "*.x-docker",
+	} {
+		domains = append(domains, strings.Join([]string{subDomain, rootDomain}, "."))
+	}
 
-var defaultDomains = []string{ //nolint:gochecknoglobals
-	"*." + rootDomain,
-	"*.app." + rootDomain,
-	"*.apps." + rootDomain,
-	"*.www." + rootDomain,
-	"*.http." + rootDomain,
-	"*.mail." + rootDomain,
-	"*.m." + rootDomain,
-	"*.go." + rootDomain,
-	"*.static." + rootDomain,
-	"*.img." + rootDomain,
-	"*.media." + rootDomain,
-	"*.admin." + rootDomain,
-	"*.api." + rootDomain,
-	"*.back." + rootDomain,
-	"*.backend." + rootDomain,
-	"*.front." + rootDomain,
-	"*.frontend." + rootDomain,
-	"*.srv." + rootDomain,
-	"*.service." + rootDomain,
-	"*.dev." + rootDomain,
-	"*.db." + rootDomain,
-	"*.test." + rootDomain,
-	"*.demo." + rootDomain,
-	"*.alpha." + rootDomain,
-	"*.beta." + rootDomain,
-	"*.x-docker." + rootDomain,
-}
-
-// exitFn is a function for application exiting.
-var exitFn = os.Exit //nolint:gochecknoglobals
+	return domains
+}()
 
 // main CLI application entrypoint.
-func main() { exitFn(run()) }
+func main() {
+	if err := run(); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+
+		os.Exit(1)
+	}
+}
 
 // run this CLI application.
-// Exit codes documentation: <https://tldp.org/LDP/abs/html/exitcodes.html>
-func run() int { //nolint:funlen
-	const (
-		emailFlagName      = "email"
-		apiKeyFlagName     = "api-key"
-		domainsFlagName    = "domains"
-		productionFlagName = "production"
-		outCertFlagName    = "out-cert"
-		outKeyFlagName     = "out-key"
+func run() error { //nolint:funlen
+	var (
+		emailFlag = cli.StringFlag{
+			Name:     "email",
+			Usage:    "Email address for important account notifications",
+			EnvVars:  []string{"EMAIL"},
+			Required: true,
+		}
+		// Create a token (https://dash.cloudflare.com/profile/api-tokens) with the following permissions:
+		// - Zone:Zone:Read
+		// - Zone:DNS:Edit
+		// Zone Resources: Include -- Specific zone -- <your-root-domain>
+		apiKeyFlag = cli.StringFlag{
+			Name:     "api-key",
+			Usage:    "Cloudflare API key",
+			EnvVars:  []string{"API_KEY"},
+			Required: true,
+		}
+		productionFlag = cli.BoolFlag{
+			Name:    "production",
+			Usage:   "Use the production Let's Encrypt server; otherwise, the staging server will be used",
+			Value:   false,
+			EnvVars: []string{"PRODUCTION"},
+		}
+		outCertFlag = cli.StringFlag{
+			Name:    "out-cert",
+			Usage:   "File to write certificate to",
+			EnvVars: []string{"OUT_CERT_FILE"},
+			Value:   "certs/fullchain.pem",
+		}
+		outKeyFlag = cli.StringFlag{
+			Name:    "out-key",
+			Usage:   "File to write private key to",
+			EnvVars: []string{"OUT_KEY_FILE"},
+			Value:   "certs/privkey.pem",
+		}
 	)
 
-	var app = cli.App{
-		Usage: "Domain certificate resolver",
+	return (&cli.App{
+		Usage: "Domain certificate creator",
 		Action: func(c *cli.Context) error {
 			var (
-				email   = c.String(emailFlagName)
-				key     = c.String(apiKeyFlagName)
-				domains = c.StringSlice(domainsFlagName)
-				prod    = c.Bool(productionFlagName)
-				outCert = c.String(outCertFlagName)
-				outKey  = c.String(outKeyFlagName)
+				email        = c.String(emailFlag.Name)
+				key          = c.String(apiKeyFlag.Name)
+				isProduction = c.Bool(productionFlag.Name)
+				outCert      = c.String(outCertFlag.Name)
+				outKey       = c.String(outKeyFlag.Name)
 			)
 
-			// create a user (new accounts need an email and private key to start)
-			privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-			if err != nil {
-				return err
+			privateKey, privKeyErr := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+			if privKeyErr != nil {
+				return fmt.Errorf("failed to generate private key: %w", privKeyErr)
 			}
 
 			var (
-				user = &MyUser{
-					Email: email,
-					key:   privateKey,
-				}
-				config = lego.NewConfig(user)
+				usr    = &user{Email: email, key: privateKey}
+				config = lego.NewConfig(usr)
 			)
 
-			if prod {
+			if isProduction {
 				config.CADirURL = lego.LEDirectoryProduction
 			} else {
 				config.CADirURL = lego.LEDirectoryStaging
 			}
 
-			// a client facilitates communication with the CA server.
-			client, err := lego.NewClient(config)
-			if err != nil {
-				return err
+			client, clientErr := lego.NewClient(config)
+			if clientErr != nil {
+				return fmt.Errorf("failed to create Let's Encrypt client: %w", clientErr)
 			}
 
 			// create and configure challenge provider
-			dns, err := cloudflare.NewDNSProviderConfig(&cloudflare.Config{
+			dnsProvider, providerErr := cloudflare.NewDNSProviderConfig(&cloudflare.Config{
 				AuthEmail:          email,           // account email address
 				AuthToken:          key,             // API token with DNS:Edit permission
 				TTL:                200,             //nolint:gomnd // the TTL of the TXT record used for the DNS challenge
 				PropagationTimeout: time.Minute,     // maximum waiting time for DNS propagation
 				PollingInterval:    2 * time.Second, //nolint:gomnd // time between DNS propagation check
 			})
-			if err != nil {
-				return err
+			if providerErr != nil {
+				return fmt.Errorf("failed to create Cloudflare DNS provider: %w", providerErr)
 			}
 
 			// use the DNS challenge provider
-			if err = client.Challenge.SetDNS01Provider(dns); err != nil {
+			if err := client.Challenge.SetDNS01Provider(dnsProvider); err != nil {
 				return err
 			}
 
 			// new users will need to register
-			reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
-			if err != nil {
-				return err
+			reg, regERr := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
+			if regERr != nil {
+				return fmt.Errorf("failed to register user: %w", regERr)
 			}
-			user.Registration = reg
+
+			usr.Registration = reg
 
 			// obtain certificates
-			certificates, err := client.Certificate.Obtain(certificate.ObtainRequest{
-				Domains: domains,
+			certificates, obtainingErr := client.Certificate.Obtain(certificate.ObtainRequest{
+				Domains: defaultDomains,
 				Bundle:  true,
 			})
-			if err != nil {
-				return err
+			if obtainingErr != nil {
+				return fmt.Errorf("failed to obtain certificate: %w", obtainingErr)
 			}
 
 			const fileMode = 0o600
 
-			if err = os.WriteFile(outCert, certificates.Certificate, fileMode); err != nil {
-				return err
+			if err := os.WriteFile(outCert, certificates.Certificate, fileMode); err != nil {
+				return fmt.Errorf("failed to write certificate to file: %w", err)
 			}
 
-			if err = os.WriteFile(outKey, certificates.PrivateKey, fileMode); err != nil {
-				return err
+			if err := os.WriteFile(outKey, certificates.PrivateKey, fileMode); err != nil {
+				return fmt.Errorf("failed to write private key to file: %w", err)
 			}
 
-			log.Infof("Certificate and key saved to %s and %s", outCert, outKey)
+			_, _ = fmt.Fprintf(os.Stdout, "Certificate and key saved to %s and %s\n", outCert, outKey)
 
 			return nil
 		},
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:     emailFlagName,
-				Usage:    "Email address for important account notifications",
-				EnvVars:  []string{"EMAIL"},
-				Required: true,
-			},
-			// Create a token (https://dash.cloudflare.com/profile/api-tokens) with the following permissions:
-			// - Zone:Zone:Read
-			// - Zone:DNS:Edit
-			// Zone Resources: Include -- Specific zone -- <your-root-domain>
-			&cli.StringFlag{
-				Name:     apiKeyFlagName,
-				Usage:    "Cloudflare API key",
-				EnvVars:  []string{"API_KEY"},
-				Required: true,
-			},
-			&cli.StringSliceFlag{
-				Name:    domainsFlagName,
-				Usage:   "Domains to generate certificates for",
-				EnvVars: []string{"DOMAINS"},
-				Value:   cli.NewStringSlice(defaultDomains...),
-			},
-			&cli.BoolFlag{
-				Name:    productionFlagName,
-				Usage:   "Use production Let's Encrypt server (otherwise staging server is used)",
-				EnvVars: []string{"PRODUCTION"},
-			},
-			&cli.StringFlag{
-				Name:    outCertFlagName,
-				Usage:   "File to write certificate to",
-				EnvVars: []string{"OUT_CERT_FILE"},
-				Value:   "certs/fullchain.pem",
-			},
-			&cli.StringFlag{
-				Name:    outKeyFlagName,
-				Usage:   "File to write private key to",
-				EnvVars: []string{"OUT_KEY_FILE"},
-				Value:   "certs/privkey.pem",
-			},
+			&emailFlag,
+			&apiKeyFlag,
+			&productionFlag,
+			&outCertFlag,
+			&outKeyFlag,
 		},
-	}
-
-	if err := app.Run(os.Args); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
-
-		return 1
-	}
-
-	return 0
+	}).Run(os.Args)
 }
+
+type user struct {
+	Email        string
+	Registration *registration.Resource
+	key          crypto.PrivateKey
+}
+
+func (u *user) GetEmail() string                        { return u.Email }
+func (u *user) GetRegistration() *registration.Resource { return u.Registration }
+func (u *user) GetPrivateKey() crypto.PrivateKey        { return u.key }
