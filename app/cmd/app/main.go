@@ -1,31 +1,23 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
-
-	"go.uber.org/automaxprocs/maxprocs"
+	"os/signal"
+	"syscall"
 
 	"gh.tarampamp.am/indocker-app/app/internal/cli"
 )
 
-// set GOMAXPROCS to match Linux container CPU quota.
-var _, _ = maxprocs.Set(maxprocs.Min(1), maxprocs.Logger(func(_ string, _ ...any) {}))
-
-// exitFn is a function for application exiting.
-var exitFn = os.Exit //nolint:gochecknoglobals
-
 // main CLI application entrypoint.
-func main() { exitFn(run()) }
+func main() {
+	var ctx, cancel = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
 
-// run this CLI application.
-// Exit codes documentation: <https://tldp.org/LDP/abs/html/exitcodes.html>
-func run() int {
-	if err := (cli.NewApp()).Run(os.Args); err != nil {
+	if err := cli.NewApp().Run(ctx, os.Args); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err.Error())
 
-		return 1
+		os.Exit(1)
 	}
-
-	return 0
 }

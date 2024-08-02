@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -12,9 +14,10 @@ import (
 
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/lego"
+	"github.com/go-acme/lego/v4/log"
 	"github.com/go-acme/lego/v4/providers/dns/cloudflare"
 	"github.com/go-acme/lego/v4/registration"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var defaultDomains = func() []string { //nolint:gochecknoglobals
@@ -48,8 +51,20 @@ func run() error { //nolint:funlen
 		emailFlag = cli.StringFlag{
 			Name:     "email",
 			Usage:    "Email address for important account notifications",
-			EnvVars:  []string{"EMAIL"},
+			Sources:  cli.EnvVars("EMAIL"),
 			Required: true,
+			OnlyOnce: true,
+			Validator: func(s string) error {
+				if s == "" {
+					return errors.New("email address cannot be empty")
+				}
+
+				if !strings.Contains(s, "@") {
+					return fmt.Errorf("invalid email address: %s", s)
+				}
+
+				return nil
+			},
 		}
 		// Create a token (https://dash.cloudflare.com/profile/api-tokens) with the following permissions:
 		// - Zone:Zone:Read
@@ -58,32 +73,63 @@ func run() error { //nolint:funlen
 		apiKeyFlag = cli.StringFlag{
 			Name:     "api-key",
 			Usage:    "Cloudflare API key",
-			EnvVars:  []string{"API_KEY"},
+			Sources:  cli.EnvVars("API_KEY"),
 			Required: true,
+			OnlyOnce: true,
+			Validator: func(s string) error {
+				if s == "" {
+					return errors.New("API key cannot be empty")
+				}
+
+				return nil
+			},
 		}
 		productionFlag = cli.BoolFlag{
-			Name:    "production",
-			Usage:   "Use the production Let's Encrypt server; otherwise, the staging server will be used",
-			Value:   false,
-			EnvVars: []string{"PRODUCTION"},
+			Name:     "production",
+			Usage:    "Use the production Let's Encrypt server; otherwise, the staging server will be used",
+			Value:    false,
+			Sources:  cli.EnvVars("PRODUCTION"),
+			OnlyOnce: true,
 		}
 		outCertFlag = cli.StringFlag{
-			Name:    "out-cert",
-			Usage:   "File to write certificate to",
-			EnvVars: []string{"OUT_CERT_FILE"},
-			Value:   "certs/fullchain.pem",
+			Name:     "out-cert",
+			Usage:    "File to write certificate to",
+			Sources:  cli.EnvVars("OUT_CERT_FILE"),
+			Value:    "certs/fullchain.pem",
+			OnlyOnce: true,
+			Validator: func(s string) error {
+				if s == "" {
+					return errors.New("file path cannot be empty")
+				}
+
+				if stat, err := os.Stat(s); err != nil {
+					if os.IsNotExist(err) {
+						return nil // file does not exist
+					}
+
+					return fmt.Errorf("failed to check if output file %s exists: %w", s, err)
+				} else {
+					if stat.IsDir() {
+						return fmt.Errorf("%s is a directory", s)
+					}
+
+					return errors.New("output file already exists (if you wish to overwrite it, please delete it first)")
+				}
+			},
 		}
 		outKeyFlag = cli.StringFlag{
-			Name:    "out-key",
-			Usage:   "File to write private key to",
-			EnvVars: []string{"OUT_KEY_FILE"},
-			Value:   "certs/privkey.pem",
+			Name:      "out-key",
+			Usage:     "File to write private key to",
+			Sources:   cli.EnvVars("OUT_KEY_FILE"),
+			Value:     "certs/privkey.pem",
+			OnlyOnce:  true,
+			Validator: outCertFlag.Validator, // reuse the validator
 		}
 	)
 
-	return (&cli.App{
+	return (&cli.Command{
 		Usage: "Domain certificate creator",
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			var (
 				email        = c.String(emailFlag.Name)
 				key          = c.String(apiKeyFlag.Name)
@@ -117,9 +163,9 @@ func run() error { //nolint:funlen
 			dnsProvider, providerErr := cloudflare.NewDNSProviderConfig(&cloudflare.Config{
 				AuthEmail:          email,           // account email address
 				AuthToken:          key,             // API token with DNS:Edit permission
-				TTL:                200,             //nolint:gomnd // the TTL of the TXT record used for the DNS challenge
+				TTL:                200,             //nolint:mnd // the TTL of the TXT record used for the DNS challenge
 				PropagationTimeout: time.Minute,     // maximum waiting time for DNS propagation
-				PollingInterval:    2 * time.Second, //nolint:gomnd // time between DNS propagation check
+				PollingInterval:    2 * time.Second, //nolint:mnd // time between DNS propagation check
 			})
 			if providerErr != nil {
 				return fmt.Errorf("failed to create Cloudflare DNS provider: %w", providerErr)
@@ -157,7 +203,7 @@ func run() error { //nolint:funlen
 				return fmt.Errorf("failed to write private key to file: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(os.Stdout, "Certificate and key saved to %s and %s\n", outCert, outKey)
+			log.Infof("Certificate and key saved to %s and %s\n", outCert, outKey)
 
 			return nil
 		},
@@ -168,7 +214,7 @@ func run() error { //nolint:funlen
 			&outCertFlag,
 			&outKeyFlag,
 		},
-	}).Run(os.Args)
+	}).Run(context.Background(), os.Args)
 }
 
 type user struct {

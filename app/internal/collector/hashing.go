@@ -32,7 +32,7 @@ func HashParts(parts ...string) (string, error) {
 
 	var hash = hex.EncodeToString(h.Sum(nil))
 
-	if len(hash) > 16 { //nolint:gomnd
+	if len(hash) > 16 { //nolint:mnd
 		return hash[:16], nil
 	}
 

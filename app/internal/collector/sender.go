@@ -43,7 +43,7 @@ func NewMixPanelSender(projectToken, appVersion string, client ...httpClient) *M
 	if len(client) == 0 {
 		client = []httpClient{ // default client
 			&http.Client{
-				Timeout: time.Second * 30, //nolint:gomnd
+				Timeout: time.Second * 30, //nolint:mnd
 				Transport: &http.Transport{
 					Proxy: http.ProxyFromEnvironment,
 				},
@@ -62,7 +62,7 @@ func NewMixPanelSender(projectToken, appVersion string, client ...httpClient) *M
 func (mp *MixPanelSender) Send(ctx context.Context, userID string, events ...Event) error { //nolint:funlen
 	if len(events) == 0 {
 		return errors.New("empty events")
-	} else if len(events) > 50 { //nolint:gomnd // https://bit.ly/3YA4C10
+	} else if len(events) > 50 { //nolint:mnd // https://bit.ly/3YA4C10
 		return errors.New("too many events")
 	}
 
@@ -89,7 +89,7 @@ func (mp *MixPanelSender) Send(ctx context.Context, userID string, events ...Eve
 			continue
 		}
 
-		var props = make(map[string]string, len(events[i].Properties)+4) //nolint:gomnd
+		var props = make(map[string]string, len(events[i].Properties)+4) //nolint:mnd
 
 		for k, v := range events[i].Properties { // copy properties
 			props[k] = v
