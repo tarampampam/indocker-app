@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 )
@@ -52,7 +53,7 @@ func (w *ContainersWatch) Watch(ctx context.Context) error {
 		f.Add("status", s)
 	}
 
-	var opt = types.ContainerListOptions{Filters: f}
+	var opt = container.ListOptions{Filters: f}
 
 	var t = time.NewTicker(w.interval)
 	defer t.Stop()

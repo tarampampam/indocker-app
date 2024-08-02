@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 )
 
@@ -26,8 +27,8 @@ type (
 	ContainersStateSubscription chan map[string]*ContainerState // map[container_id]container_state
 
 	ContainerState struct {
-		Inspect *types.ContainerJSON `json:"inspect"`
-		Stats   *types.StatsJSON     `json:"stats"`
+		Inspect *types.ContainerJSON     `json:"inspect"`
+		Stats   *container.StatsResponse `json:"stats"`
 	}
 )
 
@@ -94,7 +95,7 @@ func (w *ContainerStateWatch) Watch(ctx context.Context, cw ContainersWatcher) e
 						if stats, err := w.client.ContainerStatsOneShot(ctx, id); err != nil {
 							return
 						} else {
-							var data = types.StatsJSON{}
+							var data = container.StatsResponse{}
 							if decodingErr := json.NewDecoder(stats.Body).Decode(&data); decodingErr != nil {
 								return
 							}

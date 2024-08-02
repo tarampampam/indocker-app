@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://cdn.jsdelivr.net/gh/compose-spec/compose-spec@master/schema/compose-spec.json
+
+services:
+  app:
+    build: {target: develop}
+    environment:
+      PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@develop] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
+      HOME: /tmp
+      LOG_LEVEL: debug
+    volumes:
+      - .:/src:rw
+      - tmp-data:/tmp:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    security_opt: [no-new-privileges:true]
+
+  web:
+    build: {target: runtime}
+    ports: ['80:8080/tcp', '443:8443/tcp'] # open https://monitor.indocker.app
+    command: start --dont-use-embedded-front
+    develop: # available since docker compose v2.22, https://docs.docker.com/compose/file-watch/
+      watch: [{action: rebuild, path: .}]
+    security_opt: [no-new-privileges:true]
+
+  whoami: # just for a test
+    image: containous/whoami:latest
+    labels:
+      indocker.host: whoami.indocker.app # Open <https://whoami.indocker.app>
+      indocker.port: 8080
+    command: --port 8080
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  tmp-data: {}
