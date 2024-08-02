@@ -37,7 +37,7 @@ func DiscoverMiddleware(dashboardDomain string, next http.Handler) http.Handler 
 			data.API.BaseUrl = &u
 		}
 
-		_ = json.NewEncoder(w).Encode(data)
+		_ = json.NewEncoder(w).Encode(data) //nolint:errchkjson
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

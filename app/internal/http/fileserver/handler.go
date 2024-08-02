@@ -59,7 +59,7 @@ func NewHandler(root http.FileSystem) http.Handler { //nolint:funlen
 				var contentType = mime.TypeByExtension(filepath.Ext(filePath)) // first try to detect by file extension
 
 				if contentType == "" { // if failed, try to detect by content
-					var buf = make([]byte, 32) //nolint:gomnd // 32 bytes are enough for "first bytes" checking
+					var buf = make([]byte, 32) //nolint:mnd // 32 bytes are enough for "first bytes" checking
 
 					if _, err = io.ReadFull(f, buf); err == nil { // read first bytes to detect content type of original file
 						contentType = http.DetectContentType(buf) // if failed, try to detect by content

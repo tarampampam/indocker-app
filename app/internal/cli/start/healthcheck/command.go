@@ -1,38 +1,30 @@
 package healthcheck
 
 import (
-	"github.com/urfave/cli/v2"
+	"context"
 
-	"gh.tarampamp.am/indocker-app/app/internal/env"
+	"github.com/urfave/cli/v3"
+
+	"gh.tarampamp.am/indocker-app/app/internal/cli/shared/flags"
 )
 
 // NewCommand creates `healthcheck` command.
 func NewCommand() *cli.Command {
-	const (
-		httpPortFlagName  = "http-port"
-		httpsPortFlagName = "https-port"
+	var (
+		httpPortFlag  = flags.HttpPortFlag
+		httpsPortFlag = flags.HttpsPortFlag
 	)
 
 	return &cli.Command{
 		Name:    "healthcheck",
 		Aliases: []string{"hc", "health", "check"},
 		Usage:   "Health checker for the HTTP(S) servers. Use case - docker healthcheck",
-		Action: func(c *cli.Context) error {
-			return NewHealthChecker(c.Context).Check(c.Uint(httpPortFlagName), c.Uint(httpsPortFlagName))
+		Action: func(ctx context.Context, c *cli.Command) error {
+			return NewHealthChecker(ctx).Check(uint(c.Uint(httpPortFlag.Name)), uint(c.Uint(httpsPortFlag.Name)))
 		},
 		Flags: []cli.Flag{
-			&cli.UintFlag{
-				Name:    httpPortFlagName,
-				Usage:   "HTTP server port",
-				Value:   8080, //nolint:gomnd
-				EnvVars: []string{env.HTTPPort.String()},
-			},
-			&cli.UintFlag{
-				Name:    httpsPortFlagName,
-				Usage:   "HTTPS server port",
-				Value:   8443, //nolint:gomnd
-				EnvVars: []string{env.HTTPSPort.String()},
-			},
+			&httpPortFlag,
+			&httpsPortFlag,
 		},
 	}
 }

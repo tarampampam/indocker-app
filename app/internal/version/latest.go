@@ -66,7 +66,7 @@ func NewLatest(opts ...LatestOption) *Latest {
 
 	if latest.http == nil {
 		latest.http = &http.Client{
-			Timeout: time.Second * 30, //nolint:gomnd
+			Timeout: time.Second * 30, //nolint:mnd
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 			},

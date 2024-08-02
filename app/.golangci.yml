@@ -112,7 +112,6 @@ issues:
     - testdata
   exclude-rules:
     - {path: flags\.go, linters: [gochecknoglobals, lll, mnd, dupl]}
-    - {path: env\.go, linters: [lll, gosec]}
     - path: _test\.go
       linters:
         - dupl

@@ -3,6 +3,7 @@ package start
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,16 +12,14 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"go.uber.org/zap"
 
 	"gh.tarampamp.am/indocker-app/app/certs"
-	"gh.tarampamp.am/indocker-app/app/internal/breaker"
+	"gh.tarampamp.am/indocker-app/app/internal/cli/shared/flags"
 	"gh.tarampamp.am/indocker-app/app/internal/cli/start/healthcheck"
 	"gh.tarampamp.am/indocker-app/app/internal/collector"
 	"gh.tarampamp.am/indocker-app/app/internal/docker"
-	"gh.tarampamp.am/indocker-app/app/internal/env"
 	appHttp "gh.tarampamp.am/indocker-app/app/internal/http"
 	"gh.tarampamp.am/indocker-app/app/internal/version"
 )
@@ -58,64 +57,51 @@ type (
 func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 	var cmd = command{}
 
-	const (
-		addrFlagName                   = "addr"
-		httpPortFlagName               = "http-port"
-		httpsPortFlagName              = "https-port"
-		httpsCertFileFlagName          = "https-cert-file"
-		httpsKeyFileFlagName           = "https-key-file"
-		readTimeoutFlagName            = "read-timeout"
-		writeTimeoutFlagName           = "write-timeout"
-		idleTimeoutFlagName            = "idle-timeout"
-		shutdownTimeoutFlagName        = "shutdown-timeout"
-		dockerHostFlagName             = "docker-socket"
-		dockerWatchIntervalFlagName    = "docker-watch-interval"
-		dashboardDomainFlagName        = "dashboard-domain"
-		dontUseEmbeddedFrontFlagName   = "dont-use-embedded-front"
-		dontSendAnonymousUsageFlagName = "dont-send-anonymous-usage"
-
-		httpCategory      = "http"
-		tlsCategory       = "tls"
-		dashboardCategory = "dashboard"
-		dockerCategory    = "docker"
+	var (
+		addrFlag                   = flags.AddrFlag
+		httpPortFlag               = flags.HttpPortFlag
+		httpsPortFlag              = flags.HttpsPortFlag
+		httpsCertFileFlag          = flags.HttpsCertFileFlag
+		httpsKeyFileFlag           = flags.HttpsKeyFileFlag
+		readTimeoutFlag            = flags.ReadTimeoutFlag
+		writeTimeoutFlag           = flags.WriteTimeoutFlag
+		idleTimeoutFlag            = flags.IdleTimeoutFlag
+		shutdownTimeoutFlag        = flags.ShutdownTimeoutFlag
+		dockerHostFlag             = flags.DockerHostFlag
+		dockerWatchIntervalFlag    = flags.DockerWatchIntervalFlag
+		dashboardDomainFlag        = flags.DashboardDomainFlag
+		dontUseEmbeddedFrontFlag   = flags.DontUseEmbeddedFrontFlag
+		dontSendAnonymousUsageFlag = flags.DontSendAnonymousUsageFlag
 	)
 
 	cmd.c = &cli.Command{
 		Name:    "start",
 		Usage:   "Start HTTP/HTTPs servers",
 		Aliases: []string{"server", "serve"},
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			var opt options
 
-			opt.Addr = c.String(addrFlagName)
-			opt.HTTP.Port = c.Uint(httpPortFlagName)
-			opt.HTTPS.Port = c.Uint(httpsPortFlagName)
-			httpsCertFilePath := c.String(httpsCertFileFlagName)
-			httpsKeyFilePath := c.String(httpsKeyFileFlagName)
-			opt.ReadTimeout = c.Duration(readTimeoutFlagName)
-			opt.WriteTimeout = c.Duration(writeTimeoutFlagName)
-			opt.IDLETimeout = c.Duration(idleTimeoutFlagName)
-			opt.ShutdownTimeout = c.Duration(shutdownTimeoutFlagName)
-			opt.Docker.Host = c.String(dockerHostFlagName)
-			opt.Docker.WatchInterval = c.Duration(dockerWatchIntervalFlagName)
-			opt.Dashboard.Domain = c.String(dashboardDomainFlagName)
-			opt.Dashboard.DontUseEmbeddedFront = c.Bool(dontUseEmbeddedFrontFlagName)
-			opt.DontSendUsageStats = c.Bool(dontSendAnonymousUsageFlagName)
-
-			if opt.HTTP.Port == 0 || opt.HTTP.Port > 65535 {
-				return fmt.Errorf("wrong HTTP port number (%d)", opt.HTTP.Port)
-			}
-
-			if opt.HTTPS.Port == 0 || opt.HTTPS.Port > 65535 {
-				return fmt.Errorf("wrong HTTP port number (%d)", opt.HTTPS.Port)
-			}
+			opt.Addr = c.String(addrFlag.Name)
+			opt.HTTP.Port = uint(c.Uint(httpPortFlag.Name))
+			opt.HTTPS.Port = uint(c.Uint(httpsPortFlag.Name))
+			httpsCertFilePath := c.String(httpsCertFileFlag.Name)
+			httpsKeyFilePath := c.String(httpsKeyFileFlag.Name)
+			opt.ReadTimeout = c.Duration(readTimeoutFlag.Name)
+			opt.WriteTimeout = c.Duration(writeTimeoutFlag.Name)
+			opt.IDLETimeout = c.Duration(idleTimeoutFlag.Name)
+			opt.ShutdownTimeout = c.Duration(shutdownTimeoutFlag.Name)
+			opt.Docker.Host = c.String(dockerHostFlag.Name)
+			opt.Docker.WatchInterval = c.Duration(dockerWatchIntervalFlag.Name)
+			opt.Dashboard.Domain = c.String(dashboardDomainFlag.Name)
+			opt.Dashboard.DontUseEmbeddedFront = c.Bool(dontUseEmbeddedFrontFlag.Name)
+			opt.DontSendUsageStats = c.Bool(dontSendAnonymousUsageFlag.Name)
 
 			if httpsCertFilePath == "" {
 				opt.HTTPS.CertFile = certs.FullChain()
 			} else {
 				data, err := os.ReadFile(httpsCertFilePath)
 				if err != nil {
-					return errors.Wrap(err, "failed to read certificate file")
+					return fmt.Errorf("failed to read certificate file: %w", err)
 				}
 
 				opt.HTTPS.CertFile = data
@@ -126,7 +112,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			} else {
 				data, err := os.ReadFile(httpsKeyFilePath)
 				if err != nil {
-					return errors.Wrap(err, "failed to read key file")
+					return fmt.Errorf("failed to read key file: %w", err)
 				}
 
 				opt.HTTPS.KeyFile = data
@@ -136,103 +122,25 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 				return fmt.Errorf("too small docker watch interval (%s)", opt.Docker.WatchInterval)
 			}
 
-			return cmd.Run(c.Context, log, opt)
+			return cmd.Run(ctx, log, opt)
 		},
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:     addrFlagName,
-				Category: httpCategory,
-				Usage:    "server address (hostname or port; 0.0.0.0 for all interfaces)",
-				Value:    "0.0.0.0",
-				EnvVars:  []string{env.ServerAddress.String()},
-			},
-			&cli.UintFlag{
-				Name:     httpPortFlagName,
-				Category: httpCategory,
-				Usage:    "HTTP server port",
-				Value:    8080, //nolint:gomnd
-				EnvVars:  []string{env.HTTPPort.String()},
-			},
-			&cli.UintFlag{
-				Name:     httpsPortFlagName,
-				Category: httpCategory,
-				Usage:    "HTTPS server port",
-				Value:    8443, //nolint:gomnd
-				EnvVars:  []string{env.HTTPSPort.String()},
-			},
-			&cli.StringFlag{
-				Name:     httpsCertFileFlagName,
-				Category: tlsCategory,
-				Usage:    "TLS certificate file path (if empty, embedded certificate will be used)",
-				Value:    "",
-				EnvVars:  []string{env.HTTPSCertFile.String()},
-			},
-			&cli.StringFlag{
-				Name:     httpsKeyFileFlagName,
-				Category: tlsCategory,
-				Usage:    "TLS key file path (if empty, embedded key will be used)",
-				Value:    "",
-				EnvVars:  []string{env.HTTPSKeyFile.String()},
-			},
-			&cli.DurationFlag{
-				Name:     readTimeoutFlagName,
-				Category: httpCategory,
-				Usage:    "maximum duration for reading the entire request, including the body (zero = no timeout)",
-				Value:    time.Second * 60, //nolint:gomnd
-				EnvVars:  []string{env.ReadTimeout.String()},
-			},
-			&cli.DurationFlag{
-				Name:     writeTimeoutFlagName,
-				Category: httpCategory,
-				Usage:    "maximum duration before timing out writes of the response (zero = no timeout)",
-				Value:    time.Second * 60, //nolint:gomnd
-				EnvVars:  []string{env.WriteTimeout.String()},
-			},
-			&cli.DurationFlag{
-				Name:     idleTimeoutFlagName,
-				Category: httpCategory,
-				Usage:    "maximum amount of time to wait for the next request (keep-alive, zero = no timeout)",
-				Value:    time.Second * 60, //nolint:gomnd
-				EnvVars:  []string{env.WriteTimeout.String()},
-			},
-			&cli.DurationFlag{
-				Name:    shutdownTimeoutFlagName,
-				Usage:   "maximum duration for graceful shutdown",
-				Value:   time.Second * 15, //nolint:gomnd
-				EnvVars: []string{env.ShutdownTimeout.String()},
-			},
-			&cli.StringFlag{
-				Name:     dockerHostFlagName,
-				Category: dockerCategory,
-				Usage:    "docker host (or path to the docker socket)",
-				Value:    client.DefaultDockerHost,
-				EnvVars:  []string{env.DockerHost.String()},
-			},
-			&cli.DurationFlag{
-				Name:     dockerWatchIntervalFlagName,
-				Category: dockerCategory,
-				Usage:    "how often to ask Docker for changes (minimum 100ms)",
-				Value:    time.Second,
-				EnvVars:  []string{env.DockerWatchInterval.String()},
-			},
-			&cli.StringFlag{
-				Name:     dashboardDomainFlagName,
-				Category: dashboardCategory,
-				Usage:    "dashboard sub-domain name (set empty to disable; it will disable the API too)",
-				Value:    "monitor",
-				EnvVars:  []string{env.DashboardDomain.String()},
-			},
-			&cli.BoolFlag{
-				Name:     dontUseEmbeddedFrontFlagName,
-				Category: dashboardCategory,
-				Usage:    "don't use embedded front-end files (useful for development)",
-			},
-			&cli.BoolFlag{
-				Name:  dontSendAnonymousUsageFlagName,
-				Usage: "don't send anonymous usage statistics (please, leave it enabled, it helps us to improve the project)",
-			},
+			&addrFlag,
+			&httpPortFlag,
+			&httpsPortFlag,
+			&httpsCertFileFlag,
+			&httpsKeyFileFlag,
+			&readTimeoutFlag,
+			&writeTimeoutFlag,
+			&idleTimeoutFlag,
+			&shutdownTimeoutFlag,
+			&dockerHostFlag,
+			&dockerWatchIntervalFlag,
+			&dashboardDomainFlag,
+			&dontUseEmbeddedFrontFlag,
+			&dontSendAnonymousUsageFlag,
 		},
-		Subcommands: []*cli.Command{
+		Commands: []*cli.Command{
 			healthcheck.NewCommand(),
 		},
 	}
@@ -242,26 +150,13 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 
 // Run current command.
 func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options) error { //nolint:funlen,gocyclo
-	var (
-		ctx, cancel = context.WithCancel(parentCtx) // main context creation
-		oss         = breaker.NewOSSignals(ctx)     // OS signals listener
-	)
+	var ctx, cancel = context.WithCancel(parentCtx)
 
-	// subscribe for system signals
-	oss.Subscribe(func(sig os.Signal) {
-		log.Warn("Stopping by OS signal..", zap.String("signal", sig.String()))
-
-		cancel()
-	})
-
-	defer func() {
-		cancel()   // call the cancellation function after all
-		oss.Stop() // stop system signals listening
-	}()
+	defer cancel()
 
 	dc, dcErr := client.NewClientWithOpts(client.WithHost(opt.Docker.Host))
 	if dcErr != nil {
-		return errors.Wrap(dcErr, "failed to create docker client")
+		return fmt.Errorf("failed to create docker client: %w", dcErr)
 	}
 
 	defer func() { _ = dc.Close() }()
@@ -269,7 +164,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 	// load certificate
 	cert, certErr := tls.X509KeyPair(opt.HTTPS.CertFile, opt.HTTPS.KeyFile)
 	if certErr != nil {
-		return errors.Wrap(certErr, "failed to load certificate")
+		return fmt.Errorf("failed to load certificate: %w", certErr)
 	}
 
 	// create HTTP server
@@ -335,14 +230,14 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger, opt options)
 
 		httpListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", opt.Addr, opt.HTTP.Port))
 		if err != nil {
-			errCh <- errors.Wrapf(err, "failed to listen on HTTP port (%s:%d)", opt.Addr, opt.HTTP.Port)
+			errCh <- fmt.Errorf("failed to listen on HTTP port (%s:%d): %w", opt.Addr, opt.HTTP.Port, err)
 
 			return
 		}
 
 		httpsListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", opt.Addr, opt.HTTPS.Port))
 		if err != nil {
-			errCh <- errors.Wrapf(err, "failed to listen on HTTPS port (%s:%d)", opt.Addr, opt.HTTPS.Port)
+			errCh <- fmt.Errorf("failed to listen on HTTPS port (%s:%d): %w", opt.Addr, opt.HTTPS.Port, err)
 
 			return
 		}

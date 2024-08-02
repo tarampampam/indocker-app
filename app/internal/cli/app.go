@@ -1,47 +1,68 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"strings"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 
 	"gh.tarampamp.am/indocker-app/app/internal/cli/start"
-	"gh.tarampamp.am/indocker-app/app/internal/env"
 	"gh.tarampamp.am/indocker-app/app/internal/logger"
 	"gh.tarampamp.am/indocker-app/app/internal/version"
 )
 
-// NewApp creates new console application.
-func NewApp() *cli.App {
-	const (
-		logLevelFlagName  = "log-level"
-		logFormatFlagName = "log-format"
+//go:generate go run app_generate.go
 
-		defaultLogLevel  = logger.InfoLevel
-		defaultLogFormat = logger.ConsoleFormat
+// NewApp creates new console application.
+func NewApp() *cli.Command {
+	var (
+		logLevelFlag = cli.StringFlag{
+			Name:     "log-level",
+			Value:    logger.InfoLevel.String(),
+			Usage:    "Logging level (" + strings.Join(logger.LevelStrings(), "/") + ")",
+			Sources:  cli.EnvVars("LOG_LEVEL"),
+			OnlyOnce: true,
+			Config:   cli.StringConfig{TrimSpace: true},
+			Validator: func(s string) error {
+				if _, err := logger.ParseLevel(s); err != nil {
+					return err
+				}
+
+				return nil
+			},
+		}
+
+		logFormatFlag = cli.StringFlag{
+			Name:     "log-format",
+			Value:    logger.ConsoleFormat.String(),
+			Usage:    "Logging format (" + strings.Join(logger.FormatStrings(), "/") + ")",
+			Sources:  cli.EnvVars("LOG_FORMAT"),
+			OnlyOnce: true,
+			Config:   cli.StringConfig{TrimSpace: true},
+			Validator: func(s string) error {
+				if _, err := logger.ParseFormat(s); err != nil {
+					return err
+				}
+
+				return nil
+			},
+		}
 	)
 
 	// create "default" logger (will be overwritten later with customized)
-	var log, _ = logger.New(defaultLogLevel, defaultLogFormat) // error will never occurs
+	var log, _ = logger.New(logger.InfoLevel, logger.ConsoleFormat) // error will never occur
 
-	return &cli.App{
+	return &cli.Command{
 		Usage: "indocker.app",
-		Before: func(c *cli.Context) (err error) {
+		Before: func(ctx context.Context, c *cli.Command) error {
 			_ = log.Sync() // sync previous logger instance
 
-			var logLevel, logFormat = defaultLogLevel, defaultLogFormat //nolint:ineffassign
-
-			// parse logging level
-			if logLevel, err = logger.ParseLevel(c.String(logLevelFlagName)); err != nil {
-				return err
-			}
-
-			// parse logging format
-			if logFormat, err = logger.ParseFormat(c.String(logFormatFlagName)); err != nil {
-				return err
-			}
+			var (
+				logLevel, _  = logger.ParseLevel(c.String(logLevelFlag.Name))   // error ignored because the flag validates itself
+				logFormat, _ = logger.ParseFormat(c.String(logFormatFlag.Name)) // --//--
+			)
 
 			configured, err := logger.New(logLevel, logFormat) // create new logger instance
 			if err != nil {
@@ -57,18 +78,8 @@ func NewApp() *cli.App {
 		},
 		Version: fmt.Sprintf("%s (%s)", version.Version(), runtime.Version()),
 		Flags: []cli.Flag{ // global flags
-			&cli.StringFlag{
-				Name:    logLevelFlagName,
-				Value:   defaultLogLevel.String(),
-				Usage:   "logging level (`" + strings.Join(logger.LevelStrings(), "/") + "`)",
-				EnvVars: []string{env.LogLevel.String()},
-			},
-			&cli.StringFlag{
-				Name:    logFormatFlagName,
-				Value:   defaultLogFormat.String(),
-				Usage:   "logging format (`" + strings.Join(logger.FormatStrings(), "/") + "`)",
-				EnvVars: []string{env.LogFormat.String()},
-			},
+			&logLevelFlag,
+			&logFormatFlag,
 		},
 	}
 }
