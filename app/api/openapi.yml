@@ -1,0 +1,70 @@
+openapi: '3.0.3'
+info:
+  title: indocker.app API
+  license: {name: MIT}
+  version: '1.0.0'
+
+servers:
+  - {url: '/', description: Current server}
+
+tags:
+  - name: Service
+
+paths:
+  /api/ping:
+    get:
+      tags: [Service]
+      summary: Ping the server
+      operationId: ping
+      responses:
+        '200': {$ref: '#/components/responses/PingResponse'}
+
+  /api/version:
+    get:
+      tags: [Service]
+      summary: Get application version
+      description: Returns the application version
+      operationId: getAppVersion
+      responses:
+        '200': {$ref: '#/components/responses/AppVersionResponse'}
+
+  /api/version/latest:
+    get:
+      tags: [Service]
+      summary: Get latest application version
+      description: Returns the latest application version
+      operationId: getLatestAppVersion
+      responses:
+        '200': {$ref: '#/components/responses/AppVersionResponse'}
+        '5XX': {$ref: '#/components/responses/ErrorResponse'} # Server error
+
+components:
+  responses:
+    PingResponse:
+      description: Pong response
+      content:
+        application/json:
+          schema:
+            type: string
+            example: pong
+
+    AppVersionResponse:
+      description: Application version information
+      content:
+        application/json:
+          schema:
+            type: object
+            properties: {version: {type: string, example: '0.0.1', description: Without the 'v' prefix}}
+            additionalProperties: false
+            required: [version]
+
+    ErrorResponse:
+        description: Error response
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error: {type: string, example: 'Internal server error'}
+              additionalProperties: false
+              required: [error]

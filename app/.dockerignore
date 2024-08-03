@@ -2,6 +2,7 @@
 *
 
 ## Except the following files and directories
+!/api
 !/certs
 !/cmd
 !/internal

@@ -16,10 +16,16 @@ ENV \
 
 # install development tools and dependencies
 RUN set -x \
+    # renovate: source=github-releases name=oapi-codegen/oapi-codegen
+    && DEEPMAP_OAPI_VERSION="2.3.0" \
+    && GOBIN=/bin go install "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v${DEEPMAP_OAPI_VERSION}" \
+    && go clean -cache -modcache \
     # renovate: source=github-releases name=golangci/golangci-lint
     && GOLANGCI_LINT_VERSION="1.59.1" \
     && wget -O- -nv "https://cdn.jsdelivr.net/gh/golangci/golangci-lint@v${GOLANGCI_LINT_VERSION}/install.sh" \
-      | sh -s -- -b /bin "v${GOLANGCI_LINT_VERSION}"
+      | sh -s -- -b /bin "v${GOLANGCI_LINT_VERSION}" \
+    # customize the shell prompt (for the bash)
+    && echo "PS1='\[\033[1;36m\][develop] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'" >> /etc/bash.bashrc
 
 WORKDIR /src/web
 
@@ -99,6 +105,8 @@ ENV \
   LOG_FORMAT=json \
   # logging level
   LOG_LEVEL=info
+
+#EXPOSE "80/tcp" "443/tcp"
 
 HEALTHCHECK --interval=10s --start-interval=1s --start-period=5s --timeout=1s CMD ["/bin/app", "http-server", "healthcheck"]
 ENTRYPOINT ["/bin/app"]

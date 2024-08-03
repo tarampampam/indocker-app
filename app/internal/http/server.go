@@ -3,146 +3,132 @@ package http
 import (
 	"context"
 	"crypto/tls"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
 
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"gh.tarampamp.am/indocker-app/app/internal/docker"
-	"gh.tarampamp.am/indocker-app/app/internal/http/api"
-	"gh.tarampamp.am/indocker-app/app/internal/http/fileserver"
-	"gh.tarampamp.am/indocker-app/app/internal/http/middleware"
-	"gh.tarampamp.am/indocker-app/app/internal/http/proxy"
-	"gh.tarampamp.am/indocker-app/app/internal/httptools"
-	ver "gh.tarampamp.am/indocker-app/app/internal/version"
-	"gh.tarampamp.am/indocker-app/app/web"
+	"gh.tarampamp.am/indocker-app/app/internal/http/openapi"
 )
 
 type Server struct {
-	log   *zap.Logger
 	http  *http.Server
 	https *http.Server
+
+	ShutdownTimeout time.Duration // Maximum amount of time to wait for the server to stop, default is 5 seconds
 }
 
 type ServerOption func(*Server)
 
-func WithReadTimeout(timeout time.Duration) ServerOption {
-	return func(s *Server) { s.http.ReadTimeout = timeout; s.https.ReadTimeout = timeout }
+func WithReadTimeout(d time.Duration) ServerOption {
+	return func(s *Server) { s.http.ReadTimeout = d; s.https.ReadTimeout = d }
 }
 
-func WithWriteTimeout(timeout time.Duration) ServerOption {
-	return func(s *Server) { s.http.WriteTimeout = timeout; s.https.WriteTimeout = timeout }
+func WithWriteTimeout(d time.Duration) ServerOption {
+	return func(s *Server) { s.http.WriteTimeout = d; s.https.WriteTimeout = d }
 }
 
-func WithIDLETimeout(timeout time.Duration) ServerOption {
-	return func(s *Server) { s.http.IdleTimeout = timeout; s.https.IdleTimeout = timeout }
+func WithIDLETimeout(d time.Duration) ServerOption {
+	return func(s *Server) { s.http.IdleTimeout = d; s.https.IdleTimeout = d }
 }
 
-func NewServer(ctx context.Context, log *zap.Logger, tc *tls.Config, options ...ServerOption) *Server {
+func NewServer(baseCtx context.Context, log *zap.Logger, opts ...ServerOption) Server {
 	var (
-		baseCtx   = func(ln net.Listener) context.Context { return ctx }
-		logBridge = zap.NewStdLog(log)
-		server    = Server{
-			log:   log,
-			http:  &http.Server{BaseContext: baseCtx, ErrorLog: logBridge},                //nolint:gosec
-			https: &http.Server{BaseContext: baseCtx, ErrorLog: logBridge, TLSConfig: tc}, //nolint:gosec
+		server = Server{
+			http: &http.Server{ //nolint:gosec
+				BaseContext: func(net.Listener) context.Context { return baseCtx },
+				ErrorLog:    zap.NewStdLog(log.Named("http")),
+			},
+			https: &http.Server{ //nolint:gosec
+				BaseContext: func(net.Listener) context.Context { return baseCtx },
+				ErrorLog:    zap.NewStdLog(log.Named("https")),
+			},
+			ShutdownTimeout: 5 * time.Second, //nolint:mnd
 		}
 	)
 
-	for _, option := range options {
-		option(&server)
+	for _, opt := range opts {
+		opt(&server)
 	}
 
-	return &server
+	return server
 }
 
-func (s *Server) Register(
-	ctx context.Context,
-	drw docker.ContainersRouter,
-	dsw docker.ContainersStateWatcher,
-	dashboardDomain string,
-	dontUseEmbeddedFront bool,
-) error {
-	var (
-		proxyHandler = proxy.NewProxy(s.log, drw)
-		router       *api.Router
-	)
+func (s *Server) Register(ctx context.Context, log *zap.Logger) {
+	s.http.Handler = openapi.Handler(NewOpenAPI(ctx, log.Named("http")))
+	s.https.Handler = openapi.Handler(NewOpenAPI(ctx, log.Named("https")))
+}
 
-	if dashboardDomain != "" {
-		var fallback http.Handler
+// StartHTTP starts the HTTP server. It listens on the provided listener and serves incoming requests.
+// To stop the server, cancel the provided context.
+//
+// It blocks until the context is canceled.
+func (s *Server) StartHTTP(ctx context.Context, ln net.Listener) error {
+	var errCh = make(chan error)
 
-		if dontUseEmbeddedFront {
-			fallback = proxyHandler // if the embedded front is disabled, proxy the request
-		} else {
-			fallback = fileserver.NewHandler(http.FS(web.Content())) // otherwise, serve the embedded front
+	go func(ch chan<- error) { defer close(ch); ch <- s.http.Serve(ln) }(errCh)
+
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.ShutdownTimeout)
+		defer cancel()
+
+		if err := s.http.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
 		}
-
-		router = api.NewRouter("/api", fallback)
-
-		const latestVerCacheTTL = time.Minute * 30
-
-		router.
-			// Register(http.MethodGet, "/ws/docker/state", ws.DockerState(dsw)) // TODO: under construction
-			Register(http.MethodGet, "/version/current", api.VersionCurrent(ver.Version())).
-			Register(http.MethodGet, "/version/latest", api.VersionLatest(ver.NewLatest(ver.WithContext(ctx)), latestVerCacheTTL)) //nolint:lll
-	}
-
-	for server, namedLogger := range map[*http.Server]*zap.Logger{
-		s.http:  s.log.Named("http"),
-		s.https: s.log.Named("https"),
-	} {
-		server.ErrorLog = zap.NewStdLog(namedLogger)       // replace the default logger with named
-		server.Handler = middleware.HealthcheckMiddleware( // healthcheck requests will not be logged
-			middleware.DiscoverMiddleware(dashboardDomain,
-				middleware.LogReq(namedLogger, // named loggers for each server
-					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						if dashboardDomain != "" && httptools.TrimHostPortSuffix(r.Host) == dashboardDomain && router != nil {
-							router.ServeHTTP(w, r)
-
-							return
-						}
-
-						proxyHandler.ServeHTTP(w, r) // otherwise, proxy the request
-					}),
-				),
-			),
-		)
+	case err, isOpened := <-errCh:
+		switch {
+		case !isOpened:
+			return nil
+		case err != nil:
+			return err
+		}
 	}
 
 	return nil
 }
 
-// Start the server(s).
-func (s *Server) Start(http, https net.Listener) error {
-	if s.https.TLSConfig == nil || s.https.TLSConfig.Certificates == nil {
-		return errors.New("HTTPS server: TLS config was not set")
+// StartHTTPs starts the HTTPS server. It listens on the provided listener and serves incoming requests.
+// To stop the server, cancel the provided context.
+//
+// It blocks until the context is canceled.
+func (s *Server) StartHTTPs(ctx context.Context, ln net.Listener, certFile, keyFile []byte) error {
+	if s.https.TLSConfig == nil {
+		s.https.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+	}
+
+	if len(s.https.TLSConfig.Certificates) == 0 {
+		cert, certErr := tls.X509KeyPair(certFile, keyFile)
+		if certErr != nil {
+			return fmt.Errorf("failed to load TLS certificate: %w", certErr)
+		}
+
+		s.https.TLSConfig.Certificates = []tls.Certificate{cert}
 	}
 
 	var errCh = make(chan error)
 
-	go func() { errCh <- s.http.Serve(http) }()
-	go func() { errCh <- s.https.ServeTLS(https, "", "") }()
+	go func(ch chan<- error) { defer close(ch); ch <- s.https.ServeTLS(ln, "", "") }(errCh)
 
-	if err := <-errCh; err != nil {
-		defer func() { <-errCh; close(errCh) }()
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.ShutdownTimeout)
+		defer cancel()
 
-		return err
+		if err := s.https.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+	case err, isOpened := <-errCh:
+		switch {
+		case !isOpened:
+			return nil
+		case err != nil:
+			return err
+		}
 	}
 
-	defer close(errCh)
-
-	return <-errCh
-}
-
-// Stop the server(s).
-func (s *Server) Stop(ctx context.Context) error {
-	if err := s.http.Shutdown(ctx); err != nil {
-		defer func() { _ = s.https.Shutdown(ctx) }()
-
-		return err
-	}
-
-	return s.https.Shutdown(ctx)
+	return nil
 }

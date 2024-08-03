@@ -16,7 +16,6 @@ type httpClient interface {
 
 // HealthChecker is a heals checker.
 type HealthChecker struct {
-	ctx        context.Context
 	httpClient httpClient
 }
 
@@ -29,7 +28,7 @@ const (
 )
 
 // NewHealthChecker creates heals checker.
-func NewHealthChecker(ctx context.Context, client ...httpClient) *HealthChecker {
+func NewHealthChecker(client ...httpClient) *HealthChecker {
 	var c httpClient
 
 	if len(client) == 1 {
@@ -45,12 +44,12 @@ func NewHealthChecker(ctx context.Context, client ...httpClient) *HealthChecker 
 		}
 	}
 
-	return &HealthChecker{ctx: ctx, httpClient: c}
+	return &HealthChecker{httpClient: c}
 }
 
 // Check application using liveness probe.
-func (c *HealthChecker) Check(httpPort, httpsPort uint) error {
-	var eg, egCtx = errgroup.WithContext(c.ctx)
+func (c *HealthChecker) Check(ctx context.Context, httpPort, httpsPort uint) error {
+	var eg, egCtx = errgroup.WithContext(ctx)
 
 	for _, _uri := range []string{
 		fmt.Sprintf("http://127.0.0.1:%d%s", httpPort, Route),
