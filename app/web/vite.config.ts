@@ -1,46 +1,29 @@
-import { fileURLToPath, URL } from 'node:url'
+/// <reference types="vite/client" />
+
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import viteCompression from 'vite-plugin-compression'
+import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    viteCompression(),
-  ],
-  esbuild: {
-    legalComments: 'none',
-  },
+  plugins: [react()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '~': resolve(__dirname, 'src'),
     },
   },
   build: {
-    chunkSizeWarningLimit: 666,
+    emptyOutDir: true,
     rollupOptions: {
       input: {
         app: './index.html', // the default entry point
-        service: './service-worker.ts',
       },
       output: {
-        entryFileNames: assetInfo => {
-          switch (assetInfo.name) {
-            case 'service':
-              return 'service-worker.js'
-
-            default:
-              return 'assets/[name]-[hash].js'
-          }
-        }
-      }
+        entryFileNames: 'js/[name]-[hash].js',
+        chunkFileNames: 'js/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      },
     },
     sourcemap: false,
-  },
-  server: {
-    host: '0.0.0.0',
-    port: 8080,
-    strictPort: true,
   },
 })
