@@ -46,7 +46,7 @@ func main() {
 }
 
 // run this CLI application.
-func run() error { //nolint:funlen
+func run() error { //nolint:funlen,gocognit,gocyclo
 	var (
 		emailFlag = cli.StringFlag{
 			Name:     "email",

@@ -37,9 +37,9 @@ func TestHealthChecker_CheckSuccess(t *testing.T) {
 		}, nil
 	}
 
-	checker := healthcheck.NewHealthChecker(context.Background(), httpMock)
+	checker := healthcheck.NewHealthChecker(httpMock)
 
-	assert.NoError(t, checker.Check(80, 443))
+	assert.NoError(t, checker.Check(context.Background(), 80, 443))
 }
 
 func TestHealthChecker_CheckFail(t *testing.T) {
@@ -52,9 +52,9 @@ func TestHealthChecker_CheckFail(t *testing.T) {
 		}, nil
 	}
 
-	checker := healthcheck.NewHealthChecker(context.Background(), httpMock)
+	checker := healthcheck.NewHealthChecker(httpMock)
 
-	err := checker.Check(80, 81)
+	err := checker.Check(context.Background(), 80, 81)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "wrong status code")
 }
