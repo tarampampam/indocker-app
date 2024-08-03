@@ -39,10 +39,8 @@ type (
 				WatchInterval time.Duration
 			}
 			Dashboard struct {
-				Domain               string
 				DontUseEmbeddedFront bool
 			}
-			DontSendUsageStats bool
 		}
 	}
 )
@@ -51,20 +49,18 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 	var cmd = command{}
 
 	var (
-		addrFlag                   = shared.AddrFlag
-		httpPortFlag               = shared.HttpPortFlag
-		httpsPortFlag              = shared.HttpsPortFlag
-		httpsCertFileFlag          = shared.HttpsCertFileFlag
-		httpsKeyFileFlag           = shared.HttpsKeyFileFlag
-		readTimeoutFlag            = shared.ReadTimeoutFlag
-		writeTimeoutFlag           = shared.WriteTimeoutFlag
-		idleTimeoutFlag            = shared.IdleTimeoutFlag
-		shutdownTimeoutFlag        = shared.ShutdownTimeoutFlag
-		dockerHostFlag             = shared.DockerHostFlag
-		dockerWatchIntervalFlag    = shared.DockerWatchIntervalFlag
-		dashboardDomainFlag        = shared.DashboardDomainFlag
-		dontUseEmbeddedFrontFlag   = shared.DontUseEmbeddedFrontFlag
-		dontSendAnonymousUsageFlag = shared.DontSendAnonymousUsageFlag
+		addrFlag                 = shared.AddrFlag
+		httpPortFlag             = shared.HttpPortFlag
+		httpsPortFlag            = shared.HttpsPortFlag
+		httpsCertFileFlag        = shared.HttpsCertFileFlag
+		httpsKeyFileFlag         = shared.HttpsKeyFileFlag
+		readTimeoutFlag          = shared.ReadTimeoutFlag
+		writeTimeoutFlag         = shared.WriteTimeoutFlag
+		idleTimeoutFlag          = shared.IdleTimeoutFlag
+		shutdownTimeoutFlag      = shared.ShutdownTimeoutFlag
+		dockerHostFlag           = shared.DockerHostFlag
+		dockerWatchIntervalFlag  = shared.DockerWatchIntervalFlag
+		dontUseEmbeddedFrontFlag = shared.DontUseEmbeddedFrontFlag
 	)
 
 	cmd.c = &cli.Command{
@@ -85,9 +81,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			opt.ShutdownTimeout = c.Duration(shutdownTimeoutFlag.Name)
 			opt.Docker.Host = c.String(dockerHostFlag.Name)
 			opt.Docker.WatchInterval = c.Duration(dockerWatchIntervalFlag.Name)
-			opt.Dashboard.Domain = c.String(dashboardDomainFlag.Name)
 			opt.Dashboard.DontUseEmbeddedFront = c.Bool(dontUseEmbeddedFrontFlag.Name)
-			opt.DontSendUsageStats = c.Bool(dontSendAnonymousUsageFlag.Name)
 
 			if httpsCertFilePath == "" {
 				opt.HTTPS.CertFile = certs.FullChain()
@@ -129,9 +123,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			&shutdownTimeoutFlag,
 			&dockerHostFlag,
 			&dockerWatchIntervalFlag,
-			&dashboardDomainFlag,
 			&dontUseEmbeddedFrontFlag,
-			&dontSendAnonymousUsageFlag,
 		},
 		Commands: []*cli.Command{
 			healthcheck.NewCommand(),

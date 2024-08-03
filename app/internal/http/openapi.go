@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -51,32 +52,43 @@ func (o *OpenAPI) GetAppVersion(w http.ResponseWriter, _ *http.Request) {
 
 func (o *OpenAPI) GetLatestAppVersion(w http.ResponseWriter, _ *http.Request) {
 	if resp, err := o.handlers.latestVersion(w); err != nil {
-		o.errorToJson(w, err)
+		o.errorToJson(w, err, http.StatusInternalServerError)
 	} else {
 		o.respToJson(w, resp)
 	}
 }
 
+// HandleInternalError is a default error handler for internal server errors (e.g. query parameters binding
+// errors, and so on).
+func (o *OpenAPI) HandleInternalError(w http.ResponseWriter, _ *http.Request, err error) {
+	o.errorToJson(w, err, http.StatusBadRequest)
+}
+
+// HandleNotFoundError is a default error handler for "404: not found" errors.
+func (o *OpenAPI) HandleNotFoundError(w http.ResponseWriter, _ *http.Request) {
+	o.errorToJson(w, errors.New("not found"), http.StatusNotFound)
+}
+
 func (o *OpenAPI) respToJson(w http.ResponseWriter, resp any) {
+	w.Header().Set(contentTypeHeader, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
+
 	if resp == nil {
 		return
 	}
-
-	w.Header().Set(contentTypeHeader, contentTypeJSON)
-	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		o.log.Error("failed to encode/write response", zap.Error(err))
 	}
 }
 
-func (o *OpenAPI) errorToJson(w http.ResponseWriter, err error) {
+func (o *OpenAPI) errorToJson(w http.ResponseWriter, err error, status int) {
+	w.Header().Set(contentTypeHeader, contentTypeJSON)
+	w.WriteHeader(status)
+
 	if err == nil {
 		return
 	}
-
-	w.Header().Set(contentTypeHeader, contentTypeJSON)
-	w.WriteHeader(http.StatusInternalServerError)
 
 	if encErr := json.NewEncoder(w).Encode(openapi.ErrorResponse{Error: err.Error()}); encErr != nil {
 		o.log.Error("failed to encode/write error response", zap.Error(encErr))

@@ -76,7 +76,7 @@ func (s *Server) Register(
 		if dontUseEmbeddedFront {
 			fallback = proxyHandler // if the embedded front is disabled, proxy the request
 		} else {
-			fallback = fileserver.NewHandler(http.FS(web.Content())) // otherwise, serve the embedded front
+			fallback = fileserver.NewHandler(http.FS(web.Dist())) // otherwise, serve the embedded front
 		}
 
 		router = api.NewRouter("/api", fallback)
