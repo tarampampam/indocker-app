@@ -78,6 +78,7 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger) {
 			openapiHandler = openapi.HandlerWithOptions(openapiServer, openapi.StdHTTPServerOptions{
 				ErrorHandlerFunc: openapiServer.HandleInternalError,
 				BaseRouter:       openapiMux,
+				Middlewares:      []openapi.MiddlewareFunc{openapi.CorsMiddleware()},
 			})
 		)
 
