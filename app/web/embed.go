@@ -6,14 +6,10 @@ import (
 )
 
 // Generate mock distributive files, if needed.
-//go:generate go run dist.go
+//go:generate go run generate_dist.go
 
 //go:embed dist
 var content embed.FS
 
-// Content returns the embedded web content.
-func Content() fs.FS {
-	data, _ := fs.Sub(content, "dist")
-
-	return data
-}
+// Dist returns the content of the "dist" directory, which contains the built frontend.
+func Dist() (data fs.FS) { data, _ = fs.Sub(content, "dist"); return } //nolint:nlreturn

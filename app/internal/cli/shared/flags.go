@@ -233,22 +233,9 @@ var (
 )
 
 var (
-	DashboardDomainFlag = cli.StringFlag{ // TODO: remove?
-		Name:     "dashboard-domain",
-		Usage:    "dashboard sub-domain name (set empty to disable; it will disable the API too)",
-		Value:    "monitor",
-		Sources:  cli.EnvVars("DASHBOARD_DOMAIN"),
-		OnlyOnce: true,
-		Config:   cli.StringConfig{TrimSpace: true},
-	}
 	DontUseEmbeddedFrontFlag = cli.BoolFlag{ // TODO: remove?
 		Name:     "dont-use-embedded-front",
 		Usage:    "don't use embedded front-end files (useful for development)",
-		OnlyOnce: true,
-	}
-	DontSendAnonymousUsageFlag = cli.BoolFlag{ // TODO: remove?
-		Name:     "dont-send-anonymous-usage",
-		Usage:    "don't send anonymous usage statistics (please, leave it enabled, it helps us to improve the project)",
 		OnlyOnce: true,
 	}
 )
