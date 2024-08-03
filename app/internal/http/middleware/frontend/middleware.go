@@ -41,6 +41,10 @@ func New(root fs.FS, skipper func(*http.Request) bool) func(http.Handler) http.H
 
 			var filePath = strings.TrimLeft(path.Clean(r.URL.Path), "/")
 
+			if filePath == "" {
+				filePath = "index.html"
+			}
+
 			fd, fErr := root.Open(filePath)
 			switch { //nolint:wsl
 			case os.IsNotExist(fErr): // if requested file does not exist
