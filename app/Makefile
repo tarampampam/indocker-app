@@ -12,6 +12,10 @@ shell: ## Start shell
 
 generate: ## Run code generation
 	docker compose run $(DC_RUN_ARGS) app go generate ./...
+	docker compose run $(DC_RUN_ARGS) app npm --prefix ./web run generate
+
+node-build: ## Build node
+	docker compose run $(DC_RUN_ARGS) app npm --prefix ./web run build
 
 lint: ## Run linters
 	docker compose run $(DC_RUN_ARGS) app golangci-lint run

@@ -7,8 +7,8 @@ FROM docker.io/library/node:21-bookworm AS develop
 COPY --from=docker.io/library/golang:1.22-bookworm /usr/local/go /usr/local/go
 
 ENV \
-  # add Go to the PATH
-  PATH="$PATH:/go/bin:/usr/local/go/bin" \
+  # add Go and Node.js "binaries" to the PATH
+  PATH="$PATH:/src/web/node_modules/.bin:/go/bin:/usr/local/go/bin" \
   # use the /var/tmp/go as the GOPATH to reuse the modules cache
   GOPATH="/var/tmp/go" \
   # disable npm update notifier
@@ -59,6 +59,7 @@ COPY . .
 # build the frontend (built artifact can be found in /src/dist)
 RUN set -x \
     && cd ./web \
+    && npm run generate \
     && npm run build
 
 RUN set -x \
