@@ -5,34 +5,42 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 
 	"go.uber.org/zap"
 
 	pingHandler "gh.tarampamp.am/indocker-app/app/internal/http/handlers/ping"
+	routesListHandler "gh.tarampamp.am/indocker-app/app/internal/http/handlers/routes_list"
 	versionHandler "gh.tarampamp.am/indocker-app/app/internal/http/handlers/version"
 	latestVersionHandler "gh.tarampamp.am/indocker-app/app/internal/http/handlers/version_latest"
 	"gh.tarampamp.am/indocker-app/app/internal/http/openapi"
 	"gh.tarampamp.am/indocker-app/app/internal/version"
 )
 
-type OpenAPI struct {
-	log *zap.Logger
+type (
+	OpenAPI struct {
+		log *zap.Logger
 
-	handlers struct {
-		ping          func() openapi.PingResponse
-		version       func() openapi.AppVersionResponse
-		latestVersion func(http.ResponseWriter) (*openapi.AppVersionResponse, error)
+		handlers struct {
+			ping          func() openapi.PingResponse
+			version       func() openapi.AppVersionResponse
+			latestVersion func(http.ResponseWriter) (*openapi.AppVersionResponse, error)
+			routesList    func() openapi.RegisteredRoutesListResponse
+		}
 	}
-}
+
+	dockerRouter interface{ AllContainerURLs() map[string]url.URL }
+)
 
 var _ openapi.ServerInterface = (*OpenAPI)(nil) // verify interface implementation
 
-func NewOpenAPI(ctx context.Context, log *zap.Logger) *OpenAPI {
+func NewOpenAPI(ctx context.Context, log *zap.Logger, dockerRouter dockerRouter) *OpenAPI {
 	var si = &OpenAPI{log: log}
 
 	si.handlers.ping = pingHandler.New().Handle
 	si.handlers.version = versionHandler.New(version.Version()).Handle
 	si.handlers.latestVersion = latestVersionHandler.New(func() (string, error) { return version.Latest(ctx) }).Handle
+	si.handlers.routesList = routesListHandler.New(dockerRouter).Handle
 
 	return si
 }
@@ -41,6 +49,8 @@ const (
 	contentTypeHeader = "Content-Type"
 	contentTypeJSON   = "application/json; charset=utf-8"
 )
+
+// --------------------------------------------------- API handlers ---------------------------------------------------
 
 func (o *OpenAPI) Ping(w http.ResponseWriter, _ *http.Request) {
 	o.respToJson(w, o.handlers.ping())
@@ -58,6 +68,12 @@ func (o *OpenAPI) GetLatestAppVersion(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+func (o *OpenAPI) ListRoutes(w http.ResponseWriter, _ *http.Request) {
+	o.respToJson(w, o.handlers.routesList())
+}
+
+// -------------------------------------------------- Error handlers --------------------------------------------------
+
 // HandleInternalError is a default error handler for internal server errors (e.g. query parameters binding
 // errors, and so on).
 func (o *OpenAPI) HandleInternalError(w http.ResponseWriter, _ *http.Request, err error) {
@@ -68,6 +84,8 @@ func (o *OpenAPI) HandleInternalError(w http.ResponseWriter, _ *http.Request, er
 func (o *OpenAPI) HandleNotFoundError(w http.ResponseWriter, _ *http.Request) {
 	o.errorToJson(w, errors.New("not found"), http.StatusNotFound)
 }
+
+// ------------------------------------------------- Internal helpers -------------------------------------------------
 
 func (o *OpenAPI) respToJson(w http.ResponseWriter, resp any) {
 	w.Header().Set(contentTypeHeader, contentTypeJSON)

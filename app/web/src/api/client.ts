@@ -2,7 +2,7 @@ import createClient, { type ClientOptions, type Client as OpenapiClient } from '
 import { parse as semverParse, coerce as semverCoerce, type SemVer } from 'semver'
 import { APIErrorUnknown } from './errors.ts'
 import { throwIfNotJSON, throwIfNotValidResponse } from './middleware'
-import { paths } from './schema.gen'
+import { paths, components } from './schema.gen'
 
 export class Client {
   private readonly api: OpenapiClient<paths>
@@ -17,7 +17,7 @@ export class Client {
    *
    * @throws {APIError}
    */
-  async currentVersion(): Promise<SemVer> {
+  async currentVersion(): Promise<Readonly<SemVer>> {
     const { data, response } = await this.api.GET('/api/version')
 
     if (data) {
@@ -27,7 +27,7 @@ export class Client {
         throw new APIErrorUnknown({ message: 'Failed to parse the version', response })
       }
 
-      return version
+      return Object.freeze(version)
     }
 
     throw new APIErrorUnknown({ message: response.statusText, response }) // will never happen
@@ -38,7 +38,7 @@ export class Client {
    *
    * @throws {APIError}
    */
-  async latestVersion(): Promise<SemVer> {
+  async latestVersion(): Promise<Readonly<SemVer>> {
     const { data, response } = await this.api.GET('/api/version/latest')
 
     if (data) {
@@ -48,7 +48,22 @@ export class Client {
         throw new APIErrorUnknown({ message: 'Failed to parse the version', response })
       }
 
-      return version
+      return Object.freeze(version)
+    }
+
+    throw new APIErrorUnknown({ message: response.statusText, response }) // will never happen
+  }
+
+  /**
+   * Returns the list of all registered routes.
+   *
+   * @throws {APIError}
+   */
+  async routesList(): Promise<{routes: ReadonlyArray<components['schemas']['ContainerRoute']>}> {
+    const { data, response } = await this.api.GET('/api/routes')
+
+    if (data) {
+      return Object.freeze(data)
     }
 
     throw new APIErrorUnknown({ message: response.statusText, response }) // will never happen

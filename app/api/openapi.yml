@@ -1,19 +1,15 @@
 openapi: '3.0.3'
 info:
-  title: indocker.app API
+  title: indocker.app internal API
   license: {name: MIT}
   version: '1.0.0'
 
 servers:
   - {url: '/', description: Current server}
 
-tags:
-  - name: Service
-
 paths:
   /api/ping:
     get:
-      tags: [Service]
       summary: Ping the server
       operationId: ping
       responses:
@@ -21,7 +17,6 @@ paths:
 
   /api/version:
     get:
-      tags: [Service]
       summary: Get application version
       description: Returns the application version
       operationId: getAppVersion
@@ -30,13 +25,20 @@ paths:
 
   /api/version/latest:
     get:
-      tags: [Service]
       summary: Get latest application version
       description: Returns the latest application version
       operationId: getLatestAppVersion
       responses:
         '200': {$ref: '#/components/responses/AppVersionResponse'}
         '5XX': {$ref: '#/components/responses/ErrorResponse'} # Server error
+
+  /api/routes:
+    get:
+      summary: List all registered routes
+      description: Returns all registered routes
+      operationId: listRoutes
+      responses:
+        '200': {$ref: '#/components/responses/RegisteredRoutesListResponse'}
 
 components:
   responses:
@@ -59,12 +61,35 @@ components:
             required: [version]
 
     ErrorResponse:
-        description: Error response
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                error: {type: string, example: 'Internal server error'}
-              additionalProperties: false
-              required: [error]
+      description: Error response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: {type: string, example: 'Internal server error'}
+            additionalProperties: false
+            required: [error]
+
+    RegisteredRoutesListResponse:
+      description: List of registered routes
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              routes:
+                type: array
+                items: {$ref: '#/components/schemas/ContainerRoute'}
+            additionalProperties: false
+            required: [routes]
+
+  schemas:
+    ContainerRoute:
+      description: Container route information
+      type: object
+      properties:
+        hostname: {type: string, example: 'whoami'}
+        url: {type: string, format: uri, example: 'http://172.19.0.2:8080'}
+      additionalProperties: false
+      required: [hostname, url]

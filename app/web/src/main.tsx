@@ -6,8 +6,14 @@ import '~/theme/app.scss'
 
 const App = (): React.JSX.Element => {
   queueMicrotask(async () => {
-    await Promise.all([apiClient.currentVersion(), apiClient.latestVersion()]).then(([version, latest]) => {
-      console.log(`Version: ${version}, Latest: ${latest}`)
+    await Promise.all([
+      apiClient.currentVersion(),
+      apiClient.latestVersion(),
+      apiClient.routesList(),
+    ]).then(([version, latest, routes]) => {
+      console.log(`version: ${version}`)
+      console.log(`latest: ${latest}`)
+      console.log('routes: ', routes)
     })
   })
 

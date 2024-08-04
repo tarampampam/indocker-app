@@ -47,7 +47,7 @@ func NewContainersWatch(interval time.Duration, dc *client.Client) *ContainersWa
 func (w *ContainersWatch) Watch(ctx context.Context) error {
 	var f = filters.NewArgs()
 
-	// https://docs.docker.com/engine/api/v1.42/#tag/Container/operation/ContainerList
+	// https://docs.docker.com/engine/api/v1.46/#tag/Container/operation/ContainerList
 	// status=(created|restarting|running|removing|paused|exited|dead)
 	for _, s := range []string{"created", "restarting", "running", "removing", "paused"} {
 		f.Add("status", s)

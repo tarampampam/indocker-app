@@ -60,7 +60,7 @@ func NewContainersRoute(opt ...ContainersRouteOption) *ContainersRoute {
 		hosts: make(map[string]Route),
 	}
 
-	router.defaults.Scheme = "http"
+	router.defaults.Scheme = "http" //nolint:goconst
 	router.defaults.Port = 80
 	router.defaults.Network = "bridge"
 

@@ -8,12 +8,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/docker/docker/client"
 	"github.com/urfave/cli/v3"
 	"go.uber.org/zap"
 
 	"gh.tarampamp.am/indocker-app/app/certs"
 	"gh.tarampamp.am/indocker-app/app/internal/cli/shared"
 	"gh.tarampamp.am/indocker-app/app/internal/cli/start/healthcheck"
+	"gh.tarampamp.am/indocker-app/app/internal/docker"
 	appHttp "gh.tarampamp.am/indocker-app/app/internal/http"
 )
 
@@ -135,18 +137,24 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 
 // Run current command.
 func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //nolint:funlen
-	var ctx, cancel = context.WithCancel(parentCtx)
-
+	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 
-	/*
-		dc, dcErr := client.NewClientWithOpts(client.WithHost(cmd.options.Docker.Host))
-		if dcErr != nil {
-			return fmt.Errorf("failed to create docker client: %w", dcErr)
-		}
+	dc, dcErr := client.NewClientWithOpts(client.WithHost(cmd.options.Docker.Host))
+	if dcErr != nil {
+		return fmt.Errorf("failed to create docker client: %w", dcErr)
+	}
 
-		defer func() { _ = dc.Close() }()
-	*/
+	defer func() { _ = dc.Close() }()
+
+	var dockerState = docker.NewState(dc)
+
+	if err := dockerState.Update(ctx); err != nil { // initial update
+		return fmt.Errorf("failed to update docker state: %w", err)
+	}
+
+	var stopAutoUpdate = dockerState.StartAutoUpdate(ctx) // start auto-update
+	defer stopAutoUpdate()
 
 	// create HTTP server
 	var server = appHttp.NewServer(ctx, log,
@@ -155,38 +163,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 		appHttp.WithIDLETimeout(cmd.options.IDLETimeout),
 	)
 
-	/*
-		// prepare dependencies for the http server and register routes
-		var dockerWatcher = docker.NewContainersWatch(cmd.options.Docker.WatchInterval, dc)
-
-		go func() { // start a docker containers watcher in a separate goroutine
-			if err := dockerWatcher.Watch(ctx); err != nil && !errors.Is(err, context.Canceled) {
-				log.Error("Failed to watch docker containers", zap.Error(err))
-
-				cancel() // this is a critical error for us
-			}
-		}()
-
-		var dockerRouter = docker.NewContainersRoute()
-
-		go func() { // start a docker routes watching in a separate goroutine
-			if err := dockerRouter.Watch(ctx, dockerWatcher); err != nil && !errors.Is(err, context.Canceled) {
-				log.Error("Failed to start watching for the docker router", zap.Error(err))
-
-				cancel() // this is a critical error for us
-			}
-		}()
-
-		var dockerStateWatcher = docker.NewContainerStateWatch(dc)
-
-		go func() { // start a docker containers state watcher in a separate goroutine
-			if err := dockerStateWatcher.Watch(ctx, dockerWatcher); err != nil && !errors.Is(err, context.Canceled) {
-				log.Error("Failed to watch docker containers state updates", zap.Error(err))
-			}
-		}()
-	*/
-
-	server.Register(ctx, log)
+	server.Register(ctx, log, dockerState)
 
 	httpLn, httpLnErr := net.Listen("tcp", fmt.Sprintf("%s:%d", cmd.options.Addr, cmd.options.HTTP.Port))
 	if httpLnErr != nil {
@@ -232,51 +209,3 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 
 	return nil
 }
-
-/*
-func (cmd *command) runStatsCollector(
-	ctx context.Context, log *zap.Logger, dr *docker.ContainersRoute, dc *client.Client,
-) collector.Collector {
-	const (
-		initDelay, interval = 5 * time.Second, 30 * time.Minute
-		mixPanelProjectID   = "e39a1eb7c7732fef947e07c4caf6a844"
-	)
-
-	// create docker ID resolver (ID from this resolver will be used to generate a unique user ID hash)
-	resolver := collector.NewDockerIDResolver(ctx, dc)
-
-	// create a new collector
-	var collect = collector.NewCollector(ctx, log, initDelay, interval,
-		collector.NewMixPanelSender(mixPanelProjectID, version.Version()),
-		resolver,
-	)
-
-	// schedule initial event
-	collect.Schedule(collector.Event{Name: "app_run"})
-
-	go func() { // schedule heartbeat event sending every 14 minutes
-		const hbInterval = 14 * time.Minute
-
-		var t = time.NewTicker(hbInterval)
-		defer t.Stop()
-
-		for {
-			select {
-			case <-t.C:
-				collect.Schedule(collector.Event{
-					Name: "app_heartbeat",
-					Properties: map[string]string{
-						// routes count is used to understanding how actively the project is used
-						"routes_count": strconv.Itoa(dr.RoutesCount()),
-					}},
-				)
-
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-
-	return collect
-}
-*/

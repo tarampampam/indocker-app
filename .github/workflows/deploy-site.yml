@@ -7,10 +7,10 @@ on:
   workflow_dispatch: {}
   push:
     branches: [master, main]
-    paths: [frontend/**, .github/workflows/deploy-frontend.yml]
+    paths: [site/**, .github/workflows/deploy-site.yml]
 
 concurrency:
-  group: ${{ github.ref }}-frontend
+  group: ${{ github.ref }}-site
   cancel-in-progress: true
 
 jobs:
