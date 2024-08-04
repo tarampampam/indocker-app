@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="shortcut icon"
+        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAP1BMVEUAAADzQjbzQjb0QjXzQjXyQzTzQjf1QTb0Qzb1Qjb0Qzb8zMn8xsL7wLv7urX6oZv3cWf7tK/6qaP5lI34i4NqdfHkAAAACnRSTlMA/m9j/GpYNS5n2xuvYAAAAFtJREFUGNNVjkcOwDAIBCHNNq4p/39rFIqI98QMiwRoQoApCXH584pEYpzFOPfOxvc5c8f7pdhVZKZaiU0w0ZoJOLZvGoN5B1BzncpmnlvYjbAbY38WE0yJUYcXRLEEYyINwL4AAAAASUVORK5CYII=">
+  <title>{{ .Code }}: {{ .Message }}</title>
+  <style>
+    :root {
+      --color-bg-primary: #fff;
+      --color-bg-secondary: #62c9f1;
+      --color-bg-hint: #fff2db;
+      --color-text-primary: #010101;
+      --color-text-secondary: #9a9a9a;
+      --color-borders-primary: #949494;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-bg-primary: #222222;
+        --color-bg-secondary: #1b1b1b;
+        --color-bg-hint: #2e2f31;
+        --color-text-primary: #f5f6f8;
+        --color-text-secondary: #9b9b9b;
+        --color-borders-primary: #565656;
+      }
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      height: 100%;
+      width: 100%;
+      background-color: var(--color-bg-primary);
+      color: var(--color-text-primary);
+      font-family: sans-serif;
+      font-size: 16px;
+    }
+
+    @media screen and (min-width: 2000px) {
+      html, body {
+        font-size: 18px;
+      }
+    }
+
+    body {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      height: 100%;
+
+      .container {
+        display: flex;
+        width: 540px;
+        height: 100%;
+      }
+    }
+
+    .picture, .content {
+      display: flex;
+      height: 100%;
+      align-items: center;
+    }
+
+    .picture {
+      width: 45%;
+      justify-content: right;
+      background-color: var(--color-bg-secondary);
+
+      .container {
+        justify-content: right;
+
+        .img {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          margin: 0 5%;
+        }
+      }
+    }
+
+    .content {
+      width: 55%;
+      justify-content: left;
+      background-color: var(--color-bg-primary);
+
+      .container {
+        flex-direction: column;
+        justify-content: space-evenly;
+
+        header {
+          ul {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-around;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+
+            li a {
+              color: var(--color-text-primary);
+              text-decoration: none;
+              font-weight: 700;
+
+              &:hover {
+                text-decoration: underline;
+              }
+            }
+          }
+        }
+
+        article {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          text-align: center;
+
+          h1 {
+            font-size: 13em;
+            margin: 0;
+          }
+
+          h3 {
+            font-size: 2em;
+            margin: 0;
+            text-transform: capitalize;
+          }
+
+          p {
+            padding: 0 1em;
+          }
+
+          .hint {
+            border-radius: 3px;
+            font-size: .9em;
+            margin: 1em 3em;
+            padding: 1em;
+            line-height: 1.5;
+            background-color: var(--color-bg-hint);
+          }
+
+          code {
+            position: relative;
+            font-weight: bolder;
+            top: -.045em;
+            white-space: nowrap;
+          }
+
+          select {
+            border: 1px solid var(--color-borders-primary);
+            color: var(--color-text-primary);
+            border-radius: 5px;
+            padding: .3em 0;
+            min-width: 30%;
+            outline: none;
+            background: var(--color-bg-primary);
+            box-shadow: 0 1px 3px -2px var(--color-bg-secondary);
+          }
+        }
+
+        footer {
+          display: flex;
+          justify-content: center;
+          color: var(--color-text-secondary);
+          font-size: .85em;
+        }
+      }
+    }
+
+    @media (max-width: 830px) {
+      .picture {
+        display: none;
+      }
+
+      .content, .content .container {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="picture">
+  <div class="container">
+    <div class="img">
+      <!-- {{- if ge .Code 500 -}} -->
+      {{ .Err5xxSvg }}
+      <!-- {{- else -}} -->
+      {{ .Err4xxSvg }}
+      <!-- {{- end -}} -->
+    </div>
+  </div>
+</div>
+<div class="content">
+  <div class="container">
+    <header>
+      <ul>
+        <li><a href="" class="goto-monitor">Monitor</a></li>
+        <li><a href="https://github.com/tarampampam/indocker-app">GitHub</a></li>
+      </ul>
+    </header>
+    <article>
+      <h1>{{ .Code }}</h1>
+      <h3>{{ .Message }}</h3>
+      <div>
+        <!-- {{ if eq .Code 404 }} -->
+        <p class="hint">
+          This may happen if you forgot to add the labels <code>indocker.host={{ .Domain }}</code> and
+          <code>indocker.port=%port_number%</code> to the necessary Docker container.
+        </p>
+        <!-- {{ else if eq .Code 422 }} -->
+        <p class="hint">
+          The good news is that InDocker is works! All that's left to do is to add labels
+          <code>indocker.host={{ .Domain }}</code> and <code>indocker.port=%port_number%</code> to the relevant
+          container.
+        </p>
+        <!-- {{ end }} -->
+
+        <!-- {{ if gt (len .RegisteredHosts) 0 }} -->
+        <p>
+          <label for="goto-domain">Perhaps you would like to visit one of the following domains:</label>
+        </p>
+        <select id="goto-domain">
+          <option disabled selected>Select domain</option>
+          <!-- {{ range $host := .RegisteredHosts }} -->
+          <option value="{{ $host }}.indocker.app">{{ $host }}</option>
+          <!-- {{ end }} -->
+        </select>
+        <script type="module">
+          document.getElementById('goto-domain').addEventListener('change', (e) => {
+            let target = window.location.protocol + '//'
+
+            if ('value' in e.target) {
+              target += e.target.value
+            }
+
+            if (window.location.port) {
+              target += ':' + window.location.port
+            }
+
+            window.location.href = target
+          })
+        </script>
+        <!-- {{ end }} -->
+      </div>
+    </article>
+    <footer>
+      InDocker {{ .Version }}
+    </footer>
+  </div>
+</div>
+<script type="module">
+  document.querySelectorAll('.goto-monitor').forEach((el) => {
+    el.href = `${window.location.protocol}//monitor.indocker.app` + (window.location.port ? `:${window.location.port}` : '') + '/'
+  })
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/url"
 	"strconv"
 	"strings"
@@ -24,33 +25,17 @@ type (
 
 		rcMu sync.Mutex               // protects rc
 		rc   map[string]containerInfo // running containers, map[container_id]container_info
+
+		routesMu sync.Mutex         // protects routes
+		routes   map[string]url.URL // containers routing, map[hostname]url.URL
 	}
 
 	containerInfo struct {
 		common  types.Container
 		inspect types.ContainerJSON
 		stats   container.StatsResponse
-		route   struct {
-			hostname string // hostname
-			scheme   string // http, https
-			port     uint16 // port number
-			ipAddr   string // IP address
-		}
 	}
 )
-
-// urlToContainer returns a URL to the container. It returns false if the container does not have the required
-// routing info.
-func (c containerInfo) urlToContainer() (*url.URL, bool) {
-	if c.route.scheme == "" || c.route.ipAddr == "" || c.route.port == 0 {
-		return nil, false
-	}
-
-	return &url.URL{
-		Scheme: c.route.scheme,
-		Host:   fmt.Sprintf("%s:%d", c.route.ipAddr, c.route.port),
-	}, true
-}
 
 func NewState(dc *dc.Client) *State {
 	return &State{
@@ -129,14 +114,26 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen
 		return listErr
 	} else {
 		var (
-			mu       sync.Mutex // protects newState
-			newState = make(map[string]containerInfo, len(list))
+			mu        sync.Mutex // protects newState
+			newState  = make(map[string]containerInfo, len(list))
+			newRoutes = make(map[string]url.URL, len(list))
 
 			wg, wgCtx = errgroup.WithContext(ctx)
 		)
 
-		for _, listedContainer := range list { // fill up the map with common container info
+		for _, listedContainer := range list {
+			// fill up the map with common container info
 			newState[listedContainer.ID] = containerInfo{common: listedContainer}
+
+			// set the routing info, if possible
+			if scheme, hostname, ipAddr, port, found := s.buildRouteToContainer(listedContainer); found {
+				if scheme != "" && hostname != "" && ipAddr != "" && port != 0 { // an additional check
+					newRoutes[hostname] = url.URL{
+						Scheme: scheme,
+						Host:   fmt.Sprintf("%s:%d", ipAddr, port),
+					}
+				}
+			}
 		}
 
 		for _, listedContainer := range list {
@@ -184,22 +181,13 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen
 			})
 		}
 
+		s.routesMu.Lock()
+		clear(s.routes)      // care about the memory
+		s.routes = newRoutes // update the routes
+		s.routesMu.Unlock()
+
 		if err := wg.Wait(); err != nil {
 			return err
-		}
-
-		// set the routing info, if possible
-		for id, info := range newState {
-			if scheme, hostname, ipAddr, port, found := s.buildRouteToContainer(info.common); found {
-				current := newState[id]
-
-				current.route.scheme = scheme
-				current.route.hostname = hostname
-				current.route.ipAddr = ipAddr
-				current.route.port = port
-
-				newState[id] = current
-			}
 		}
 
 		s.rcMu.Lock()
@@ -213,7 +201,7 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen
 
 // URLToContainerByHostname returns a URL to the container with the given hostname. It returns false if the container
 // with the given hostname is not found.
-func (s *State) URLToContainerByHostname(hostname string) (*url.URL, bool) {
+func (s *State) URLToContainerByHostname(hostname string) (url.URL, bool) {
 	{ // normalize the hostname
 		hostname = strings.ToLower(strings.TrimSpace(hostname))
 
@@ -223,32 +211,24 @@ func (s *State) URLToContainerByHostname(hostname string) (*url.URL, bool) {
 		}
 	}
 
-	s.rcMu.Lock()
-	defer s.rcMu.Unlock()
+	s.routesMu.Lock()
+	u, ok := s.routes[hostname]
+	s.routesMu.Unlock()
 
-	for _, info := range s.rc {
-		if info.route.hostname == hostname {
-			return info.urlToContainer()
-		}
+	if ok {
+		return u, true
 	}
 
-	return nil, false
+	return url.URL{}, false
 }
 
 // AllContainerURLs returns a map of all container URLs.
-func (s *State) AllContainerURLs() map[string]url.URL { // map[hostname]url.URL
-	s.rcMu.Lock()
-	defer s.rcMu.Unlock()
+func (s *State) AllContainerURLs() (routes map[string]url.URL) { // map[hostname]url.URL
+	s.routesMu.Lock()
+	routes = maps.Clone(s.routes)
+	s.routesMu.Unlock()
 
-	var routes = make(map[string]url.URL, len(s.rc))
-
-	for _, info := range s.rc {
-		if u, ok := info.urlToContainer(); ok {
-			routes[info.route.hostname] = *u
-		}
-	}
-
-	return routes
+	return
 }
 
 //nolint:gochecknoglobals
@@ -265,8 +245,6 @@ func (s *State) buildRouteToContainer(info types.Container) ( //nolint:funlen,go
 	scheme, host, ipAddr string, port uint16, found bool,
 ) {
 	scheme, port = "http", uint16(80) //nolint:mnd // defaults
-
-	var netName = "bridge" // defaults
 
 	// determine the host
 	for _, wantHostLabel := range hostLabels {
@@ -293,7 +271,7 @@ func (s *State) buildRouteToContainer(info types.Container) ( //nolint:funlen,go
 		if v, ok := info.Labels[wantSchemeLabel]; ok {
 			v = strings.ToLower(strings.TrimSpace(v))
 
-			if v == "" || (v != "http" && v != "https") {
+			if v == "" {
 				continue
 			} else {
 				if v == "https" {
@@ -324,6 +302,8 @@ func (s *State) buildRouteToContainer(info types.Container) ( //nolint:funlen,go
 			break
 		}
 	}
+
+	var netName = "bridge" // defaults
 
 	// determine the network name
 	for _, wantNetLabel := range networkNameLabels {

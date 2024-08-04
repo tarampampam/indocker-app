@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"gh.tarampamp.am/indocker-app/app/internal/http/middleware/frontend"
 	"gh.tarampamp.am/indocker-app/app/internal/http/middleware/logreq"
 	"gh.tarampamp.am/indocker-app/app/internal/http/openapi"
+	"gh.tarampamp.am/indocker-app/app/internal/http/proxy"
+	"gh.tarampamp.am/indocker-app/app/internal/version"
 	"gh.tarampamp.am/indocker-app/app/web"
 )
 
@@ -61,7 +64,10 @@ func NewServer(baseCtx context.Context, log *zap.Logger, opts ...ServerOption) S
 	return server
 }
 
-func (s *Server) Register(ctx context.Context, log *zap.Logger, dockerRouter dockerRouter) {
+func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface {
+	AllContainerURLs() map[string]url.URL
+	URLToContainerByHostname(string) (url.URL, bool)
+}) {
 	// since both servers uses the same logics, we can iterate over them, but with differently named loggers
 	for namedLog, srv := range map[*zap.Logger]*http.Server{
 		log.Named("http"):  s.http,
@@ -69,7 +75,7 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger, dockerRouter doc
 	} {
 		var (
 			// create openapi server implementation (it is used only for the monitor subdomain)
-			openapiServer = NewOpenAPI(ctx, namedLog, dockerRouter)
+			openapiServer = NewOpenAPI(ctx, namedLog, router)
 
 			// create the base router for the openapi server
 			openapiMux = http.NewServeMux()
@@ -94,6 +100,8 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger, dockerRouter doc
 			return strings.HasPrefix(r.URL.Path, "/api") // skip the middleware, if the request is intended for the API
 		})(http.HandlerFunc(openapiServer.HandleNotFoundError))) // <-- this is the general 404 handler
 
+		var proxyHandler = proxy.New(namedLog, router, version.Version())
+
 		// wrap the server handler with middleware
 		srv.Handler = logreq.New(namedLog, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// extract the host from the request
@@ -107,8 +115,12 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger, dockerRouter doc
 				}
 
 				// otherwise, serve the proxy handler
-				http.NotFound(w, r) // TODO: proxy handler
+				proxyHandler.ServeHTTP(w, r)
+
+				return
 			}
+
+			http.Error(w, "invalid host", http.StatusBadRequest)
 		}))
 	}
 }
