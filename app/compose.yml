@@ -27,7 +27,7 @@ services:
       indocker.host: whoami.indocker.app # Open <https://whoami.indocker.app>
       indocker.port: 8080
     command: --port 8080
-    depends_on: {web: {condition: service_healthy}}
+    #depends_on: {web: {condition: service_healthy}}
     security_opt: [no-new-privileges:true]
 
 volumes:

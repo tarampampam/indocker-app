@@ -61,7 +61,7 @@ func NewServer(baseCtx context.Context, log *zap.Logger, opts ...ServerOption) S
 	return server
 }
 
-func (s *Server) Register(ctx context.Context, log *zap.Logger) {
+func (s *Server) Register(ctx context.Context, log *zap.Logger, dockerRouter dockerRouter) {
 	// since both servers uses the same logics, we can iterate over them, but with differently named loggers
 	for namedLog, srv := range map[*zap.Logger]*http.Server{
 		log.Named("http"):  s.http,
@@ -69,7 +69,7 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger) {
 	} {
 		var (
 			// create openapi server implementation (it is used only for the monitor subdomain)
-			openapiServer = NewOpenAPI(ctx, namedLog)
+			openapiServer = NewOpenAPI(ctx, namedLog, dockerRouter)
 
 			// create the base router for the openapi server
 			openapiMux = http.NewServeMux()
