@@ -233,9 +233,23 @@ var (
 )
 
 var (
-	DontUseEmbeddedFrontFlag = cli.BoolFlag{ // TODO: remove?
-		Name:     "dont-use-embedded-front",
-		Usage:    "don't use embedded front-end files (useful for development)",
+	LocalFrontendPathFlag = cli.StringFlag{
+		Name:     "local-frontend-path",
+		Usage:    "path to the local frontend (if empty, embedded frontend will be used; useful for development)",
 		OnlyOnce: true,
+		Config:   cli.StringConfig{TrimSpace: true},
+		Validator: func(s string) error {
+			if s == "" {
+				return nil // use embedded frontend
+			}
+
+			if stat, err := os.Stat(s); err != nil {
+				return fmt.Errorf("failed to find local frontend path (%s): %w", s, err)
+			} else if !stat.IsDir() {
+				return fmt.Errorf("local frontend path is not a directory (%s)", s)
+			}
+
+			return nil
+		},
 	}
 )

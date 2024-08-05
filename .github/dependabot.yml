@@ -25,7 +25,7 @@ updates:
     assignees: [tarampampam]
 
   - package-ecosystem: npm
-    directory: /app
+    directory: /app/web
     schedule: {interval: monthly}
     reviewers: [tarampampam]
     assignees: [tarampampam]

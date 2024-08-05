@@ -40,9 +40,7 @@ type (
 				Host          string
 				WatchInterval time.Duration
 			}
-			Dashboard struct {
-				DontUseEmbeddedFront bool
-			}
+			LocalFrontendPath string
 		}
 	}
 )
@@ -51,18 +49,18 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 	var cmd = command{}
 
 	var (
-		addrFlag                 = shared.AddrFlag
-		httpPortFlag             = shared.HttpPortFlag
-		httpsPortFlag            = shared.HttpsPortFlag
-		httpsCertFileFlag        = shared.HttpsCertFileFlag
-		httpsKeyFileFlag         = shared.HttpsKeyFileFlag
-		readTimeoutFlag          = shared.ReadTimeoutFlag
-		writeTimeoutFlag         = shared.WriteTimeoutFlag
-		idleTimeoutFlag          = shared.IdleTimeoutFlag
-		shutdownTimeoutFlag      = shared.ShutdownTimeoutFlag
-		dockerHostFlag           = shared.DockerHostFlag
-		dockerWatchIntervalFlag  = shared.DockerWatchIntervalFlag
-		dontUseEmbeddedFrontFlag = shared.DontUseEmbeddedFrontFlag
+		addrFlag                = shared.AddrFlag
+		httpPortFlag            = shared.HttpPortFlag
+		httpsPortFlag           = shared.HttpsPortFlag
+		httpsCertFileFlag       = shared.HttpsCertFileFlag
+		httpsKeyFileFlag        = shared.HttpsKeyFileFlag
+		readTimeoutFlag         = shared.ReadTimeoutFlag
+		writeTimeoutFlag        = shared.WriteTimeoutFlag
+		idleTimeoutFlag         = shared.IdleTimeoutFlag
+		shutdownTimeoutFlag     = shared.ShutdownTimeoutFlag
+		dockerHostFlag          = shared.DockerHostFlag
+		dockerWatchIntervalFlag = shared.DockerWatchIntervalFlag
+		localFrontendPathFlag   = shared.LocalFrontendPathFlag
 	)
 
 	cmd.c = &cli.Command{
@@ -83,7 +81,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			opt.ShutdownTimeout = c.Duration(shutdownTimeoutFlag.Name)
 			opt.Docker.Host = c.String(dockerHostFlag.Name)
 			opt.Docker.WatchInterval = c.Duration(dockerWatchIntervalFlag.Name)
-			opt.Dashboard.DontUseEmbeddedFront = c.Bool(dontUseEmbeddedFrontFlag.Name)
+			opt.LocalFrontendPath = c.String(localFrontendPathFlag.Name)
 
 			if httpsCertFilePath == "" {
 				opt.HTTPS.CertFile = certs.FullChain()
@@ -125,7 +123,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			&shutdownTimeoutFlag,
 			&dockerHostFlag,
 			&dockerWatchIntervalFlag,
-			&dontUseEmbeddedFrontFlag,
+			&localFrontendPathFlag,
 		},
 		Commands: []*cli.Command{
 			healthcheck.NewCommand(),
@@ -163,7 +161,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 		appHttp.WithIDLETimeout(cmd.options.IDLETimeout),
 	)
 
-	server.Register(ctx, log, dockerState)
+	server.Register(ctx, log, dockerState, cmd.options.LocalFrontendPath)
 
 	httpLn, httpLnErr := net.Listen("tcp", fmt.Sprintf("%s:%d", cmd.options.Addr, cmd.options.HTTP.Port))
 	if httpLnErr != nil {

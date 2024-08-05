@@ -28,10 +28,15 @@
     }
 
     html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      height: 100%;
+      width: 100%;
       background-color: var(--color-bg-primary);
       color: var(--color-text-primary);
-      margin: 0;
-      min-height: 100vh;
+      font-family: sans-serif;
+      font-size: 16px;
     }
 
     body, #root {
@@ -50,39 +55,59 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      height: 100%;
       width: 100%;
+
+      .loader {
+        display: inline-block;
+        opacity: 0;
+        transition: opacity;
+        animation: app-loading-spinner-fade-in ease 1300ms;
+        animation-iteration-count: 1;
+        animation-fill-mode: forwards;
+
+        &, .inner, .inner:before, .inner:after {
+          width: 100px;
+          height: 100px;
+        }
+
+        .inner {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          text-align: center;
+
+          &:before, &:after {
+            content: '';
+            border-radius: 50%;
+            position: absolute;
+            inset: 0;
+            box-shadow: 0 0 10px 2px rgba(0, 0, 0, 0.3) inset;
+          }
+
+          &:after {
+            box-shadow: 0 2px 0 #FF3D00 inset;
+            animation: app-loading-spinner-rotate 1350ms linear infinite;
+          }
+        }
+      }
     }
 
-    #please-wait-app-loading .spinner {
-      width: 48px;
-      height: 48px;
-      display: inline-block;
-      position: relative;
-      box-sizing: border-box;
-      animation: app-loading-spinner-rotation 1s linear infinite;
-    }
-
-    #please-wait-app-loading .spinner::after {
-      content: '';
-      box-sizing: border-box;
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 3px solid;
-      border-color: #FF3D00 transparent;
-    }
-
-    @keyframes app-loading-spinner-rotation {
+    @keyframes app-loading-spinner-rotate {
       0% {
-        transform: rotate(0deg)
+        transform: rotate(0)
       }
       100% {
         transform: rotate(360deg)
+      }
+    }
+    @keyframes app-loading-spinner-fade-in {
+      30% {
+        opacity: 0
+      }
+      100% {
+        opacity: 1
       }
     }
   </style>
@@ -90,8 +115,11 @@
 <body>
 <div id="root">
   <div id="please-wait-app-loading">
-    <span class="spinner"></span>
-    <p>Please wait...</p>
+    <span class="loader">
+      <span class="inner">
+        Please wait...
+      </span>
+    </span>
   </div>
 </div>
 <script type="module" src="/src/main.tsx"></script>
