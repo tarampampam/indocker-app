@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"html/template"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -26,8 +27,8 @@ var (
 
 type (
 	dockerRouter interface {
-		URLToContainerByHostname(hostname string) (url.URL, bool)
-		AllContainerURLs() (routes map[string]url.URL)
+		URLToContainerByHostname(hostname string) ([]url.URL, bool)
+		AllContainerURLs() (routes map[string][]url.URL)
 	}
 
 	Handler struct {
@@ -45,7 +46,10 @@ func New(log *zap.Logger, router dockerRouter, appVersion string) *Handler {
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if host, _, err := net.SplitHostPort(r.Host); err == nil {
-		if u, found := h.router.URLToContainerByHostname(host); found {
+		if urls, found := h.router.URLToContainerByHostname(host); found && len(urls) > 0 {
+			// pick a random url in round-robin fashion
+			var u = urls[rand.Intn(len(urls))] //nolint:gosec
+
 			(&httputil.ReverseProxy{
 				Director: func(pr *http.Request) {
 					var clone = r.Clone(r.Context())
@@ -58,6 +62,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				},
 				Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}, //nolint:gosec
 				ErrorLog:  zap.NewStdLog(h.log),
+				ModifyResponse: func(resp *http.Response) error {
+					resp.Header.Set("X-Indocker-Downstream-Url", u.String())
+
+					return nil
+				},
 			}).ServeHTTP(w, r)
 
 			return

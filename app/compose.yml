@@ -22,11 +22,22 @@ services:
     security_opt: [no-new-privileges:true]
 
   whoami: # just for a test
-    image: containous/whoami:latest
+    image: docker.io/containous/whoami:latest
     labels:
       indocker.host: whoami.indocker.app # Open <https://whoami.indocker.app>
       indocker.port: 8080
     command: --port 8080
+    scale: 2
+    #depends_on: {web: {condition: service_healthy}}
+    security_opt: [no-new-privileges:true]
+
+  httpbin: # just for a test
+    image: docker.io/mccutchen/go-httpbin:latest
+    labels:
+      indocker.host: httpbin.indocker.app # Open <https://whoami.indocker.app>
+      indocker.port: 8080
+    command: go-httpbin -port 8080
+    scale: 3
     #depends_on: {web: {condition: service_healthy}}
     security_opt: [no-new-privileges:true]
 

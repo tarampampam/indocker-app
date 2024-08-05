@@ -29,7 +29,7 @@ type (
 		}
 	}
 
-	dockerRouter interface{ AllContainerURLs() map[string]url.URL }
+	dockerRouter interface{ AllContainerURLs() map[string][]url.URL }
 )
 
 var _ openapi.ServerInterface = (*OpenAPI)(nil) // verify interface implementation

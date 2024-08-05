@@ -90,6 +90,9 @@ components:
       type: object
       properties:
         hostname: {type: string, example: 'whoami'}
-        url: {type: string, format: uri, example: 'http://172.19.0.2:8080'}
+        urls:
+          type: array
+          items: {type: string, format: uri, example: 'http://172.19.0.2:8080'}
+          minLength: 1
       additionalProperties: false
-      required: [hostname, url]
+      required: [hostname, urls]

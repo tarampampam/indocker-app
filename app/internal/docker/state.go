@@ -26,8 +26,8 @@ type (
 		rcMu sync.Mutex               // protects rc
 		rc   map[string]containerInfo // running containers, map[container_id]container_info
 
-		routesMu sync.Mutex         // protects routes
-		routes   map[string]url.URL // containers routing, map[hostname]url.URL
+		routesMu sync.Mutex           // protects routes
+		routes   map[string][]url.URL // containers routing, map[hostname]url.URL
 	}
 
 	containerInfo struct {
@@ -39,8 +39,9 @@ type (
 
 func NewState(dc *dc.Client) *State {
 	return &State{
-		dc: dc,
-		rc: make(map[string]containerInfo),
+		dc:     dc,
+		rc:     make(map[string]containerInfo),
+		routes: make(map[string][]url.URL),
 	}
 }
 
@@ -116,7 +117,7 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen
 		var (
 			mu        sync.Mutex // protects newState
 			newState  = make(map[string]containerInfo, len(list))
-			newRoutes = make(map[string]url.URL, len(list))
+			newRoutes = make(map[string][]url.URL, len(list))
 
 			wg, wgCtx = errgroup.WithContext(ctx)
 		)
@@ -128,10 +129,12 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen
 			// set the routing info, if possible
 			if scheme, hostname, ipAddr, port, found := s.buildRouteToContainer(listedContainer); found {
 				if scheme != "" && hostname != "" && ipAddr != "" && port != 0 { // an additional check
-					newRoutes[hostname] = url.URL{
+					var u = url.URL{
 						Scheme: scheme,
 						Host:   fmt.Sprintf("%s:%d", ipAddr, port),
 					}
+
+					newRoutes[hostname] = append(newRoutes[hostname], u)
 				}
 			}
 		}
@@ -201,7 +204,7 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen
 
 // URLToContainerByHostname returns a URL to the container with the given hostname. It returns false if the container
 // with the given hostname is not found.
-func (s *State) URLToContainerByHostname(hostname string) (url.URL, bool) {
+func (s *State) URLToContainerByHostname(hostname string) ([]url.URL, bool) {
 	{ // normalize the hostname
 		hostname = strings.ToLower(strings.TrimSpace(hostname))
 
@@ -219,11 +222,11 @@ func (s *State) URLToContainerByHostname(hostname string) (url.URL, bool) {
 		return u, true
 	}
 
-	return url.URL{}, false
+	return nil, false
 }
 
 // AllContainerURLs returns a map of all container URLs.
-func (s *State) AllContainerURLs() (routes map[string]url.URL) { // map[hostname]url.URL
+func (s *State) AllContainerURLs() (routes map[string][]url.URL) { // map[hostname]url.URL
 	s.routesMu.Lock()
 	routes = maps.Clone(s.routes)
 	s.routesMu.Unlock()

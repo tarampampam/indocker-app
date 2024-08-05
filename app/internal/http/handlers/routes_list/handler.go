@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	dockerRouter interface{ AllContainerURLs() map[string]url.URL }
+	dockerRouter interface{ AllContainerURLs() map[string][]url.URL }
 
 	Handler struct{ router dockerRouter }
 )
@@ -19,8 +19,14 @@ func (h *Handler) Handle() (resp openapi.RegisteredRoutesListResponse) {
 
 	resp.Routes = make([]openapi.ContainerRoute, 0, len(routes))
 
-	for hostname, u := range routes {
-		resp.Routes = append(resp.Routes, openapi.ContainerRoute{Hostname: hostname, Url: u.String()})
+	for hostname, urls := range routes {
+		var route = openapi.ContainerRoute{Hostname: hostname, Urls: make([]string, 0, len(urls))}
+
+		for _, u := range urls {
+			route.Urls = append(route.Urls, u.String())
+		}
+
+		resp.Routes = append(resp.Routes, route)
 	}
 
 	return
