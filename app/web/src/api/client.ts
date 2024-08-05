@@ -2,7 +2,7 @@ import createClient, { type ClientOptions, type Client as OpenapiClient } from '
 import { parse as semverParse, coerce as semverCoerce, type SemVer } from 'semver'
 import { APIErrorUnknown } from './errors.ts'
 import { throwIfNotJSON, throwIfNotValidResponse } from './middleware'
-import { paths, components } from './schema.gen'
+import { paths } from './schema.gen'
 
 export class Client {
   private readonly api: OpenapiClient<paths>
@@ -59,7 +59,7 @@ export class Client {
    *
    * @throws {APIError}
    */
-  async routesList(): Promise<{routes: ReadonlyArray<components['schemas']['ContainerRoute']>}> {
+  async routesList(): Promise<{routes: ReadonlyArray<{hostname: string; urls: ReadonlyArray<string>}>}> {
     const { data, response } = await this.api.GET('/api/routes')
 
     if (data) {
