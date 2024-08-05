@@ -20,16 +20,11 @@ const (
 // If the requested file does not exist, it will return index.html if it exists (otherwise html-formatted 404 error).
 func New(root fs.FS, skipper func(*http.Request) bool) func(http.Handler) http.Handler { //nolint:funlen
 	var (
-		fileServer = http.FileServerFS(root)
-		index      []byte
-
+		fileServer  = http.FileServerFS(root)
 		fallback404 = []byte("<!doctype html><html><body><h1>Error 404</h1><h2>Not found</h2></body></html>")
 	)
 
-	if f, err := root.Open("index.html"); err == nil {
-		index, _ = io.ReadAll(f)
-		_ = f.Close()
-	}
+	const indexFileName = "index.html"
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,13 +37,16 @@ func New(root fs.FS, skipper func(*http.Request) bool) func(http.Handler) http.H
 			var filePath = strings.TrimLeft(path.Clean(r.URL.Path), "/")
 
 			if filePath == "" {
-				filePath = "index.html"
+				filePath = indexFileName
 			}
 
 			fd, fErr := root.Open(filePath)
 			switch { //nolint:wsl
 			case os.IsNotExist(fErr): // if requested file does not exist
-				if len(index) > 0 { // always return index.html, if it exists (required for SPA to work)
+				index, indexErr := root.Open(indexFileName)
+				if indexErr == nil { // always return index.html, if it exists (required for SPA to work)
+					defer func() { _ = index.Close() }()
+
 					if r.Method == http.MethodHead {
 						w.WriteHeader(http.StatusOK)
 
@@ -57,7 +55,7 @@ func New(root fs.FS, skipper func(*http.Request) bool) func(http.Handler) http.H
 
 					w.Header().Set(contentTypeHeader, contentTypeHTML)
 					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write(index)
+					_, _ = io.Copy(w, index)
 
 					return
 				}

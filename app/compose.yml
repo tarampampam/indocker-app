@@ -1,25 +1,30 @@
 # yaml-language-server: $schema=https://cdn.jsdelivr.net/gh/compose-spec/compose-spec@master/schema/compose-spec.json
 
 services:
-  app:
-    build: {target: develop}
+  app: # common use case is to run shell or execute commands
+    build: &app-build {dockerfile: Dockerfile, target: develop}
     environment:
       PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@develop] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
       HOME: /tmp
       LOG_LEVEL: debug
-    volumes:
-      - .:/src:rw
-      - tmp-data:/tmp:rw
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+    volumes: [.:/src:rw, tmp-data:/tmp:rw]
     security_opt: [no-new-privileges:true]
 
-  web:
-    build: {target: runtime}
+  app-web-dist:
+    build: *app-build
+    volumes: [.:/src:rw]
+    working_dir: /src/web
+    command: npm run watch
+    security_opt: [no-new-privileges:true]
+
+  daemon:
+    build: *app-build
+    command: go run ./cmd/app/ start --local-frontend-path ./web/dist
+    volumes: [.:/src:rw, /var/run/docker.sock:/var/run/docker.sock:ro]
     ports: ['80:8080/tcp', '443:8443/tcp'] # open https://monitor.indocker.app
-    command: start --dont-use-embedded-front
+    depends_on: {app-web-dist: {condition: service_started}}
     develop: # available since docker compose v2.22, https://docs.docker.com/compose/file-watch/
       watch: [{action: rebuild, path: .}]
-    security_opt: [no-new-privileges:true]
 
   whoami: # just for a test
     image: docker.io/containous/whoami:latest
@@ -28,7 +33,7 @@ services:
       indocker.port: 8080
     command: --port 8080
     scale: 2
-    #depends_on: {web: {condition: service_healthy}}
+    #depends_on: {daemon: {condition: service_healthy}}
     security_opt: [no-new-privileges:true]
 
   httpbin: # just for a test
@@ -38,7 +43,7 @@ services:
       indocker.port: 8080
     command: go-httpbin -port 8080
     scale: 3
-    #depends_on: {web: {condition: service_healthy}}
+    #depends_on: {daemon: {condition: service_healthy}}
     security_opt: [no-new-privileges:true]
 
 volumes:

@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"errors"
+	"fmt"
 	"html/template"
 	"math/rand"
 	"net"
@@ -45,39 +46,45 @@ func New(log *zap.Logger, router dockerRouter, appVersion string) *Handler {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if host, _, err := net.SplitHostPort(r.Host); err == nil {
-		if urls, found := h.router.URLToContainerByHostname(host); found && len(urls) > 0 {
-			// pick a random url in round-robin fashion
-			var u = urls[rand.Intn(len(urls))] //nolint:gosec
+	var host = r.Host
 
-			(&httputil.ReverseProxy{
-				Director: func(pr *http.Request) {
-					var clone = r.Clone(r.Context())
-
-					clone.URL.Scheme = u.Scheme // set target scheme
-					clone.URL.Host = u.Host     // set target host
-					clone.Host = u.Host         // --//--
-
-					*pr = *clone // swap the request
-				},
-				Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}, //nolint:gosec
-				ErrorLog:  zap.NewStdLog(h.log),
-				ModifyResponse: func(resp *http.Response) error {
-					resp.Header.Set("X-Indocker-Downstream-Url", u.String())
-
-					return nil
-				},
-			}).ServeHTTP(w, r)
+	if strings.ContainsRune(host, ':') { // remove the port from the host
+		if splitHost, _, err := net.SplitHostPort(host); err != nil {
+			http.Error(w, fmt.Sprintf("invalid host: %s", host), http.StatusBadRequest)
 
 			return
+		} else {
+			host = splitHost
 		}
+	}
 
-		h.renderError(w, host, http.StatusNotFound, errors.New("container not found"))
+	if urls, found := h.router.URLToContainerByHostname(host); found && len(urls) > 0 {
+		// pick a random url in round-robin fashion
+		var u = urls[rand.Intn(len(urls))] //nolint:gosec
+
+		(&httputil.ReverseProxy{
+			Director: func(pr *http.Request) {
+				var clone = r.Clone(r.Context())
+
+				clone.URL.Scheme = u.Scheme // set target scheme
+				clone.URL.Host = u.Host     // set target host
+				clone.Host = u.Host         // --//--
+
+				*pr = *clone // swap the request
+			},
+			Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}, //nolint:gosec
+			ErrorLog:  zap.NewStdLog(h.log),
+			ModifyResponse: func(resp *http.Response) error {
+				resp.Header.Set("X-Indocker-Downstream-Url", u.String())
+
+				return nil
+			},
+		}).ServeHTTP(w, r)
 
 		return
 	}
 
-	h.renderError(w, "", http.StatusUnprocessableEntity, errors.New("invalid host"))
+	h.renderError(w, host, http.StatusNotFound, errors.New("container not found"))
 }
 
 var errorTemplate = func() *template.Template { //nolint:gochecknoglobals

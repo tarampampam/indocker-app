@@ -5,9 +5,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -64,10 +66,10 @@ func NewServer(baseCtx context.Context, log *zap.Logger, opts ...ServerOption) S
 	return server
 }
 
-func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface {
+func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface { //nolint:funlen
 	AllContainerURLs() map[string][]url.URL
 	URLToContainerByHostname(string) ([]url.URL, bool)
-}) {
+}, localFrontendPath string) {
 	// since both servers uses the same logics, we can iterate over them, but with differently named loggers
 	for namedLog, srv := range map[*zap.Logger]*http.Server{
 		log.Named("http"):  s.http,
@@ -86,7 +88,15 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface
 				BaseRouter:       openapiMux,
 				Middlewares:      []openapi.MiddlewareFunc{openapi.CorsMiddleware()},
 			})
+
+			frontendFs fs.FS
 		)
+
+		if localFrontendPath != "" { // if the local frontend path is provided, use it
+			frontendFs = os.DirFS(localFrontendPath)
+		} else {
+			frontendFs = web.Dist() // otherwise, use the embedded frontend
+		}
 
 		// note that since a pattern ending in a slash names a rooted subtree, the pattern "/" matches all paths not
 		// matched by other registered patterns, not just the URL with Path == "/". this allows us to use this pattern
@@ -96,7 +106,7 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface
 		// and one more important thing - to serve the frontend (located in the web directory) we use the frontend
 		// middleware, which is a simple wrapper around the http.FileServer. it allows us to serve the frontend only
 		// for the requests that are not intended for the API (i.e. requests that do not start with "/api").
-		openapiMux.Handle("/", frontend.New(web.Dist(), func(r *http.Request) bool {
+		openapiMux.Handle("/", frontend.New(frontendFs, func(r *http.Request) bool {
 			return strings.HasPrefix(r.URL.Path, "/api") // skip the middleware, if the request is intended for the API
 		})(http.HandlerFunc(openapiServer.HandleNotFoundError))) // <-- this is the general 404 handler
 
@@ -104,23 +114,28 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface
 
 		// wrap the server handler with middleware
 		srv.Handler = logreq.New(namedLog, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// extract the host from the request
-			if h, _, err := net.SplitHostPort(r.Host); err == nil {
-				// and check if it's a subdomain of the monitor
-				if strings.ToLower(h) == "monitor.indocker.app" {
-					// then serve the openapi handler
-					openapiHandler.ServeHTTP(w, r)
+			var host = r.Host
+
+			if strings.ContainsRune(host, ':') { // remove the port from the host
+				if h, _, err := net.SplitHostPort(host); err != nil {
+					http.Error(w, fmt.Sprintf("invalid host: %s", host), http.StatusBadRequest)
 
 					return
+				} else {
+					host = h
 				}
+			}
 
-				// otherwise, serve the proxy handler
-				proxyHandler.ServeHTTP(w, r)
+			// and check if it's a subdomain of the monitor
+			if strings.ToLower(host) == "monitor.indocker.app" {
+				// then serve the openapi handler
+				openapiHandler.ServeHTTP(w, r)
 
 				return
 			}
 
-			http.Error(w, "invalid host", http.StatusBadRequest)
+			// otherwise, serve the proxy handler
+			proxyHandler.ServeHTTP(w, r)
 		}))
 	}
 }
