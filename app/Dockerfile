@@ -11,6 +11,8 @@ ENV \
   PATH="$PATH:/src/web/node_modules/.bin:/go/bin:/usr/local/go/bin" \
   # use the /var/tmp/go as the GOPATH to reuse the modules cache
   GOPATH="/var/tmp/go" \
+  # set path to the Go cache (think about this as a "object files cache")
+  GOCACHE="/var/tmp/go/cache" \
   # disable npm update notifier
   NPM_CONFIG_UPDATE_NOTIFIER=false
 
@@ -27,23 +29,30 @@ RUN set -x \
     # customize the shell prompt (for the bash)
     && echo "PS1='\[\033[1;36m\][develop] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'" >> /etc/bash.bashrc
 
-WORKDIR /src/web
+WORKDIR /src
 
-# install node dependencies
 RUN \
     --mount=type=bind,source=web/package.json,target=/src/web/package.json \
     --mount=type=bind,source=web/package-lock.json,target=/src/web/package-lock.json \
-    npm ci -dd --no-audit --prefer-offline
-
-WORKDIR /src
-
-# burn the Go modules cache
-RUN \
     --mount=type=bind,source=go.mod,target=/src/go.mod \
     --mount=type=bind,source=go.sum,target=/src/go.sum \
-    go mod download -x \
-    && find "${GOPATH}" -type d -exec chmod 0777 {} \; \
-    && find "${GOPATH}" -type f -exec chmod 0666 {} \;
+    set -x \
+    # install node dependencies
+    && npm --prefix /src/web ci -dd --no-audit --prefer-offline \
+    # burn the Go modules cache
+    && go mod download -x
+
+# -✂- this stage is used to build the application frontend ------------------------------------------------------------
+FROM develop AS frontend
+
+# copy the frontend source code
+COPY ./web /src/web
+
+# build the frontend (built artifact can be found in /src/web/dist)
+RUN --mount=type=bind,source=api/openapi.yml,target=/src/api/openapi.yml \
+    set -x \
+    && npm --prefix /src/web run generate \
+    && npm --prefix /src/web run build
 
 # -✂- this stage is used to compile the application -------------------------------------------------------------------
 FROM develop AS compile
@@ -52,15 +61,10 @@ FROM develop AS compile
 ARG APP_VERSION="undefined@docker"
 
 # copy the source code
-COPY . .
+COPY . /src
 
-# build the frontend (built artifact can be found in /src/dist)
-RUN set -x \
-    && cd ./web \
-    && npm run generate \
-    && npm run build
-
-RUN set -x \
+RUN --mount=type=bind,from=frontend,source=/src/web/dist,target=/src/web/dist \
+    set -x \
     # build the app itself
     && go generate ./... \
     && CGO_ENABLED=0 go build \
