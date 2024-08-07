@@ -59,11 +59,26 @@ export class Client {
    *
    * @throws {APIError}
    */
-  async routesList(): Promise<{routes: ReadonlyArray<{hostname: string; urls: ReadonlyArray<string>}>}> {
+  async routesList(): Promise<ReadonlyMap<string, ReadonlyArray<URL>>> {
     const { data, response } = await this.api.GET('/api/routes')
 
     if (data) {
-      return Object.freeze(data)
+      const map = new Map<string, ReadonlyArray<URL>>()
+
+      for (const route of data.routes) {
+        map.set(
+          route.hostname,
+          route.urls.map((url) => Object.freeze(new URL(url)))
+        )
+      }
+
+      map.set('foo', []) // TODO: remove this line
+      map.set('aaa.foo', []) // TODO: remove this line
+      map.set('bbb.foo', []) // TODO: remove this line
+      map.set('111.bbb.foo', []) // TODO: remove this line
+      map.set('qqq.www.eee', [new URL('https://example.com')]) // TODO: remove this line
+
+      return Object.freeze(map)
     }
 
     throw new APIErrorUnknown({ message: response.statusText, response }) // will never happen

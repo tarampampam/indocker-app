@@ -33,9 +33,7 @@ WORKDIR /src/web
 RUN \
     --mount=type=bind,source=web/package.json,target=/src/web/package.json \
     --mount=type=bind,source=web/package-lock.json,target=/src/web/package-lock.json \
-    set -x \
-    && npm config set update-notifier false \
-    && npm ci -dd --no-audit --prefer-offline
+    npm ci -dd --no-audit --prefer-offline
 
 WORKDIR /src
 

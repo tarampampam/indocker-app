@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,9 +27,14 @@ type (
 		rcMu sync.Mutex               // protects rc
 		rc   map[string]containerInfo // running containers, map[container_id]container_info
 
-		routesMu sync.Mutex           // protects routes
-		routes   map[string][]url.URL // containers routing, map[hostname]url.URL
+		routesMu sync.Mutex // protects routes
+		routes   routesMap  // containers routing, map[hostname]url.URL
+
+		routeChangesSubsMu sync.Mutex                       // protects subs
+		routeChangesSubs   map[chan routesMap]chan struct{} // map[subscription]stop_channel
 	}
+
+	routesMap = map[string][]url.URL
 
 	containerInfo struct {
 		common  types.Container
@@ -39,9 +45,10 @@ type (
 
 func NewState(dc *dc.Client) *State {
 	return &State{
-		dc:     dc,
-		rc:     make(map[string]containerInfo),
-		routes: make(map[string][]url.URL),
+		dc:               dc,
+		rc:               make(map[string]containerInfo),
+		routes:           make(routesMap),
+		routeChangesSubs: make(map[chan routesMap]chan struct{}),
 	}
 }
 
@@ -98,7 +105,7 @@ func (s *State) StartAutoUpdate(ctx context.Context) (stop func()) { //nolint:go
 }
 
 // Update updates the state of running containers immediately. It returns an error if something went wrong.
-func (s *State) Update(ctx context.Context) error { //nolint:funlen
+func (s *State) Update(ctx context.Context) error { //nolint:funlen,gocognit,gocyclo
 	var filter = filters.NewArgs()
 
 	// we need to filter only certain statuses (alive containers)
@@ -117,7 +124,7 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen
 		var (
 			mu        sync.Mutex // protects newState
 			newState  = make(map[string]containerInfo, len(list))
-			newRoutes = make(map[string][]url.URL, len(list))
+			newRoutes = make(routesMap, len(list))
 
 			wg, wgCtx = errgroup.WithContext(ctx)
 		)
@@ -184,10 +191,32 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen
 			})
 		}
 
+		var routesUpdated bool
+
 		s.routesMu.Lock()
-		clear(s.routes)      // care about the memory
-		s.routes = newRoutes // update the routes
+		routesUpdated = !reflect.DeepEqual(s.routes, newRoutes) // check if the routes have been updated
+		clear(s.routes)                                         // care about the memory
+		s.routes = newRoutes                                    // update the routes
 		s.routesMu.Unlock()
+
+		if routesUpdated {
+			s.routeChangesSubsMu.Lock()
+			for sub, stop := range s.routeChangesSubs {
+				go func(sub chan<- routesMap, stop <-chan struct{}) {
+					select { // first, check if the subscription and context are still alive
+					case <-stop: // is the subscription stopped?
+					case <-ctx.Done(): // is the context done?
+					default:
+						select { // then, notify the subscribers
+						case <-stop: // is the subscription stopped?
+						case <-ctx.Done(): //  is the context done?
+						case sub <- maps.Clone(newRoutes): // notify the subscribers
+						}
+					}
+				}(sub, stop)
+			}
+			s.routeChangesSubsMu.Unlock()
+		}
 
 		if err := wg.Wait(); err != nil {
 			return err
@@ -200,6 +229,39 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen
 	}
 
 	return nil
+}
+
+// SubscribeForRoutingUpdates will return a subscription channel and a stop function. The subscription channel will
+// receive a message when the routing info is updated. The stop function will stop the subscription.
+// The subscription channel will be closed when the stop function is called.
+func (s *State) SubscribeForRoutingUpdates() (sub <-chan routesMap, stop func()) {
+	var ch, cancel = make(chan routesMap, 1), make(chan struct{})
+
+	sub, stop = ch, sync.OnceFunc(func() {
+		close(cancel) // close the stop channel will notify the subscription to stop
+
+		s.routeChangesSubsMu.Lock()
+		delete(s.routeChangesSubs, ch) // remove the subscription from the list
+		s.routeChangesSubsMu.Unlock()
+
+		// empty the channel
+	emptyLoop:
+		for {
+			select {
+			case <-ch:
+			default:
+				close(ch)
+
+				break emptyLoop
+			}
+		}
+	})
+
+	s.routeChangesSubsMu.Lock()
+	s.routeChangesSubs[ch] = cancel // add the subscription to the list
+	s.routeChangesSubsMu.Unlock()
+
+	return
 }
 
 // URLToContainerByHostname returns a URL to the container with the given hostname. It returns false if the container

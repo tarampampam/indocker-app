@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"time"
 
@@ -134,7 +135,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 }
 
 // Run current command.
-func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //nolint:funlen
+func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //nolint:funlen,gocyclo
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 
@@ -143,13 +144,45 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 		return fmt.Errorf("failed to create docker client: %w", dcErr)
 	}
 
-	defer func() { _ = dc.Close() }()
+	var dockerLog = log.Named("docker")
+
+	if dockerInfo, err := dc.Info(ctx); err != nil { // check connection to the Docker daemon
+		return fmt.Errorf("failed to get docker info: %w", err)
+	} else {
+		dockerLog.Info("Connected to the Docker daemon", zap.String("docker version", dockerInfo.ServerVersion))
+	}
+
+	defer func() { log.Info("Disconnected from the Docker daemon"); _ = dc.Close() }()
 
 	var dockerState = docker.NewState(dc)
 
 	if err := dockerState.Update(ctx); err != nil { // initial update
 		return fmt.Errorf("failed to update docker state: %w", err)
 	}
+
+	if routes := dockerState.AllContainerURLs(); len(routes) != 0 {
+		dockerLog.Info("Initial docker routes", zap.Any("routes", cmd.formatRoutesMap(routes)))
+	} else {
+		dockerLog.Info("No docker routes found")
+	}
+
+	var routeUpdates, stopRouteUpdates = dockerState.SubscribeForRoutingUpdates()
+	defer stopRouteUpdates()
+
+	go func() {
+		for {
+			select {
+			case routes, isOpened := <-routeUpdates:
+				if !isOpened {
+					return
+				}
+
+				dockerLog.Info("Docker routing updated", zap.Any("routes", cmd.formatRoutesMap(routes)))
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	var stopAutoUpdate = dockerState.StartAutoUpdate(ctx) // start auto-update
 	defer stopAutoUpdate()
@@ -174,28 +207,52 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 	}
 
 	go func() {
+		var monitorUrl = fmt.Sprintf("http://monitor.indocker.app:%d", cmd.options.HTTP.Port)
+
+		if cmd.options.HTTP.Port != 80 { //nolint:mnd // standard HTTP port
+			monitorUrl += fmt.Sprintf(
+				" (if you are running the app inside a Docker container, please use the exposed port number instead of %d)",
+				cmd.options.HTTP.Port,
+			)
+		}
+
 		log.Info("HTTP servers starting",
 			zap.String("address", cmd.options.Addr),
 			zap.Uint("port", cmd.options.HTTP.Port),
+			zap.String("open", monitorUrl),
 		)
 
 		if err := server.StartHTTP(ctx, httpLn); err != nil {
 			cancel()
 
 			log.Error("Failed to start HTTP server", zap.Error(err))
+		} else {
+			log.Info("HTTP server stopped")
 		}
 	}()
 
 	go func() {
+		var monitorUrl = fmt.Sprintf("https://monitor.indocker.app:%d", cmd.options.HTTPS.Port)
+
+		if cmd.options.HTTP.Port != 443 { //nolint:mnd // standard HTTPS port
+			monitorUrl += fmt.Sprintf(
+				" (if you are running the app inside a Docker container, please use the exposed port number instead of %d)",
+				cmd.options.HTTPS.Port,
+			)
+		}
+
 		log.Info("HTTPS servers starting",
 			zap.String("address", cmd.options.Addr),
 			zap.Uint("port", cmd.options.HTTPS.Port),
+			zap.String("open", monitorUrl),
 		)
 
 		if err := server.StartHTTPs(ctx, httpsLn, cmd.options.HTTPS.CertFile, cmd.options.HTTPS.KeyFile); err != nil {
 			cancel()
 
 			log.Error("Failed to start HTTPS server", zap.Error(err))
+		} else {
+			log.Info("HTTPS server stopped")
 		}
 	}()
 
@@ -206,4 +263,17 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 	}
 
 	return nil
+}
+
+// formatRoutesMap formats routes map to a more readable format.
+func (*command) formatRoutesMap(routes map[string][]url.URL) map[string][]string {
+	var currentRoutes = make(map[string][]string, len(routes))
+
+	for domain, urls := range routes {
+		for _, u := range urls {
+			currentRoutes[domain] = append(currentRoutes[domain], u.String())
+		}
+	}
+
+	return currentRoutes
 }
