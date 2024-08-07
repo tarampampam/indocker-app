@@ -19,3 +19,11 @@ node-build: ## Build node
 
 lint: ## Run linters
 	docker compose run $(DC_RUN_ARGS) app golangci-lint run
+
+up: ## Start the application in watch mode
+	docker compose kill daemon --remove-orphans 2>/dev/null || true
+	docker compose up --detach --wait whoami httpbin
+	docker compose up daemon
+
+down: ## Stop the application
+	docker compose down --remove-orphans

@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	_ "embed"
 	"fmt"
 	"io"
 	"io/fs"
@@ -9,6 +10,9 @@ import (
 	"path"
 	"strings"
 )
+
+//go:embed error404.html
+var error404html []byte
 
 const (
 	contentTypeHeader = "Content-Type"
@@ -19,10 +23,7 @@ const (
 //
 // If the requested file does not exist, it will return index.html if it exists (otherwise html-formatted 404 error).
 func New(root fs.FS, skipper func(*http.Request) bool) func(http.Handler) http.Handler { //nolint:funlen
-	var (
-		fileServer  = http.FileServerFS(root)
-		fallback404 = []byte("<!doctype html><html><body><h1>Error 404</h1><h2>Not found</h2></body></html>")
-	)
+	var fileServer = http.FileServerFS(root)
 
 	const indexFileName = "index.html"
 
@@ -62,7 +63,7 @@ func New(root fs.FS, skipper func(*http.Request) bool) func(http.Handler) http.H
 
 				w.Header().Set(contentTypeHeader, contentTypeHTML)
 				w.WriteHeader(http.StatusNotFound)
-				_, _ = w.Write(fallback404)
+				_, _ = w.Write(error404html)
 
 				return
 			case fErr != nil: // some other error

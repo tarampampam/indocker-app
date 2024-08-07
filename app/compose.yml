@@ -1,5 +1,7 @@
 # yaml-language-server: $schema=https://cdn.jsdelivr.net/gh/compose-spec/compose-spec@master/schema/compose-spec.json
 
+name: indocker-app
+
 services:
   app: # common use case is to run shell or execute commands
     build: &app-build {dockerfile: Dockerfile, target: develop}
@@ -23,8 +25,6 @@ services:
     volumes: [.:/src:rw, /var/run/docker.sock:/var/run/docker.sock:ro]
     ports: ['80:8080/tcp', '443:8443/tcp'] # open https://monitor.indocker.app
     depends_on: {app-web-dist: {condition: service_started}}
-    develop: # available since docker compose v2.22, https://docs.docker.com/compose/file-watch/
-      watch: [{action: rebuild, path: .}]
 
   whoami: # just for a test
     image: docker.io/containous/whoami:latest
