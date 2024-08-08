@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -102,14 +103,21 @@ func run() error { //nolint:funlen,gocognit,gocyclo
 					return errors.New("file path cannot be empty")
 				}
 
-				if stat, err := os.Stat(s); err != nil {
-					if os.IsNotExist(err) {
+				if fileStat, fileStatErr := os.Stat(s); fileStatErr != nil {
+					if os.IsNotExist(fileStatErr) {
+						// check base directory existence
+						if dirStat, dirStatErr := os.Stat(filepath.Dir(s)); dirStatErr != nil {
+							return fmt.Errorf("failed to check if output directory %s exists: %w", filepath.Dir(s), dirStatErr)
+						} else if !dirStat.IsDir() {
+							return fmt.Errorf("%s is not a directory", filepath.Dir(s))
+						}
+
 						return nil // file does not exist
 					}
 
-					return fmt.Errorf("failed to check if output file %s exists: %w", s, err)
+					return fmt.Errorf("failed to check if output file %s exists: %w", s, fileStatErr)
 				} else {
-					if stat.IsDir() {
+					if fileStat.IsDir() {
 						return fmt.Errorf("%s is a directory", s)
 					}
 

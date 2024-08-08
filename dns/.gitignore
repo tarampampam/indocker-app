@@ -1,2 +1,2 @@
-## Auth
+## auth (file format - `{"cloudflare": {"TYPE": "CLOUDFLAREAPI", "accountid": "...", "apitoken": "..."}}`)
 creds.json
