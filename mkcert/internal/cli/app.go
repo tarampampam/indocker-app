@@ -36,7 +36,7 @@ type app struct {
 }
 
 // NewApp creates new console application.
-func NewApp() *cli.Command {
+func NewApp() *cli.Command { //nolint:funlen
 	var cliApp app
 
 	cliApp.c = &cli.Command{
@@ -53,7 +53,7 @@ func NewApp() *cli.Command {
 				switch apiKey := cliApp.options.apiKey; {
 				case apiKey == "":
 					return fmt.Errorf("API key cannot be empty")
-				case len(apiKey) < 10:
+				case len(apiKey) < 10: //nolint:mnd
 					return fmt.Errorf("API key is too short")
 				}
 
@@ -143,7 +143,7 @@ func (*app) domainsList() []string {
 	return domains
 }
 
-func (app *app) obtainCert() (*certificate.Resource, error) {
+func (app *app) obtainCert() (*certificate.Resource, error) { //nolint:funlen
 	privateKey, privateKeyErr := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if privateKeyErr != nil {
 		return nil, fmt.Errorf("failed to generate private key: %w", privateKeyErr)
@@ -182,10 +182,10 @@ func (app *app) obtainCert() (*certificate.Resource, error) {
 		return nil, fmt.Errorf("failed to set DNS challenge provider: %w", err)
 	}
 
-	return &certificate.Resource{ // FIXME: JUST FOR A TEST
-		PrivateKey:  []byte("foo"),
-		Certificate: []byte("bar"),
-	}, nil
+	//	return &certificate.Resource{ // FIXME: JUST FOR A TEST
+	//		PrivateKey:  []byte("foo"),
+	//		Certificate: []byte("bar"),
+	//	}, nil
 
 	// new users will need to register
 	reg, regERr := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
@@ -231,7 +231,7 @@ func (*app) writeArchive(cert certificate.Resource, filepath string) error {
 			Typeflag: tar.TypeReg,
 			Name:     fileName,
 			Size:     int64(len(content)),
-			Mode:     0o600,
+			Mode:     0o600, //nolint:mnd
 			ModTime:  now,
 		}); err != nil {
 			return err

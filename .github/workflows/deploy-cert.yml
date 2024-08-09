@@ -6,9 +6,6 @@ name: 🚀 Obtain and update the certificate
 on:
   workflow_dispatch: {}
   schedule: [cron: '0 0 1 * *'] # every month on the first day of the month
-  push: # TODO: remove this line
-    branches: [v2] # TODO: remove this line
-    paths: [mkcert/**, .github/workflows/deploy-cert.yml] # TODO: remove this line
 
 concurrency:
   group: ${{ github.ref }}-cert
@@ -34,7 +31,7 @@ jobs:
     steps:
       - {uses: actions/download-artifact@v4, with: {name: mkcert}}
       - run: chmod +x ./mkcert && mkdir -p ./dist
-      - run: ./mkcert --email "${{ secrets.CF_EMAIL }}" --api-key "${{ secrets.CF_API_KEY }}" --out-archive-dir ./dist
+      - run: ./mkcert --email "${{ secrets.CF_EMAIL }}" --api-key "${{ secrets.CF_API_KEY }}" --production --out-archive-dir ./dist
       - uses: cloudflare/wrangler-action@v3
         env: {PROJECT_NAME: indocker-app-certs, DIST_DIR: ./dist, CF_BRANCH_NAME: main}
         with:
