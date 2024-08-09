@@ -34,6 +34,8 @@ jobs:
     steps:
       - {uses: actions/download-artifact@v4, with: {name: mkcert}}
       - run: ls -la
+      - run: chmod +x ./mkcert
+      - run: ./mkcert --help
 #      - run: ./mkcert --email "${{ secrets.CF_EMAIL }}" --api-key "${{ secrets.CF_API_KEY }}" --out-archive-dir ./dist
 #      - uses: cloudflare/wrangler-action@v3
 #        env:
