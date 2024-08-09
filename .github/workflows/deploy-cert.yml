@@ -31,7 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     environment: cert
-    defaults: {run: {working-directory: ./mkcert}}
     steps:
       - {uses: actions/download-artifact@v4, with: {name: mkcert}}
       - run: ls -la
