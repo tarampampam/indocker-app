@@ -21,32 +21,27 @@ jobs:
     defaults: {run: {working-directory: ./mkcert}}
     steps:
       - uses: actions/checkout@v4
-      - {uses: actions/setup-go@v5, with: {go-version-file: ./mkcert/go.mod}}
+      - {uses: actions/setup-go@v5, with: {go-version-file: ./mkcert/go.mod, cache-dependency-path: mkcert/*.sum}}
       - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o ./mkcert ./cmd/mkcert
       - uses: actions/upload-artifact@v4
         with: {name: mkcert, path: ./mkcert/mkcert, if-no-files-found: error, retention-days: 1}
 
   deploy:
-    name: 📜 Deploy the certificate
+    name: 📜 Obtain and deploy the certificate
     runs-on: ubuntu-latest
     needs: [build]
     environment: cert
     steps:
       - {uses: actions/download-artifact@v4, with: {name: mkcert}}
-      - run: ls -la
-      - run: chmod +x ./mkcert
-      - run: ./mkcert --help
-#      - run: ./mkcert --email "${{ secrets.CF_EMAIL }}" --api-key "${{ secrets.CF_API_KEY }}" --out-archive-dir ./dist
-#      - uses: cloudflare/wrangler-action@v3
-#        env:
-#          PROJECT_NAME: indocker-app-certs
-#          DIST_DIR: ./mkcert/dist
-#          CF_BRANCH_NAME: main # to deploy as "Production" environment on Cloudflare Pages
-#        with:
-#          apiToken: ${{ secrets.CF_PAGES_DEPLOY_TOKEN }}
-#          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-#          command:
-#            pages deploy ${{ env.DIST_DIR }}
-#            --project-name=${{ env.PROJECT_NAME }}
-#            --branch ${{ env.CF_BRANCH_NAME }}
-#            --commit-dirty=true
+      - run: chmod +x ./mkcert && mkdir -p ./dist
+      - run: ./mkcert --email "${{ secrets.CF_EMAIL }}" --api-key "${{ secrets.CF_API_KEY }}" --out-archive-dir ./dist
+      - uses: cloudflare/wrangler-action@v3
+        env: {PROJECT_NAME: indocker-app-certs, DIST_DIR: ./dist, CF_BRANCH_NAME: main}
+        with:
+          apiToken: ${{ secrets.CF_PAGES_DEPLOY_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command:
+            pages deploy ${{ env.DIST_DIR }}
+            --project-name=${{ env.PROJECT_NAME }}
+            --branch ${{ env.CF_BRANCH_NAME }}
+            --commit-dirty=true
