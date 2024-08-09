@@ -22,14 +22,14 @@ jobs:
     defaults: {run: {working-directory: ./mkcert}}
     steps:
       - uses: actions/checkout@v4
-      - {uses: actions/setup-go@v5, with: {go-version-file: go.mod}}
+      - {uses: actions/setup-go@v5, with: {go-version-file: ./mkcert/go.mod}}
       - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o ./mkcert ./cmd/mkcert
       - run: mkdir ./dist
       - run: ./mkcert --email "${{ secrets.CF_EMAIL }}" --api-key "${{ secrets.CF_API_KEY }}" --out-archive-dir ./dist
       - uses: cloudflare/wrangler-action@v3
         env:
           PROJECT_NAME: indocker-app-certs
-          DIST_DIR: ./dist
+          DIST_DIR: ./mkcert/dist
           CF_BRANCH_NAME: main # to deploy as "Production" environment on Cloudflare Pages
         with:
           apiToken: ${{ secrets.CF_PAGES_DEPLOY_TOKEN }}
