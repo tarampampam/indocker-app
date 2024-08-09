@@ -44,7 +44,7 @@ func WithIDLETimeout(d time.Duration) ServerOption {
 	return func(s *Server) { s.http.IdleTimeout = d; s.https.IdleTimeout = d }
 }
 
-func NewServer(baseCtx context.Context, log *zap.Logger, opts ...ServerOption) Server {
+func NewServer(baseCtx context.Context, log *zap.Logger, opts ...ServerOption) *Server {
 	var (
 		server = Server{
 			http: &http.Server{ //nolint:gosec
@@ -63,13 +63,13 @@ func NewServer(baseCtx context.Context, log *zap.Logger, opts ...ServerOption) S
 		opt(&server)
 	}
 
-	return server
+	return &server
 }
 
 func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface { //nolint:funlen
 	AllContainerURLs() map[string][]url.URL
 	URLToContainerByHostname(string) ([]url.URL, bool)
-}, localFrontendPath string) {
+}, localFrontendPath string) *Server {
 	// since both servers uses the same logics, we can iterate over them, but with differently named loggers
 	for namedLog, srv := range map[*zap.Logger]*http.Server{
 		log.Named("http"):  s.http,
@@ -138,6 +138,8 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface
 			proxyHandler.ServeHTTP(w, r)
 		}))
 	}
+
+	return s
 }
 
 // StartHTTP starts the HTTP server. It listens on the provided listener and serves incoming requests.
@@ -173,17 +175,12 @@ func (s *Server) StartHTTP(ctx context.Context, ln net.Listener) error {
 // To stop the server, cancel the provided context.
 //
 // It blocks until the context is canceled or the server is stopped by some error.
-func (s *Server) StartHTTPs(ctx context.Context, ln net.Listener, certFile, keyFile []byte) error {
+func (s *Server) StartHTTPs(ctx context.Context, ln net.Listener, cert tls.Certificate) error {
 	if s.https.TLSConfig == nil {
 		s.https.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 	}
 
 	if len(s.https.TLSConfig.Certificates) == 0 {
-		cert, certErr := tls.X509KeyPair(certFile, keyFile)
-		if certErr != nil {
-			return fmt.Errorf("failed to load TLS certificate: %w", certErr)
-		}
-
 		s.https.TLSConfig.Certificates = []tls.Certificate{cert}
 	}
 
