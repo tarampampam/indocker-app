@@ -4,11 +4,8 @@
 name: 🚀 Obtain and update the certificate
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch: {} # works on the default branch only
   schedule: [cron: '0 0 1 * *'] # every month on the first day of the month
-  push: # TODO: remove this line
-    branches: [v2] # TODO: remove this line
-    paths: [mkcert/**, .github/workflows/deploy-cert.yml] # TODO: remove this line
 
 concurrency:
   group: ${{ github.ref }}-cert
