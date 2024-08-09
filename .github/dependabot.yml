@@ -7,7 +7,6 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: {interval: monthly}
-    reviewers: [tarampampam]
     assignees: [tarampampam]
 
   # App updates:
@@ -15,17 +14,19 @@ updates:
   - package-ecosystem: docker
     directory: /app
     schedule: {interval: monthly}
-    reviewers: [tarampampam]
     assignees: [tarampampam]
 
   - package-ecosystem: gomod
     directory: /app
     schedule: {interval: monthly}
-    reviewers: [tarampampam]
     assignees: [tarampampam]
 
   - package-ecosystem: npm
     directory: /app/web
     schedule: {interval: monthly}
-    reviewers: [tarampampam]
+    assignees: [tarampampam]
+
+  - package-ecosystem: gomod
+    directory: /mkcert
+    schedule: {interval: monthly}
     assignees: [tarampampam]
