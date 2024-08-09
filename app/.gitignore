@@ -1,6 +1,5 @@
 ## Binaries
 /app
-/mkcert
 
 ## Generated code
 *.gen.go

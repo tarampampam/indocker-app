@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# docs: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
+
+name: 🚀 Obtain and update the certificate
+
+on:
+  workflow_dispatch: {}
+  schedule: [cron: '0 0 1 * *'] # every month on the first day of the month
+  push: # TODO: remove this line
+    branches: [v2] # TODO: remove this line
+    paths: [mkcert/**, .github/workflows/deploy-cert.yml] # TODO: remove this line
+
+concurrency:
+  group: ${{ github.ref }}-cert
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: 📜 Deploy the certificate
+    runs-on: ubuntu-latest
+    environment: cert
+    defaults: {run: {working-directory: ./mkcert}}
+    steps:
+      - uses: actions/checkout@v4
+      - {uses: actions/setup-go@v5, with: {go-version-file: go.mod}}
+      - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o ./mkcert ./cmd/mkcert
+      - run: mkdir ./dist
+      - run: ./mkcert --email "${{ secrets.CF_EMAIL }}" --api-key "${{ secrets.CF_API_KEY }}" --out-archive-dir ./dist
+      - uses: cloudflare/wrangler-action@v3
+        env:
+          PROJECT_NAME: indocker-app-certs
+          DIST_DIR: ./dist
+          CF_BRANCH_NAME: main # to deploy as "Production" environment on Cloudflare Pages
+        with:
+          apiToken: ${{ secrets.CF_PAGES_DEPLOY_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command:
+            pages deploy ${{ env.DIST_DIR }}
+            --project-name=${{ env.PROJECT_NAME }}
+            --branch ${{ env.CF_BRANCH_NAME }}
+            --commit-dirty=true
