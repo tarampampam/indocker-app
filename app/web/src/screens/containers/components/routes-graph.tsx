@@ -15,9 +15,9 @@ type ChartData = {
 }
 
 enum NodeCategories {
-  User = 0,
-  Service = 1,
-  Empty = 2,
+  Empty = 0,
+  User = 1,
+  Service = 3,
 }
 
 export default function RoutesGraph({

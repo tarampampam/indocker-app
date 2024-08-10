@@ -69,6 +69,7 @@ func NewServer(baseCtx context.Context, log *zap.Logger, opts ...ServerOption) *
 func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface { //nolint:funlen
 	AllContainerURLs() map[string][]url.URL
 	URLToContainerByHostname(string) ([]url.URL, bool)
+	SubscribeForRoutingUpdates() (sub <-chan map[string][]url.URL, stop func())
 }, localFrontendPath string) *Server {
 	// since both servers uses the same logics, we can iterate over them, but with differently named loggers
 	for namedLog, srv := range map[*zap.Logger]*http.Server{

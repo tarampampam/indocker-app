@@ -142,7 +142,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 	defer cancel()
 
 	// create Docker client
-	dc, dcClose, dcErr := cmd.makeDockerClient(ctx, log)
+	dc, dcClose, dcErr := cmd.makeDockerClient(ctx, log.Named("docker"))
 	if dcErr != nil {
 		return dcErr
 	} else {
@@ -150,7 +150,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 	}
 
 	// create Docker state watcher
-	dockerState, stateClose, stateErr := cmd.makeDockerStateWatcher(ctx, log, dc)
+	dockerState, stateClose, stateErr := cmd.makeDockerStateWatcher(ctx, log.Named("docker.state"), dc)
 	if stateErr != nil {
 		return stateErr
 	} else {
@@ -186,21 +186,24 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 	// try to determine if the app is running inside a Docker container
 	var iAmInsideDocker = cmd.isInsideDocker()
 
-	const monitorDomain, defaultHttpPort, defaultHttpsPort = "monitor.indocker.app", uint16(80), uint16(443)
+	const monitorDomain = "monitor.indocker.app"
 
 	// start HTTP server in separate goroutine
 	go func() {
 		defer func() { _ = httpLn.Close() }()
+
+		const defaultHttpPort uint16 = 80
+		const hstsNote = "please note that browsers open every domain in the .app zone using HTTPS due to the HSTS policy"
 
 		log.Info("HTTP server starting",
 			zap.String("address", cmd.options.addr),
 			zap.Uint16("port", cmd.options.http.tcpPort),
 			zap.String("open", func() string {
 				if iAmInsideDocker || cmd.options.http.tcpPort == defaultHttpPort {
-					return fmt.Sprintf("http://%s", monitorDomain)
+					return fmt.Sprintf("http://%s (%s)", monitorDomain, hstsNote)
 				}
 
-				return fmt.Sprintf("http://%s:%d", monitorDomain, cmd.options.http.tcpPort)
+				return fmt.Sprintf("http://%s:%d (%s)", monitorDomain, cmd.options.http.tcpPort, hstsNote)
 			}()),
 		)
 
@@ -216,6 +219,8 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 	// start HTTPS server in separate goroutine
 	go func() {
 		defer func() { _ = httpsLn.Close() }()
+
+		const defaultHttpsPort uint16 = 443
 
 		log.Info("HTTPS server starting",
 			zap.String("address", cmd.options.addr),
@@ -256,8 +261,6 @@ func (cmd *command) makeDockerClient(ctx context.Context, log *zap.Logger) (*cli
 		return nil, func() {}, fmt.Errorf("failed to create docker client: %w", dcErr)
 	}
 
-	log = log.Named("docker")
-
 	if info, err := dc.Info(ctx); err != nil { // check connection to the Docker daemon
 		return nil, func() {}, fmt.Errorf("failed to get docker info: %w", err)
 	} else {
@@ -277,8 +280,6 @@ func (cmd *command) makeDockerStateWatcher(
 	if err := state.Update(ctx); err != nil { // initial update
 		return nil, func() {}, fmt.Errorf("failed to update docker state: %w", err)
 	}
-
-	log = log.Named("docker.state")
 
 	var (
 		routesSub, closeRoutesSub = state.SubscribeForRoutingUpdates() // subscribe for routing updates

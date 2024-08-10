@@ -3,7 +3,7 @@ import { APIErrorCommon, APIErrorNotFound } from './errors'
 
 /** This middleware throws an error if the response is not JSON. */
 export const throwIfNotJSON: Middleware = {
-  async onResponse({response}): Promise<undefined> {
+  async onResponse({ response }): Promise<undefined> {
     // check the response header "Content-Type" to be sure it's JSON
     if (response.headers.get('content-type')?.toLowerCase().includes('json')) {
       return undefined
@@ -18,7 +18,7 @@ export const throwIfNotJSON: Middleware = {
 
 /** This middleware throws a well-formatted error if the response is not OK. */
 export const throwIfNotValidResponse: Middleware = {
-  async onResponse({response}): Promise<undefined> {
+  async onResponse({ response }): Promise<undefined> {
     // skip if the response is OK
     if (response.ok) {
       return undefined

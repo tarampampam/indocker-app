@@ -1,13 +1,20 @@
-import createClient, { type ClientOptions, type Client as OpenapiClient } from 'openapi-fetch'
-import { parse as semverParse, coerce as semverCoerce, type SemVer } from 'semver'
-import { APIErrorUnknown } from './errors.ts'
+import createClient, { type Client as OpenapiClient, type ClientOptions } from 'openapi-fetch'
+import { coerce as semverCoerce, parse as semverParse, type SemVer } from 'semver'
+import { APIErrorUnknown } from './errors'
 import { throwIfNotJSON, throwIfNotValidResponse } from './middleware'
-import { paths } from './schema.gen'
+import { components, paths } from './schema.gen'
+
+type ContainerRoutesList = ReadonlyMap<string, ReadonlyArray<URL>>
 
 export class Client {
+  private readonly baseUrl: URL
   private readonly api: OpenapiClient<paths>
 
   constructor(opt?: ClientOptions) {
+    this.baseUrl = new URL(
+      opt?.baseUrl ? opt.baseUrl.replace(/\/+$/, '') : window.location.protocol + '//' + window.location.host
+    )
+
     this.api = createClient<paths>(opt)
     this.api.use(throwIfNotJSON, throwIfNotValidResponse)
   }
@@ -59,29 +66,53 @@ export class Client {
    *
    * @throws {APIError}
    */
-  async routesList(): Promise<ReadonlyMap<string, ReadonlyArray<URL>>> {
+  async routesList(): Promise<ContainerRoutesList> {
     const { data, response } = await this.api.GET('/api/routes')
 
     if (data) {
       const map = new Map<string, ReadonlyArray<URL>>()
 
       for (const route of data.routes) {
-        map.set(
-          route.hostname,
-          route.urls.map((url) => Object.freeze(new URL(url)))
-        )
+        map.set(route.hostname, Object.freeze(route.urls.map((url) => Object.freeze(new URL(url)))))
       }
 
-      map.set('foo', []) // TODO: remove this line
-      map.set('aaa.foo', []) // TODO: remove this line
-      map.set('bbb.foo', []) // TODO: remove this line
-      map.set('111.bbb.foo', []) // TODO: remove this line
-      map.set('qqq.www.eee', [new URL('https://example.com')]) // TODO: remove this line
-
-      return Object.freeze(map)
+      // sort the map by keys before returning it
+      return Object.freeze(new Map([...map.entries()].sort()))
     }
 
     throw new APIErrorUnknown({ message: response.statusText, response }) // will never happen
+  }
+
+  /**
+   * Subscribe to route changes via WebSocket.
+   *
+   * The promise resolves with a closer function that can be called to close the WebSocket connection.
+   *
+   *
+   * */
+  async routesSubscribe(onUpdate: (routes: ContainerRoutesList) => void): Promise</* closer */ () => void> {
+    const protocol = this.baseUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+    const path: keyof paths = '/api/routes/subscribe'
+
+    const ws = new WebSocket(`${protocol}//${this.baseUrl.host}${path}`)
+
+    return new Promise((resolve: (closer: () => void) => void, reject: (err: unknown) => void) => {
+      ws.onopen = (): void => resolve((): void => ws.close())
+      ws.onerror = (err): void => reject(err)
+      ws.onmessage = (event): void => {
+        if (event.data) {
+          const content = JSON.parse(event.data) as components['schemas']['ContainerRoutesList']
+          const map = new Map<string, ReadonlyArray<URL>>()
+
+          for (const route of content.routes) {
+            map.set(route.hostname, Object.freeze(route.urls.map((url) => Object.freeze(new URL(url)))))
+          }
+
+          // sort the map by keys before calling the callback
+          onUpdate(Object.freeze(Object.freeze(new Map([...map.entries()].sort()))))
+        }
+      }
+    })
   }
 }
 

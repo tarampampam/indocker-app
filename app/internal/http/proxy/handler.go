@@ -96,11 +96,6 @@ var errorTemplate = func() *template.Template { //nolint:gochecknoglobals
 	return s
 }()
 
-const (
-	contentTypeHeader = "Content-Type"
-	contentTypeHTML   = "text/html; charset=utf-8"
-)
-
 func (h *Handler) renderError(w http.ResponseWriter, host string, code int, err error) {
 	var message string
 
@@ -110,7 +105,7 @@ func (h *Handler) renderError(w http.ResponseWriter, host string, code int, err 
 		message = "Houston, we have a problem"
 	}
 
-	w.Header().Set(contentTypeHeader, contentTypeHTML)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(code)
 
 	var (

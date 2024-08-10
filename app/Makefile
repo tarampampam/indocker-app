@@ -14,8 +14,11 @@ generate: ## Run code generation
 	docker compose run $(DC_RUN_ARGS) app go generate ./...
 	docker compose run $(DC_RUN_ARGS) app npm --prefix ./web run generate
 
-node-build: ## Build node
+node-build: ## Build the frontend
 	docker compose run $(DC_RUN_ARGS) app npm --prefix ./web run build
+
+node-fmt: ## Format frontend code
+	docker compose run $(DC_RUN_ARGS) app npm --prefix ./web run fmt
 
 lint: ## Run linters
 	docker compose run $(DC_RUN_ARGS) app golangci-lint run

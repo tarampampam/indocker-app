@@ -32,7 +32,7 @@ paths:
       operationId: getLatestAppVersion
       responses:
         '200': {$ref: '#/components/responses/AppVersionResponse'}
-        '5XX': {$ref: '#/components/responses/ErrorResponse'} # Server error
+        '5XX': {$ref: '#/components/responses/ErrorResponse', description: Server error}
 
   /api/routes:
     get:
@@ -41,9 +41,71 @@ paths:
       operationId: listRoutes
       responses:
         '200': {$ref: '#/components/responses/RegisteredRoutesListResponse'}
+        '5XX': {$ref: '#/components/responses/ErrorResponse', description: Server error}
+
+  /api/routes/subscribe:
+    get:
+      summary: Subscribe to route changes via WebSocket
+      description: Establishes a WebSocket connection to receive route changes
+      operationId: subscribeRoutes
+      parameters:
+        - {$ref: '#/components/parameters/WebSocketRequestConnectionInHeader'}
+        - {$ref: '#/components/parameters/WebSocketRequestUpgradeInHeader'}
+        - {$ref: '#/components/parameters/WebSocketRequestSecKeyInHeader'}
+        - {$ref: '#/components/parameters/WebSocketRequestSecVersionInHeader'}
+      responses:
+        '101':
+          description: Switching Protocols
+          headers:
+            Connection: {$ref: '#/components/headers/WebSocketResponseConnection'}
+            Upgrade: {$ref: '#/components/headers/WebSocketResponseUpgrade'}
+            Sec-Websocket-Accept: {$ref: '#/components/headers/WebSocketResponseSecWebsocketAccept'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ContainerRoutesList'}
+        '400': {$ref: '#/components/responses/ErrorResponse', description: Bad request}
+        '5XX': {$ref: '#/components/responses/ErrorResponse', description: Server error}
 
 components:
-  responses:
+  headers: # ------------------------------------------------ HEADERS -------------------------------------------------
+    WebSocketResponseConnection:
+      description: Websocket connection header
+      schema: {type: string, example: Upgrade, externalDocs: {url: 'https://mzl.la/3WWJi8w'}}
+
+    WebSocketResponseUpgrade:
+      description: Websocket upgrade header
+      schema: {type: string, example: websocket, externalDocs: {url: 'https://mzl.la/46XxkyZ'}}
+
+    WebSocketResponseSecWebsocketAccept:
+      description: Websocket Sec-WebSocket-Accept header
+      schema: {type: string, example: nESCeAuSsDkp9fVKF/BQ9Nfev+U=, externalDocs: {url: 'https://mzl.la/4duaxwC'}}
+
+  parameters: # --------------------------------------------- PARAMETERS ---------------------------------------------
+    WebSocketRequestConnectionInHeader:
+      name: Connection
+      in: header
+      required: true
+      schema: {type: string, example: Upgrade, externalDocs: {url: 'https://mzl.la/3WWJi8w'}}
+
+    WebSocketRequestUpgradeInHeader:
+      name: Upgrade
+      in: header
+      required: true
+      schema: {type: string, example: websocket, externalDocs: {url: 'https://mzl.la/46XxkyZ'}}
+
+    WebSocketRequestSecKeyInHeader:
+      name: Sec-WebSocket-Key
+      in: header
+      required: true
+      schema: {type: string, example: K/TxmSsnVc71pFVjGIYy3w==}
+
+    WebSocketRequestSecVersionInHeader:
+      name: Sec-WebSocket-Version
+      in: header
+      required: true
+      schema: {type: string, example: 13}
+
+  responses: # ---------------------------------------------- RESPONSES -----------------------------------------------
     PingResponse:
       description: Pong response
       content:
@@ -77,16 +139,19 @@ components:
       description: List of registered routes
       content:
         application/json:
-          schema:
-            type: object
-            properties:
-              routes:
-                type: array
-                items: {$ref: '#/components/schemas/ContainerRoute'}
-            additionalProperties: false
-            required: [routes]
+          schema: {$ref: '#/components/schemas/ContainerRoutesList'}
 
-  schemas:
+  schemas: # ------------------------------------------------ SCHEMAS -------------------------------------------------
+    ContainerRoutesList:
+      description: List of container routes
+      type: object
+      properties:
+        routes:
+          type: array
+          items: {$ref: '#/components/schemas/ContainerRoute'}
+      additionalProperties: false
+      required: [routes]
+
     ContainerRoute:
       description: Container route information
       type: object
