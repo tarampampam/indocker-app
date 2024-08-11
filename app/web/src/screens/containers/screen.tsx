@@ -19,7 +19,10 @@ export default function Containers({ apiClient }: { apiClient: Client }): React.
       .finally(() => setIsLoading(false))
 
     apiClient
-      .routesSubscribe((routes): void => setRoutes(routes))
+      .routesSubscribe({
+        onUpdate: (routes): void => setRoutes(routes),
+        onError: console.error,
+      })
       .then((closer): void => {
         closeRoutesSub.current = closer // save the closer function to call it when the component unmounts
       })

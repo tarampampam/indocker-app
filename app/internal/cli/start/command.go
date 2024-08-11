@@ -192,8 +192,10 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 	go func() {
 		defer func() { _ = httpLn.Close() }()
 
-		const defaultHttpPort uint16 = 80
-		const hstsNote = "please note that browsers open every domain in the .app zone using HTTPS due to the HSTS policy"
+		const (
+			defaultHttpPort = uint16(80)
+			hstsNote        = "please note browsers open every domain in the .app zone using HTTPS due to the HSTS policy"
+		)
 
 		log.Info("HTTP server starting",
 			zap.String("address", cmd.options.addr),

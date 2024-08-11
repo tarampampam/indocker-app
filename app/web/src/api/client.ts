@@ -90,15 +90,25 @@ export class Client {
    *
    *
    * */
-  async routesSubscribe(onUpdate: (routes: ContainerRoutesList) => void): Promise</* closer */ () => void> {
+  async routesSubscribe({
+    onUpdate,
+    onError,
+  }: {
+    onUpdate: (routes: ContainerRoutesList) => void
+    onError?: (err: Error) => void
+  }): Promise</* closer */ () => void> {
     const protocol = this.baseUrl.protocol === 'https:' ? 'wss:' : 'ws:'
     const path: keyof paths = '/api/routes/subscribe'
 
-    const ws = new WebSocket(`${protocol}//${this.baseUrl.host}${path}`)
-
     return new Promise((resolve: (closer: () => void) => void, reject: (err: unknown) => void) => {
+      const ws = new WebSocket(`${protocol}//${this.baseUrl.host}${path}`)
+
       ws.onopen = (): void => resolve((): void => ws.close())
-      ws.onerror = (err): void => reject(err)
+      ws.onerror = (err): void => {
+        reject(err) // will be ignored if the promise is already resolved
+        onError?.(new Error(err instanceof ErrorEvent ? err.message : String(err)))
+      }
+
       ws.onmessage = (event): void => {
         if (event.data) {
           const content = JSON.parse(event.data) as components['schemas']['ContainerRoutesList']
