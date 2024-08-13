@@ -40,7 +40,10 @@ RUN \
     # install node dependencies
     && npm --prefix /src/web ci -dd --no-audit --prefer-offline \
     # burn the Go modules cache
-    && go mod download -x
+    && go mod download -x \
+    # allow anyone to read/write the Go cache
+    && find /var/tmp/go -type d -exec chmod 0777 {} + \
+    && find /var/tmp/go -type f -exec chmod 0666 {} +
 
 # -✂- this stage is used to build the application frontend ------------------------------------------------------------
 FROM develop AS frontend

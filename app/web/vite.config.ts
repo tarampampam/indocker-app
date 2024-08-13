@@ -26,4 +26,7 @@ export default defineConfig({
     },
     sourcemap: false,
   },
+  esbuild: {
+    legalComments: 'none',
+  },
 })

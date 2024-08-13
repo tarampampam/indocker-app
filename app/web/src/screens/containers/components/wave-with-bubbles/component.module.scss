@@ -1,0 +1,25 @@
+.component {
+  width: 100%;
+  height: 200px; // height of the SVG
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+
+  background: url('./assets/wave.svg') repeat-x bottom left;
+  animation: scroll 3s linear infinite;
+
+  &:after {
+    content: '';
+    display: block;
+    height: 198px; // height of the SVG
+    width: 198px;
+    background: url('./assets/bubbles.svg') no-repeat bottom center;
+  }
+
+  @keyframes scroll {
+    to {
+      background-position-x: -1600px; // width of the SVG
+    }
+  }
+}

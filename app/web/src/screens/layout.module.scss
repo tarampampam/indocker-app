@@ -1,0 +1,30 @@
+@forward '../theme/app';
+
+.header {
+  .headerNavigation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5em;
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      padding: 1em 1em;
+    }
+  }
+}
+
+.main {
+  height: 100%;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  margin: 1em 0;
+  gap: .5em;
+}

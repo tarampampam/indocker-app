@@ -1,11 +1,14 @@
-import { matchRoutes, type RouteObject, useLocation } from 'react-router-dom'
+import { Navigate, matchRoutes, useLocation, type RouteObject } from 'react-router-dom'
 import { default as DefaultLayout } from '~/screens/layout'
-import { default as NotFoundScreen } from '~/screens/not-found/screen'
-import { default as Containers } from '~/screens/containers/screen'
+import { NotFoundScreen } from '~/screens/not-found'
+import { ContainersScreen } from '~/screens/containers'
+import { AboutScreen } from '~/screens/about'
 import { apiClient } from '~/api'
 
 export enum RouteIDs {
   Home = 'home',
+  Containers = 'containers',
+  About = 'about',
 }
 
 export const routes: RouteObject[] = [
@@ -17,7 +20,17 @@ export const routes: RouteObject[] = [
       {
         index: true,
         id: RouteIDs.Home,
-        element: <Containers apiClient={apiClient} />,
+        element: <Navigate to={pathTo(RouteIDs.Containers)} />,
+      },
+      {
+        path: 'containers',
+        id: RouteIDs.Containers,
+        element: <ContainersScreen apiClient={apiClient} />,
+      },
+      {
+        path: 'about',
+        id: RouteIDs.About,
+        element: <AboutScreen />,
       },
     ],
   },
@@ -52,6 +65,10 @@ export function pathTo(path: RouteIDs): string {
   switch (path) {
     case RouteIDs.Home:
       return '/'
+    case RouteIDs.Containers:
+      return '/containers'
+    case RouteIDs.About:
+      return '/about'
     default:
       throw new Error(`Unknown route: ${path}`)
   }

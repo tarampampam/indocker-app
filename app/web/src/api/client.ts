@@ -9,6 +9,10 @@ type ContainerRoutesList = ReadonlyMap<string, ReadonlyArray<URL>>
 export class Client {
   private readonly baseUrl: URL
   private readonly api: OpenapiClient<paths>
+  private cache: Partial<{
+    currentVersion: Readonly<SemVer>
+    latestVersion: Readonly<SemVer>
+  }> = {}
 
   constructor(opt?: ClientOptions) {
     this.baseUrl = new URL(
@@ -24,17 +28,23 @@ export class Client {
    *
    * @throws {APIError}
    */
-  async currentVersion(): Promise<Readonly<SemVer>> {
+  async currentVersion(force: boolean = false): Promise<Readonly<SemVer>> {
+    if (this.cache.currentVersion && !force) {
+      return this.cache.currentVersion
+    }
+
     const { data, response } = await this.api.GET('/api/version')
 
     if (data) {
       const version = semverParse(semverCoerce(data.version.replace('@', '-')))
 
       if (!version) {
-        throw new APIErrorUnknown({ message: 'Failed to parse the version', response })
+        throw new APIErrorUnknown({ message: `Failed to parse the current version value: ${data.version}`, response })
       }
 
-      return Object.freeze(version)
+      this.cache.currentVersion = Object.freeze(version)
+
+      return this.cache.currentVersion
     }
 
     throw new APIErrorUnknown({ message: response.statusText, response }) // will never happen
@@ -45,17 +55,23 @@ export class Client {
    *
    * @throws {APIError}
    */
-  async latestVersion(): Promise<Readonly<SemVer>> {
+  async latestVersion(force: boolean = false): Promise<Readonly<SemVer>> {
+    if (this.cache.latestVersion && !force) {
+      return this.cache.latestVersion
+    }
+
     const { data, response } = await this.api.GET('/api/version/latest')
 
     if (data) {
       const version = semverParse(semverCoerce(data.version))
 
       if (!version) {
-        throw new APIErrorUnknown({ message: 'Failed to parse the version', response })
+        throw new APIErrorUnknown({ message: `Failed to parse the latest version value: ${data.version}`, response })
       }
 
-      return Object.freeze(version)
+      this.cache.latestVersion = Object.freeze(version)
+
+      return this.cache.latestVersion
     }
 
     throw new APIErrorUnknown({ message: response.statusText, response }) // will never happen

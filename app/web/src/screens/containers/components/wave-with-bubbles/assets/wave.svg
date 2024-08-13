@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="200">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      #A1 { stop-color: #282836; }
+      #A2 { stop-color: #20202b; }
+    }
+  </style>
+  <defs>
+    <linearGradient id="A" x1="50%" x2="50%" y1="-10.959%" y2="100%">
+      <stop id="A1" stop-color="#22b8eb" stop-opacity=".5" offset="0%"/>
+      <stop id="A2" stop-color="#22b8eb" offset="100%"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#A)"
+        fill-rule="evenodd"
+        d="M.005 121C311 121 409.898-.25 811 0c400 0 500 121 789 121v77H0l.005-77z"
+        transform="matrix(-1 0 0 1 1600 0)"/>
+</svg>
