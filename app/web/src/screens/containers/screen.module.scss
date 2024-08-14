@@ -1,0 +1,56 @@
+@forward '~/theme/app';
+
+.waveWithBubbles {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  position: absolute;
+  width: 100%;
+  bottom: 0; // move to the bottom of the container
+  height: 200px; // height of the SVG with the wave
+  background: url('~/shared/assets/wave.svg') repeat-x bottom left;
+  animation:
+    scroll 2500ms linear infinite,
+    // animation for the wave
+    show-wave ease-in-out 1300ms 1 forwards; // animation for the wave to show
+
+  &:after {
+    // bubbles
+    content: '';
+    display: block;
+    height: 100%;
+    width: 198px;
+    background: url('~/shared/assets/bubbles.svg') no-repeat bottom center;
+    animation: show-bubbles ease-in-out 3300ms 1 forwards; // animation for the bubbles to show
+  }
+
+  @keyframes scroll {
+    // animation for the wave to move
+    to {
+      background-position-x: -1600px;
+    } // width of the SVG
+  }
+
+  @keyframes show-wave {
+    // animation for the wave to show
+    from {
+      background-position-y: 200px;
+    }
+    to {
+      background-position-y: 0;
+    }
+  }
+
+  @keyframes show-bubbles {
+    // animation for the bubbles to show
+    from {
+      opacity: 0;
+    }
+    40% {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}

@@ -21,7 +21,15 @@
       color: var(--color-text-primary);
       border: solid var(--color-ui-border-primary);
       border-width: 0 1px 0 0;
-      transition: background-color $transition-speed, box-shadow $transition-speed;
+      transition:
+        background-color $transition-speed,
+        box-shadow $transition-speed,
+        color $transition-speed;
+
+      svg {
+        // icon
+        padding-right: 0.3em;
+      }
 
       &:last-child {
         border-right-width: 0;
@@ -42,7 +50,10 @@
 }
 
 .main {
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
-.footer {}
+.footer {
+}

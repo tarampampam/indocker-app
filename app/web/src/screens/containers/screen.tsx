@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import type { Client } from '~/api'
-import { WaveWithBubbles } from './components'
+import { AnimatedLayout } from '~/shared/components'
+import styles from './screen.module.scss'
 
 export default function Screen({ apiClient }: { apiClient: Client }): React.JSX.Element {
   const [, setRoutes] = useState<ReadonlyMap<string, ReadonlyArray<URL>> | null>(null)
@@ -58,10 +59,12 @@ export default function Screen({ apiClient }: { apiClient: Client }): React.JSX.
   // }, [routes])
 
   return (
-    <div style={{ position: 'relative', height: '100%' }}>
-      <h1 style={{ padding: 0, margin: 0 }}>Containers</h1>
-      <WaveWithBubbles style={{ position: 'absolute', bottom: 0 }} />
-      {/*<RoutesGraph loading={isLoading} points={graphPoints} />*/}
-    </div>
+    <AnimatedLayout>
+      <div style={{ position: 'relative', height: '100%' }}>
+        <h1 style={{ padding: 0, margin: 0 }}>Containers</h1>
+        <div className={styles.waveWithBubbles} />
+        {/*<RoutesGraph loading={isLoading} points={graphPoints} />*/}
+      </div>
+    </AnimatedLayout>
   )
 }
