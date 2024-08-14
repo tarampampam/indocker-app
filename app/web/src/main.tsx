@@ -2,7 +2,7 @@ import React from 'react'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import { routes } from './router'
+import { routes } from './routing'
 import '~/theme/app.scss'
 
 const App = (): React.JSX.Element => {

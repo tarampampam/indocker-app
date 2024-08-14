@@ -12,6 +12,9 @@ export default defineConfig({
       '~': resolve(__dirname, 'src'),
     },
   },
+  define: {
+    __LATEST_RELEASE_LINK__: JSON.stringify('https://github.com/tarampampam/indocker-app/releases/latest'),
+  },
   build: {
     emptyOutDir: true,
     rollupOptions: {

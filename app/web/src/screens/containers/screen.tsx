@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import type { Client } from '~/api'
 import { WaveWithBubbles } from './components'
 
-export default function Containers({ apiClient }: { apiClient: Client }): React.JSX.Element {
+export default function Screen({ apiClient }: { apiClient: Client }): React.JSX.Element {
   const [, setRoutes] = useState<ReadonlyMap<string, ReadonlyArray<URL>> | null>(null)
   const [, setIsLoading] = useState<boolean>(false)
   // const [graphPoints, setGraphPoints] = useState<GraphPoints | null>(null)

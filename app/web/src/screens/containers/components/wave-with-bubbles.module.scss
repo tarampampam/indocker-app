@@ -1,7 +1,7 @@
 .component {
   width: 100%;
   height: 200px; // height of the SVG
-  overflow: hidden;
+  //overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -12,7 +12,7 @@
   &:after {
     content: '';
     display: block;
-    height: 198px; // height of the SVG
+    height: 100%;
     width: 198px;
     background: url('./assets/bubbles.svg') no-repeat bottom center;
   }

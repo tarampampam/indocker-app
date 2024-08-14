@@ -107,9 +107,11 @@ export class Client {
    *
    * */
   async routesSubscribe({
+    onConnected,
     onUpdate,
     onError,
   }: {
+    onConnected?: () => void
     onUpdate: (routes: ContainerRoutesList) => void
     onError?: (err: Error) => void
   }): Promise</* closer */ () => void> {
@@ -119,10 +121,14 @@ export class Client {
     return new Promise((resolve: (closer: () => void) => void, reject: (err: unknown) => void) => {
       const ws = new WebSocket(`${protocol}//${this.baseUrl.host}${path}`)
 
-      ws.onopen = (): void => resolve((): void => ws.close())
+      ws.onopen = (): void => {
+        onConnected?.()
+        resolve((): void => ws.close())
+      }
+
       ws.onerror = (err): void => {
-        reject(err) // will be ignored if the promise is already resolved
         onError?.(new Error(err instanceof ErrorEvent ? err.message : String(err)))
+        reject(err) // will be ignored if the promise is already resolved
       }
 
       ws.onmessage = (event): void => {

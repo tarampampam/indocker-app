@@ -15,28 +15,23 @@
   <title>Monitor</title>
 
   <style>
-    :root {
-      --color-bg-primary: #fff;
-      --color-text-primary: #010101;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --color-bg-primary: #18181c;
-        --color-text-primary: #dcdcdc;
-      }
-    }
-
     html, body {
       margin: 0;
       padding: 0;
       min-height: 100%;
       height: 100%;
       width: 100%;
-      background-color: var(--color-bg-primary);
-      color: var(--color-text-primary);
+      background-color: #fff;
+      color: #010101;
       font-family: sans-serif;
       font-size: 16px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html, body {
+        background-color: #18181c;
+        color: #dcdcdc;
+      }
     }
 
     body, #root {
@@ -97,20 +92,12 @@
     }
 
     @keyframes app-loading-spinner-rotate {
-      0% {
-        transform: rotate(0)
-      }
-      100% {
-        transform: rotate(360deg)
-      }
+      0%   { transform: rotate(0) }
+      100% { transform: rotate(360deg) }
     }
     @keyframes app-loading-spinner-fade-in {
-      30% {
-        opacity: 0
-      }
-      100% {
-        opacity: 1
-      }
+      30%  { opacity: 0 }
+      100% { opacity: 1 }
     }
   </style>
 </head>
