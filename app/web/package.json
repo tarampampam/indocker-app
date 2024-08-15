@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "generate": "node --no-deprecation ./node_modules/.bin/openapi-typescript ./../api/openapi.yml --immutable --enum --array-length --additional-properties=false --output ./src/api/schema.gen.ts",
-    "fmt": "prettier --config package.json --write ./src && npm run lint:es -- --fix",
+    "fmt": "prettier --config package.json --write ./*.ts ./src && npm run lint:es -- --fix",
     "lint": "npm run lint:ts && npm run lint:es",
     "lint:ts": "tsc --noEmit",
     "lint:es": "eslint --config package.json ./src/**/*.{ts,tsx}",

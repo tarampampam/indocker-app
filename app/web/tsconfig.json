@@ -26,6 +26,6 @@
   },
   "include": [
     "node_modules/vite/client.d.ts",
-    "src/**/*",
+    "src/**/*"
   ]
 }

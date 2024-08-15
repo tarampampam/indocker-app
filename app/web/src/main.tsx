@@ -14,3 +14,7 @@ createRoot(document.getElementById('root') as HTMLElement).render(
     <App />
   </StrictMode>
 )
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('./service-worker.js', { scope: '/', type: 'module' }).catch(console.error)
+}
