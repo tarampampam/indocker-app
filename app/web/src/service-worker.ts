@@ -1,10 +1,10 @@
 /// <reference lib="WebWorker" />
 
-import deadDockerSvg from '~/shared/assets/dead-docker.svg'
+import deadDockerSvg from '~/shared/assets/dead-docker.svg?raw'
 
 // kinda fuse
 if (self.constructor.name.toLowerCase().includes('worker')) {
-  const ctx = self as unknown as ServiceWorkerGlobalScope
+  const sw = self as unknown as ServiceWorkerGlobalScope & typeof globalThis
 
   const faviconBase64 =
     'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA' +
@@ -53,18 +53,6 @@ if (self.constructor.name.toLowerCase().includes('worker')) {
       }
     }
 
-    @media screen and (min-width: 2000px) {
-      body, html {
-        font-size: 19px;
-      }
-
-      body {
-        .icon {
-          width: 380px;
-        }
-      }
-    }
-
     body {
       display: flex;
       align-items: center;
@@ -83,25 +71,45 @@ if (self.constructor.name.toLowerCase().includes('worker')) {
         opacity: 0.7;
       }
 
-      .icon {
-        width: 300px;
+      picture {
         padding-bottom: 30px;
+
+        img {
+          width: 300px;
+          height: auto;
+        }
+      }
+    }
+
+    @media screen and (min-width: 2000px) {
+      body, html {
+        font-size: 19px;
+      }
+
+      body {
+        picture {
+          img {
+            width: 380px;
+          }
+        }
       }
     }
   </style>
-  <meta http-equiv="refresh" content="3" />
+  <meta http-equiv="refresh" content="300" />
   <title>Offline</title>
 </head>
 <body>
-  <div class="icon">${deadDockerSvg}</div>
+  <picture>
+    <img src="data:image/svg+xml;base64,${btoa(deadDockerSvg)}" alt="Dead Docker" />
+  </picture>
   <h1>The app isn't running</h1>
   <h3>Please, start indocker and try again</h3>
   <p>You're seeing this page because the service worker has<br />replaced the default browser offline page with this one</p>
 </body>
 </html>`,
     {
-      status: 503,
-      statusText: 'Service Unavailable',
+      status: 521,
+      statusText: 'Web Server Is Down',
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'X-From-Service-Worker': 'true',
@@ -109,9 +117,9 @@ if (self.constructor.name.toLowerCase().includes('worker')) {
     }
   )
 
-  ctx.addEventListener('install', async () => await ctx.skipWaiting())
+  sw.addEventListener('install', async () => await sw.skipWaiting())
 
-  ctx.addEventListener('fetch', (event) => {
+  sw.addEventListener('fetch', (event) => {
     // nly call event.respondWith() if this is a navigation request for an HTML page AND not an API request
     if (event.request.mode === 'navigate' && event.request.url.toLowerCase().indexOf('api') === -1) {
       event.respondWith(fetch(event.request).catch(() => Promise.resolve(fallback.clone())))
