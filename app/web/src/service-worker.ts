@@ -77,6 +77,8 @@ if (self.constructor.name.toLowerCase().includes('worker')) {
         img {
           width: 300px;
           height: auto;
+          user-select: none;
+          -webkit-user-drag: none;
         }
       }
     }
@@ -95,7 +97,7 @@ if (self.constructor.name.toLowerCase().includes('worker')) {
       }
     }
   </style>
-  <meta http-equiv="refresh" content="300" />
+  <meta http-equiv="refresh" content="3" />
   <title>Offline</title>
 </head>
 <body>
@@ -120,8 +122,8 @@ if (self.constructor.name.toLowerCase().includes('worker')) {
   sw.addEventListener('install', async () => await sw.skipWaiting())
 
   sw.addEventListener('fetch', (event) => {
-    // nly call event.respondWith() if this is a navigation request for an HTML page AND not an API request
-    if (event.request.mode === 'navigate' && event.request.url.toLowerCase().indexOf('api') === -1) {
+    // only call event.respondWith() if this is a navigation request for an HTML page AND not an API request
+    if (event.request.mode === 'navigate' && event.request.url.toLowerCase().indexOf('/api/') === -1) {
       event.respondWith(fetch(event.request).catch(() => Promise.resolve(fallback.clone())))
     }
   })
