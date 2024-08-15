@@ -64,11 +64,20 @@ if (self.constructor.name.toLowerCase().includes('worker')) {
         text-align: center;
       }
 
-      p {
+      article {
         margin: 1em 0 0 0;
         text-align: center;
         font-size: 0.8em;
         opacity: 0.7;
+
+        p {
+          margin: 0 0 1em 0;
+        }
+
+        .unregister {
+          text-decoration: underline;
+          cursor: pointer;
+        }
       }
 
       picture {
@@ -106,7 +115,38 @@ if (self.constructor.name.toLowerCase().includes('worker')) {
   </picture>
   <h1>The app isn't running</h1>
   <h3>Please, start indocker and try again</h3>
-  <p>You're seeing this page because the service worker has<br />replaced the default browser offline page with this one</p>
+  <article>
+    <p>
+      You're seeing this page because the service worker has<br />
+      replaced the default browser offline page with this one<br />
+      <span class="unregister">(unregister service worker)</span>
+    </p>
+  </article>
+
+  <script type="module">
+    const unregisterElements = document.querySelectorAll('.unregister')
+
+    if ('serviceWorker' in navigator) {
+      const unregister = async () => {
+        for (const reg of (await navigator.serviceWorker.getRegistrations())) {
+          await reg.unregister()
+        }
+
+        reloadPage()
+      }
+
+      unregisterElements.forEach((el) => {
+        el.addEventListener('click', () => unregister().catch(console.error))
+      })
+    } else {
+      unregisterElements.forEach((el) => {
+        el.disabled = true
+        el.style.display = 'none'
+      })
+    }
+
+    window.addEventListener('online', () => window.location.reload(), {passive: true, once: true})
+  </script>
 </body>
 </html>`,
     {

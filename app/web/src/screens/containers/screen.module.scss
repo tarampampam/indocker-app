@@ -13,6 +13,7 @@
     scroll 2500ms linear infinite,
     // animation for the wave
     show-wave ease-in-out 1300ms 1 forwards; // animation for the wave to show
+  z-index: -1;
 
   &:after {
     // bubbles

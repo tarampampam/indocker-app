@@ -36,7 +36,7 @@ export default defineConfig({
       },
     },
     sourcemap: isWatchMode,
-    minify: !isWatchMode,
+    minify: true,
   },
   esbuild: {
     legalComments: 'none',
