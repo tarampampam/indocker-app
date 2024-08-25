@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import type { Client } from '~/api'
 import { AnimatedLayout } from '~/shared/components'
+import { ContainersList } from './components'
 import styles from './screen.module.scss'
 
 export default function Screen({ apiClient }: { apiClient: Client }): React.JSX.Element {
-  const [, setRoutes] = useState<ReadonlyMap<string, ReadonlyArray<URL>> | null>(null)
+  const [, setRoutes] = useState<ReadonlyMap<string, ReadonlyMap<string, URL>> | null>(null)
   const [, setIsLoading] = useState<boolean>(false)
   // const [graphPoints, setGraphPoints] = useState<GraphPoints | null>(null)
   const closeRoutesSub = useRef<(() => void) | null>(null)
@@ -22,7 +23,7 @@ export default function Screen({ apiClient }: { apiClient: Client }): React.JSX.
     apiClient
       .routesSubscribe({
         onUpdate: (routes): void => setRoutes(routes),
-        onError: console.error,
+        onError: console.warn,
       })
       .then((closer): void => {
         closeRoutesSub.current = closer // save the closer function to call it when the component unmounts
@@ -60,8 +61,10 @@ export default function Screen({ apiClient }: { apiClient: Client }): React.JSX.
 
   return (
     <AnimatedLayout>
-      <div style={{ position: 'relative', height: '100%' }}>
-        <h1 style={{ padding: 0, margin: 0 }}>Containers</h1>
+      <div className={styles.containerOuter}>
+        <div className={styles.containerInner}>
+          <ContainersList apiClient={apiClient} />
+        </div>
         <div className={styles.waveWithBubbles} />
         {/*<RoutesGraph loading={isLoading} points={graphPoints} />*/}
       </div>

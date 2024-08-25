@@ -18,6 +18,7 @@ services:
     volumes: [.:/src:rw]
     working_dir: /src/web
     command: npm run watch
+    healthcheck: {test: ['CMD', 'test', '-f', './dist/robots.txt'], start_interval: 1s, interval: 10s, start_period: 20s}
     security_opt: [no-new-privileges:true]
 
   daemon:
@@ -25,7 +26,7 @@ services:
     command: go run ./cmd/app/ start --local-frontend-path ./web/dist
     volumes: [.:/src:rw, /var/run/docker.sock:/var/run/docker.sock:ro]
     ports: ['80:8080/tcp', '443:8443/tcp'] # open https://monitor.indocker.app
-    depends_on: {app-web-dist: {condition: service_started}} # do not use it due file permissions issues
+    depends_on: {app-web-dist: {condition: service_healthy}} # do not use it due file permissions issues
 
   whoami: # just for a test
     image: docker.io/containous/whoami:latest

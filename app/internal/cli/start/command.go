@@ -75,8 +75,8 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 
 			// set options
 			opt.addr = c.String(addrFlag.Name)
-			opt.http.tcpPort = uint16(c.Uint(httpPortFlag.Name))
-			opt.https.tcpPort = uint16(c.Uint(httpsPortFlag.Name))
+			opt.http.tcpPort = uint16(c.Uint(httpPortFlag.Name))   //nolint:gosec
+			opt.https.tcpPort = uint16(c.Uint(httpsPortFlag.Name)) //nolint:gosec
 			opt.timeouts.httpRead = c.Duration(readTimeoutFlag.Name)
 			opt.timeouts.httpWrite = c.Duration(writeTimeoutFlag.Name)
 			opt.timeouts.httpIdle = c.Duration(idleTimeoutFlag.Name)
@@ -287,7 +287,7 @@ func (cmd *command) makeDockerStateWatcher(
 		routesSub, closeRoutesSub = state.SubscribeForRoutingUpdates() // subscribe for routing updates
 		stopAutoUpdate            = state.StartAutoUpdate(ctx)         // start auto-update
 
-		logRoutes = func(msg string, routes map[string][]url.URL) {
+		logRoutes = func(msg string, routes map[string]map[string]url.URL) {
 			var currentRoutes = make(map[string][]string, len(routes))
 
 			// format routes map

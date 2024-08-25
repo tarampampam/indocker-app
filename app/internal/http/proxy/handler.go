@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -28,8 +27,8 @@ var (
 
 type (
 	dockerRouter interface {
-		URLToContainerByHostname(hostname string) ([]url.URL, bool)
-		AllContainerURLs() (routes map[string][]url.URL)
+		URLToContainerByHostname(hostname string) (map[string]url.URL, bool)
+		AllContainerURLs() (routes map[string]map[string]url.URL)
 	}
 
 	Handler struct {
@@ -59,8 +58,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if urls, found := h.router.URLToContainerByHostname(host); found && len(urls) > 0 {
+		var u url.URL
+
 		// pick a random url in round-robin fashion
-		var u = urls[rand.Intn(len(urls))] //nolint:gosec
+		for _, u = range urls {
+			break
+		}
 
 		(&httputil.ReverseProxy{
 			Director: func(pr *http.Request) {

@@ -9,6 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"gh.tarampamp.am/indocker-app/app/internal/http/handlers/favicon"
 	pingHandler "gh.tarampamp.am/indocker-app/app/internal/http/handlers/ping"
 	routesListHandler "gh.tarampamp.am/indocker-app/app/internal/http/handlers/routes_list"
 	routesSubscribeHandler "gh.tarampamp.am/indocker-app/app/internal/http/handlers/routes_subscribe"
@@ -20,8 +21,8 @@ import (
 
 type (
 	dockerRouter interface {
-		AllContainerURLs() map[string][]url.URL
-		SubscribeForRoutingUpdates() (sub <-chan map[string][]url.URL, stop func())
+		AllContainerURLs() map[string]map[string]url.URL
+		SubscribeForRoutingUpdates() (sub <-chan map[string]map[string]url.URL, stop func())
 	}
 
 	OpenAPI struct {
@@ -33,6 +34,7 @@ type (
 			latestVersion   func(http.ResponseWriter) (*openapi.AppVersionResponse, error)
 			routesList      func() openapi.RegisteredRoutesListResponse
 			routesSubscribe func(http.ResponseWriter, *http.Request) error
+			favicon         func(context.Context, http.ResponseWriter, openapi.GetFaviconParams) error
 		}
 	}
 )
@@ -47,6 +49,7 @@ func NewOpenAPI(ctx context.Context, log *zap.Logger, dockerRouter dockerRouter)
 	si.handlers.latestVersion = latestVersionHandler.New(func() (string, error) { return version.Latest(ctx) }).Handle
 	si.handlers.routesList = routesListHandler.New(dockerRouter).Handle
 	si.handlers.routesSubscribe = routesSubscribeHandler.New(dockerRouter).Handle
+	si.handlers.favicon = favicon.New().Handle
 
 	return si
 }
@@ -80,6 +83,12 @@ func (o *OpenAPI) ListRoutes(w http.ResponseWriter, _ *http.Request) {
 
 func (o *OpenAPI) SubscribeRoutes(w http.ResponseWriter, r *http.Request, _ openapi.SubscribeRoutesParams) {
 	if err := o.handlers.routesSubscribe(w, r); err != nil {
+		o.errorToJson(w, err, http.StatusInternalServerError)
+	}
+}
+
+func (o *OpenAPI) GetFavicon(w http.ResponseWriter, r *http.Request, params openapi.GetFaviconParams) {
+	if err := o.handlers.favicon(r.Context(), w, params); err != nil {
 		o.errorToJson(w, err, http.StatusInternalServerError)
 	}
 }

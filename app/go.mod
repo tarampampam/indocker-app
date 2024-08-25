@@ -11,6 +11,7 @@ require (
 	github.com/urfave/cli/v3 v3.0.0-alpha9
 	github.com/zenizh/go-capturer v0.0.0-20211219060012-52ea6c8fed04
 	go.uber.org/zap v1.27.0
+	golang.org/x/image v0.19.0
 	golang.org/x/sync v0.7.0
 )
 

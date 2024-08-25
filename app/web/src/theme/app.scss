@@ -13,6 +13,8 @@
   --color-ui-border-active: #108ee9;
 
   --color-ui-bg-active: #f8fafc;
+
+  --container-max-width: 1200px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -41,6 +43,10 @@ body {
 }
 
 @media screen and (min-width: 2000px) {
+  :root {
+    --container-max-width: 1400px;
+  }
+
   body,
   html {
     font-size: 19px;
@@ -48,6 +54,10 @@ body {
 }
 
 @media screen and (min-width: 2300px) {
+  :root {
+    --container-max-width: 1600px;
+  }
+
   body,
   html {
     font-size: 22px;

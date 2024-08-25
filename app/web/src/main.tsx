@@ -42,5 +42,5 @@ const App = (): React.JSX.Element => {
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
     <App />
-  </StrictMode>,
+  </StrictMode>
 )

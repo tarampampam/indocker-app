@@ -1,11 +1,11 @@
-import { IconBrandDocker, IconInfoHexagonFilled, IconDownload } from '@tabler/icons-react'
-import { AnimatePresence } from 'framer-motion' // https://tabler.io/icons
+import { AnimatePresence } from 'framer-motion'
 import React, { type ReactNode, useEffect } from 'react'
 import { Link, useLocation, useOutlet } from 'react-router-dom'
 import { type SemVer } from 'semver'
 import { type Client } from '~/api'
 import { pathTo, RouteIDs, useCurrentRouteID } from '~/routing'
-import { Icon } from '~/shared/components'
+import { Icon, type IconProps } from '~/shared/components'
+import { DockerRoundIcon, AboutIcon, SoftwareUpdateIcon } from '~/assets/icons'
 import styles from './layout.module.scss'
 
 const Header = ({
@@ -17,6 +17,7 @@ const Header = ({
 }): React.JSX.Element => {
   const currentRouteID = useCurrentRouteID()
   const isUpdateAvailable = current && latest && current.compare(latest) === -1
+  const commonIconProps: Omit<IconProps, 'src'> = { style: { outer: { paddingRight: '.3em' } } }
 
   const links: ReadonlyMap<RouteIDs, Readonly<{ component: ReactNode }>> = new Map([
     [
@@ -24,7 +25,7 @@ const Header = ({
       {
         component: (
           <>
-            <Icon icon={<IconBrandDocker stroke={1} />} /> Containers
+            <Icon src={DockerRoundIcon} {...commonIconProps} /> Containers
           </>
         ),
       },
@@ -34,7 +35,8 @@ const Header = ({
       {
         component: (
           <>
-            <Icon icon={<IconInfoHexagonFilled />} /> About
+            <Icon src={AboutIcon} {...commonIconProps} />
+            About
           </>
         ),
       },
@@ -51,7 +53,8 @@ const Header = ({
         ))}
         {isUpdateAvailable && (
           <Link to={__LATEST_RELEASE_LINK__} target="_blank">
-            <Icon icon={<IconDownload />} /> Update available {latest && <>({latest.toString()})</>}
+            <Icon src={SoftwareUpdateIcon} {...commonIconProps} />
+            Update available {latest && <>({latest.toString()})</>}
           </Link>
         )}
       </nav>

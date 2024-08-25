@@ -1,0 +1,35 @@
+@forward '~/theme/app';
+
+.list {
+  background-color: #123;
+  padding: 1em;
+  border-radius: 1em;
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1em;
+
+    .col {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      .segment {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 0.3em;
+
+        &:first-child {
+          padding-left: 0;
+        }
+
+        &:last-child {
+          padding-right: 0;
+        }
+      }
+    }
+  }
+}

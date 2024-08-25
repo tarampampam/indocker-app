@@ -1,6 +1,6 @@
 /// <reference lib="WebWorker" />
 
-import deadDockerSvg from '~/shared/assets/dead-docker.svg?raw'
+import deadDockerSvg from '~/assets/dead-docker.svg?raw'
 
 // kinda fuse
 if (self.constructor.name.toLowerCase().includes('worker')) {

@@ -1,10 +1,57 @@
-import React, { type CSSProperties, type ReactNode } from 'react'
-import styles from './icon.module.scss'
+import React, { useId } from 'react'
 
-export default function Icon({ icon, style }: { icon: ReactNode; style?: CSSProperties }): React.JSX.Element {
+export type IconProps = {
+  src: 'foo' | string
+  id?: string
+  disabled?: boolean
+  clickable?: boolean
+  alt?: string
+  title?: string
+  size?: string | number
+  style?: Partial<{ outer: React.CSSProperties; img: React.CSSProperties }>
+  onClick?: () => void
+}
+
+export default function Icon({
+  src,
+  id = useId(), // eslint-disable-line react-hooks/rules-of-hooks
+  disabled = false,
+  clickable = false,
+  alt = 'icon',
+  title,
+  size = '1em',
+  style,
+  onClick,
+}: IconProps): React.JSX.Element {
   return (
-    <span className={styles.icon} style={{ ...style }}>
-      {icon}
-    </span>
+    <div
+      style={{
+        width: size,
+        height: size,
+        display: 'inline-flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        cursor: (clickable || onClick) && !disabled ? 'pointer' : 'default',
+        ...style?.outer,
+      }}
+    >
+      <img
+        id={id}
+        src={src}
+        style={{
+          width: '100%',
+          height: '100%',
+          cursor: 'inherit',
+          filter: disabled ? 'grayscale(1)' : undefined,
+          ...style?.img,
+        }}
+        onClick={(): void => {
+          !disabled && onClick?.()
+        }}
+        title={title}
+        draggable={false}
+        alt={alt}
+      />
+    </div>
   )
 }

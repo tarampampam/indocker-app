@@ -1,5 +1,5 @@
 import type React from 'react'
-import deadDockerSvg from '~/shared/assets/dead-docker.svg'
+import deadDockerSvg from '~/assets/dead-docker.svg'
 import styles from './screen.module.scss'
 
 export default function Screen(): React.JSX.Element {

@@ -2,7 +2,6 @@ package docker
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"net/url"
@@ -17,15 +16,13 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	dc "github.com/docker/docker/client"
-	"golang.org/x/sync/errgroup"
 )
 
 type (
+	routesMap = map[string]map[string]url.URL // map[hostname]map[container_id]url.URL
+
 	State struct {
 		dc *dc.Client
-
-		rcMu sync.Mutex               // protects rc
-		rc   map[string]containerInfo // running containers, map[container_id]container_info
 
 		routesMu sync.Mutex // protects routes
 		routes   routesMap  // containers routing, map[hostname]url.URL
@@ -33,20 +30,11 @@ type (
 		routeChangesSubsMu sync.Mutex                       // protects subs
 		routeChangesSubs   map[chan routesMap]chan struct{} // map[subscription]stop_channel
 	}
-
-	routesMap = map[string][]url.URL
-
-	containerInfo struct {
-		common  types.Container
-		inspect types.ContainerJSON
-		stats   container.StatsResponse
-	}
 )
 
 func NewState(dc *dc.Client) *State {
 	return &State{
 		dc:               dc,
-		rc:               make(map[string]containerInfo),
 		routes:           make(routesMap),
 		routeChangesSubs: make(map[chan routesMap]chan struct{}),
 	}
@@ -105,7 +93,7 @@ func (s *State) StartAutoUpdate(ctx context.Context) (stop func()) { //nolint:go
 }
 
 // Update updates the state of running containers immediately. It returns an error if something went wrong.
-func (s *State) Update(ctx context.Context) error { //nolint:funlen,gocognit,gocyclo
+func (s *State) Update(ctx context.Context) error { //nolint:funlen,gocyclo
 	var filter = filters.NewArgs()
 
 	// we need to filter only certain statuses (alive containers)
@@ -118,114 +106,56 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen,gocognit,goc
 
 	// get the list of containers
 	// https://docs.docker.com/engine/api/v1.46/#tag/Container/operation/ContainerList
-	if list, listErr := s.dc.ContainerList(ctx, options); listErr != nil { //nolint:nestif
+	list, listErr := s.dc.ContainerList(ctx, options)
+	if listErr != nil {
 		return listErr
-	} else {
-		var (
-			mu        sync.Mutex // protects newState
-			newState  = make(map[string]containerInfo, len(list))
-			newRoutes = make(routesMap, len(list))
+	}
 
-			wg, wgCtx = errgroup.WithContext(ctx)
-		)
+	var newRoutes = make(routesMap, len(list))
 
-		for _, listedContainer := range list {
-			// fill up the map with common container info
-			newState[listedContainer.ID] = containerInfo{common: listedContainer}
-
-			// set the routing info, if possible
-			if scheme, hostname, ipAddr, port, found := s.buildRouteToContainer(listedContainer); found {
-				if scheme != "" && hostname != "" && ipAddr != "" && port != 0 { // an additional check
-					var u = url.URL{
-						Scheme: scheme,
-						Host:   fmt.Sprintf("%s:%d", ipAddr, port),
-					}
-
-					newRoutes[hostname] = append(newRoutes[hostname], u)
+	for _, listedContainer := range list {
+		// set the routing info, if possible
+		if scheme, hostname, ipAddr, port, found := s.buildRouteToContainer(listedContainer); found {
+			if scheme != "" && hostname != "" && ipAddr != "" && port != 0 { // an additional check
+				var u = url.URL{
+					Scheme: scheme,
+					Host:   fmt.Sprintf("%s:%d", ipAddr, port),
 				}
+
+				if _, ok := newRoutes[hostname]; !ok {
+					newRoutes[hostname] = make(map[string]url.URL)
+				}
+
+				newRoutes[hostname][listedContainer.ID] = u
 			}
 		}
+	}
 
-		for _, listedContainer := range list {
-			wg.Go(func() error { // inspect all containers in parallel
-				// https://docs.docker.com/engine/api/v1.46/#tag/Container/operation/ContainerInspect
-				inspect, inspectErr := s.dc.ContainerInspect(wgCtx, listedContainer.ID)
-				if inspectErr != nil {
-					return inspectErr
-				}
+	var routesUpdated bool
 
-				mu.Lock()
+	s.routesMu.Lock()
+	routesUpdated = !reflect.DeepEqual(s.routes, newRoutes) // check if the routes have been updated
+	clear(s.routes)                                         // care about the memory
+	s.routes = newRoutes                                    // update the routes
+	s.routesMu.Unlock()
 
-				current := newState[listedContainer.ID]
-				current.inspect = inspect
-				newState[listedContainer.ID] = current
-
-				mu.Unlock()
-
-				return nil
-			})
-
-			wg.Go(func() error { // capture container stats in parallel
-				// https://docs.docker.com/engine/api/v1.46/#tag/Container/operation/ContainerStats
-				statsReader, statsErr := s.dc.ContainerStatsOneShot(wgCtx, listedContainer.ID)
-				if statsErr != nil {
-					return statsErr
-				}
-
-				var stats container.StatsResponse
-				if err := json.NewDecoder(statsReader.Body).Decode(&stats); err != nil {
-					return err
-				}
-
-				_ = statsReader.Body.Close()
-
-				mu.Lock()
-
-				current := newState[listedContainer.ID]
-				current.stats = stats
-				newState[listedContainer.ID] = current
-
-				mu.Unlock()
-
-				return nil
-			})
-		}
-
-		var routesUpdated bool
-
-		s.routesMu.Lock()
-		routesUpdated = !reflect.DeepEqual(s.routes, newRoutes) // check if the routes have been updated
-		clear(s.routes)                                         // care about the memory
-		s.routes = newRoutes                                    // update the routes
-		s.routesMu.Unlock()
-
-		if routesUpdated {
-			s.routeChangesSubsMu.Lock()
-			for sub, stop := range s.routeChangesSubs {
-				go func(sub chan<- routesMap, stop <-chan struct{}) {
-					select { // first, check if the subscription and context are still alive
+	if routesUpdated {
+		s.routeChangesSubsMu.Lock()
+		for sub, stop := range s.routeChangesSubs {
+			go func(sub chan<- routesMap, stop <-chan struct{}) {
+				select { // first, check if the subscription and context are still alive
+				case <-stop: // is the subscription stopped?
+				case <-ctx.Done(): // is the context done?
+				default:
+					select { // then, notify the subscribers
 					case <-stop: // is the subscription stopped?
-					case <-ctx.Done(): // is the context done?
-					default:
-						select { // then, notify the subscribers
-						case <-stop: // is the subscription stopped?
-						case <-ctx.Done(): //  is the context done?
-						case sub <- maps.Clone(newRoutes): // notify the subscribers
-						}
+					case <-ctx.Done(): //  is the context done?
+					case sub <- maps.Clone(newRoutes): // notify the subscriber
 					}
-				}(sub, stop)
-			}
-			s.routeChangesSubsMu.Unlock()
+				}
+			}(sub, stop)
 		}
-
-		if err := wg.Wait(); err != nil {
-			return err
-		}
-
-		s.rcMu.Lock()
-		clear(s.rc)     // care about the memory
-		s.rc = newState // update the state
-		s.rcMu.Unlock()
+		s.routeChangesSubsMu.Unlock()
 	}
 
 	return nil
@@ -266,7 +196,7 @@ func (s *State) SubscribeForRoutingUpdates() (sub <-chan routesMap, stop func())
 
 // URLToContainerByHostname returns a URL to the container with the given hostname. It returns false if the container
 // with the given hostname is not found.
-func (s *State) URLToContainerByHostname(hostname string) ([]url.URL, bool) {
+func (s *State) URLToContainerByHostname(hostname string) (map[string]url.URL, bool) { // map[container_id]url.URL
 	{ // normalize the hostname
 		hostname = strings.ToLower(strings.TrimSpace(hostname))
 
@@ -288,7 +218,7 @@ func (s *State) URLToContainerByHostname(hostname string) ([]url.URL, bool) {
 }
 
 // AllContainerURLs returns a map of all container URLs.
-func (s *State) AllContainerURLs() (routes map[string][]url.URL) { // map[hostname]url.URL
+func (s *State) AllContainerURLs() (routes map[string]map[string]url.URL) { // map[hostname]map[container_id]url.URL
 	s.routesMu.Lock()
 	routes = maps.Clone(s.routes)
 	s.routesMu.Unlock()
@@ -361,7 +291,7 @@ func (s *State) buildRouteToContainer(info types.Container) ( //nolint:funlen,go
 
 			// parse the port
 			if parsed, parseErr := strconv.ParseUint(v, 10, 16); parseErr == nil {
-				port = uint16(parsed)
+				port = uint16(parsed) //nolint:gosec
 			}
 
 			break

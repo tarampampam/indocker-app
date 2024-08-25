@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -15,7 +17,7 @@ import (
 
 type (
 	routesSub interface {
-		SubscribeForRoutingUpdates() (sub <-chan map[string][]url.URL, stop func())
+		SubscribeForRoutingUpdates() (sub <-chan map[string]map[string]url.URL, stop func())
 	}
 
 	Handler struct {
@@ -114,18 +116,21 @@ func (h *Handler) writer(ctx context.Context, ws *websocket.Conn) error {
 }
 
 // routesToResponse is a helper function that converts the routing data to the response format.
-func (*Handler) routesToResponse(routes map[string][]url.URL) openapi.ContainerRoutesList {
-	var response = openapi.ContainerRoutesList{Routes: make([]openapi.ContainerRoute, 0, len(routes))}
+func (*Handler) routesToResponse(routes map[string]map[string]url.URL) openapi.ContainerRoutesList {
+	var resp = openapi.ContainerRoutesList{Routes: make([]openapi.ContainerRoute, 0, len(routes))}
 
-	for hostname, urls := range routes {
-		var route = openapi.ContainerRoute{Hostname: hostname, Urls: make([]string, 0, len(urls))}
+	for hostname, urlsMap := range routes {
+		var route = openapi.ContainerRoute{Hostname: hostname, Urls: make(map[string]string, len(urlsMap))}
 
-		for _, u := range urls {
-			route.Urls = append(route.Urls, u.String())
+		for containerID, u := range urlsMap {
+			route.Urls[containerID] = u.String()
 		}
 
-		response.Routes = append(response.Routes, route)
+		resp.Routes = append(resp.Routes, route)
 	}
 
-	return response
+	// keep the list sorted
+	slices.SortFunc(resp.Routes, func(a, b openapi.ContainerRoute) int { return strings.Compare(a.Hostname, b.Hostname) })
+
+	return resp
 }
