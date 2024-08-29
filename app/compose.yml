@@ -48,6 +48,18 @@ services:
     #depends_on: {daemon: {condition: service_healthy}}
     security_opt: [no-new-privileges:true]
 
+  minio:
+    image: quay.io/minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: minio-user
+      MINIO_ROOT_PASSWORD: minio-password
+    command: server /data --json --console-address ':9090'
+    labels:
+      indocker.host: my-minio # Open <https://my-minio.indocker.app>
+      indocker.port: 9090
+    healthcheck: {test: ['CMD', 'curl', '-f', 'http://127.0.0.1:9000/minio/health/live'], interval: 10s, start_interval: 1s, start_period: 10s}
+    security_opt: [no-new-privileges:true]
+
 volumes:
   app-modules-cache: {}
   app-tmp-data: {}

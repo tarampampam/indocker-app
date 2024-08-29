@@ -131,8 +131,6 @@ if (self.constructor.name.toLowerCase().includes('worker')) {
         for (const reg of (await navigator.serviceWorker.getRegistrations())) {
           await reg.unregister()
         }
-
-        reloadPage()
       }
 
       unregisterElements.forEach((el) => {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -49,7 +50,7 @@ func NewOpenAPI(ctx context.Context, log *zap.Logger, dockerRouter dockerRouter)
 	si.handlers.latestVersion = latestVersionHandler.New(func() (string, error) { return version.Latest(ctx) }).Handle
 	si.handlers.routesList = routesListHandler.New(dockerRouter).Handle
 	si.handlers.routesSubscribe = routesSubscribeHandler.New(dockerRouter).Handle
-	si.handlers.favicon = favicon.New().Handle
+	si.handlers.favicon = favicon.New(ctx, time.Hour, 10*time.Second).Handle //nolint:mnd
 
 	return si
 }

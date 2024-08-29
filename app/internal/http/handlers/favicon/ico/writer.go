@@ -38,8 +38,7 @@ func Encode(w io.Writer, im image.Image) error {
 
 	var bounds = m.Bounds()
 
-	entry.Width = uint8(bounds.Dx())
-	entry.Height = uint8(bounds.Dy())
+	entry.Width, entry.Height = uint8(bounds.Dx()), uint8(bounds.Dy()) //nolint:gosec
 
 	var bb = new(bytes.Buffer)
 

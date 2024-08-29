@@ -76,9 +76,7 @@ paths:
         '200':
           description: Favicon image for the hostname in PNG format
           content: {image/png: {schema: {type: string, format: binary}}}
-        '204':
-          description: Not found (no favicon found)
-          headers: {X-Error: {$ref: '#/components/headers/FaviconNoContentError'}}
+        '204': {description: Not found (no favicon found)}
         '400': {$ref: '#/components/responses/ErrorResponse', description: Bad request}
         '5XX': {$ref: '#/components/responses/ErrorResponse', description: Server error}
 
@@ -95,10 +93,6 @@ components:
     WebSocketResponseSecWebsocketAccept:
       description: Websocket Sec-WebSocket-Accept header
       schema: {type: string, example: nESCeAuSsDkp9fVKF/BQ9Nfev+U=, externalDocs: {url: 'https://mzl.la/4duaxwC'}}
-
-    FaviconNoContentError:
-      description: Details of the error when no favicon is found
-      schema: {type: string, example: failed to fetch favicon image (https://example.com/favicon.ico)}
 
   parameters: # --------------------------------------------- PARAMETERS ---------------------------------------------
     WebSocketRequestConnectionInHeader:

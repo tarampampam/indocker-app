@@ -10,7 +10,7 @@ type cache struct {
 	data map[string]image.Image
 }
 
-func newCache() cache { return cache{data: make(map[string]image.Image)} }
+func newCache() *cache { return &cache{data: make(map[string]image.Image)} }
 
 func (c *cache) Get(key string) (img image.Image, hit bool) {
 	c.mu.Lock()
