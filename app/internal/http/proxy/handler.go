@@ -14,21 +14,14 @@ import (
 	"strings"
 
 	"go.uber.org/zap"
-)
 
-var (
-	//go:embed error.tpl.html
-	errorTplHtml string
-	//go:embed 5xx.svg
-	err5xxSvg string
-	//go:embed 4xx.svg
-	err4xxSvg string
+	"gh.tarampamp.am/indocker-app/app/internal/docker"
 )
 
 type (
 	dockerRouter interface {
-		URLToContainerByHostname(hostname string) (map[string]url.URL, bool)
-		AllContainerURLs() (routes map[string]map[string]url.URL)
+		docker.RoutingURLResolver
+		docker.AllContainerURLsResolver
 	}
 
 	Handler struct {
@@ -87,8 +80,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.renderError(w, host, http.StatusNotFound, errors.New("container not found"))
+	h.renderErrorNice(w, host, http.StatusNotFound, errors.New("container not found"))
 }
+
+var (
+	//go:embed error.tpl.html
+	errorTplHtml string
+	//go:embed 5xx.svg
+	err5xxSvg string
+	//go:embed 4xx.svg
+	err4xxSvg string
+)
 
 var errorTemplate = func() *template.Template { //nolint:gochecknoglobals
 	var s, err = template.New("").Parse(errorTplHtml)
@@ -99,7 +101,7 @@ var errorTemplate = func() *template.Template { //nolint:gochecknoglobals
 	return s
 }()
 
-func (h *Handler) renderError(w http.ResponseWriter, host string, code int, err error) {
+func (h *Handler) renderErrorNice(w http.ResponseWriter, host string, code int, err error) {
 	var message string
 
 	if err != nil {

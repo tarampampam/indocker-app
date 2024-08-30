@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"net/url"
 	"time"
 
 	"go.uber.org/zap"
 
+	"gh.tarampamp.am/indocker-app/app/internal/docker"
 	"gh.tarampamp.am/indocker-app/app/internal/http/handlers/favicon"
 	pingHandler "gh.tarampamp.am/indocker-app/app/internal/http/handlers/ping"
 	routesListHandler "gh.tarampamp.am/indocker-app/app/internal/http/handlers/routes_list"
@@ -22,8 +22,9 @@ import (
 
 type (
 	dockerRouter interface {
-		AllContainerURLs() map[string]map[string]url.URL
-		SubscribeForRoutingUpdates() (sub <-chan map[string]map[string]url.URL, stop func())
+		docker.AllContainerURLsResolver
+		docker.RoutingUpdateSubscriber
+		docker.RoutingURLResolver
 	}
 
 	OpenAPI struct {
@@ -35,7 +36,7 @@ type (
 			latestVersion   func(http.ResponseWriter) (*openapi.AppVersionResponse, error)
 			routesList      func() openapi.RegisteredRoutesListResponse
 			routesSubscribe func(http.ResponseWriter, *http.Request) error
-			favicon         func(context.Context, http.ResponseWriter, openapi.GetFaviconParams) error
+			favicon         func(context.Context, http.ResponseWriter, string) error
 		}
 	}
 )
@@ -50,7 +51,7 @@ func NewOpenAPI(ctx context.Context, log *zap.Logger, dockerRouter dockerRouter)
 	si.handlers.latestVersion = latestVersionHandler.New(func() (string, error) { return version.Latest(ctx) }).Handle
 	si.handlers.routesList = routesListHandler.New(dockerRouter).Handle
 	si.handlers.routesSubscribe = routesSubscribeHandler.New(dockerRouter).Handle
-	si.handlers.favicon = favicon.New(ctx, time.Hour, 10*time.Second).Handle //nolint:mnd
+	si.handlers.favicon = favicon.New(ctx, dockerRouter, time.Hour, 10*time.Second).Handle //nolint:mnd
 
 	return si
 }
@@ -88,8 +89,8 @@ func (o *OpenAPI) SubscribeRoutes(w http.ResponseWriter, r *http.Request, _ open
 	}
 }
 
-func (o *OpenAPI) GetFavicon(w http.ResponseWriter, r *http.Request, params openapi.GetFaviconParams) {
-	if err := o.handlers.favicon(r.Context(), w, params); err != nil {
+func (o *OpenAPI) GetFavicon(w http.ResponseWriter, r *http.Request, hostname openapi.HostNameInPath) {
+	if err := o.handlers.favicon(r.Context(), w, hostname); err != nil {
 		o.errorToJson(w, err, http.StatusInternalServerError)
 	}
 }

@@ -66,18 +66,17 @@ paths:
         '400': {$ref: '#/components/responses/ErrorResponse', description: Bad request}
         '5XX': {$ref: '#/components/responses/ErrorResponse', description: Server error}
 
-  /api/favicon:
+  /api/favicon/{hostname}:
     get:
       summary: Get favicon for the hostname
       operationId: getFavicon
-      parameters:
-        - {$ref: '#/components/parameters/FaviconBaseUrlInQuery'}
+      parameters: [{$ref: '#/components/parameters/HostNameInPath'}]
       responses:
         '200':
           description: Favicon image for the hostname in PNG format
           content: {image/png: {schema: {type: string, format: binary}}}
-        '204': {description: Not found (no favicon found)}
-        '400': {$ref: '#/components/responses/ErrorResponse', description: Bad request}
+        '204': {description: No favicon found}
+        '404': {description: Hostname not found}
         '5XX': {$ref: '#/components/responses/ErrorResponse', description: Server error}
 
 components:
@@ -119,11 +118,12 @@ components:
       required: true
       schema: {type: string, example: 13}
 
-    FaviconBaseUrlInQuery:
-      name: base_url
-      in: query
+    HostNameInPath:
+      name: hostname
+      in: path
+      description: Host name
       required: true
-      schema: {type: string, example: 'https://whoami.indocker.app'}
+      schema: {type: string, example: whoami}
 
   responses: # ---------------------------------------------- RESPONSES -----------------------------------------------
     PingResponse:

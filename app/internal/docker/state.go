@@ -19,24 +19,39 @@ import (
 )
 
 type (
-	routesMap = map[string]map[string]url.URL // map[hostname]map[container_id]url.URL
+	ContainerMap = map[string]url.URL      // map[container_id]url.URL
+	RoutesMap    = map[string]ContainerMap // map[hostname]map[container_id]url.URL
 
+	RoutingUpdateSubscriber interface {
+		SubscribeForRoutingUpdates() (sub <-chan RoutesMap, stop func())
+	}
+
+	RoutingURLResolver interface {
+		URLToContainerByHostname(hostname string) (ContainerMap, bool)
+	}
+
+	AllContainerURLsResolver interface {
+		AllContainerURLs() RoutesMap
+	}
+)
+
+type (
 	State struct {
 		dc *dc.Client
 
 		routesMu sync.Mutex // protects routes
-		routes   routesMap  // containers routing, map[hostname]url.URL
+		routes   RoutesMap  // containers routing, map[hostname]url.URL
 
 		routeChangesSubsMu sync.Mutex                       // protects subs
-		routeChangesSubs   map[chan routesMap]chan struct{} // map[subscription]stop_channel
+		routeChangesSubs   map[chan RoutesMap]chan struct{} // map[subscription]stop_channel
 	}
 )
 
 func NewState(dc *dc.Client) *State {
 	return &State{
 		dc:               dc,
-		routes:           make(routesMap),
-		routeChangesSubs: make(map[chan routesMap]chan struct{}),
+		routes:           make(RoutesMap),
+		routeChangesSubs: make(map[chan RoutesMap]chan struct{}),
 	}
 }
 
@@ -111,7 +126,7 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen,gocyclo
 		return listErr
 	}
 
-	var newRoutes = make(routesMap, len(list))
+	var newRoutes = make(RoutesMap, len(list))
 
 	for _, listedContainer := range list {
 		// set the routing info, if possible
@@ -142,7 +157,7 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen,gocyclo
 	if routesUpdated {
 		s.routeChangesSubsMu.Lock()
 		for sub, stop := range s.routeChangesSubs {
-			go func(sub chan<- routesMap, stop <-chan struct{}) {
+			go func(sub chan<- RoutesMap, stop <-chan struct{}) {
 				select { // first, check if the subscription and context are still alive
 				case <-stop: // is the subscription stopped?
 				case <-ctx.Done(): // is the context done?
@@ -164,8 +179,8 @@ func (s *State) Update(ctx context.Context) error { //nolint:funlen,gocyclo
 // SubscribeForRoutingUpdates will return a subscription channel and a stop function. The subscription channel will
 // receive a message when the routing info is updated. The stop function will stop the subscription.
 // The subscription channel will be closed when the stop function is called.
-func (s *State) SubscribeForRoutingUpdates() (sub <-chan routesMap, stop func()) {
-	var ch, cancel = make(chan routesMap, 1), make(chan struct{})
+func (s *State) SubscribeForRoutingUpdates() (sub <-chan RoutesMap, stop func()) {
+	var ch, cancel = make(chan RoutesMap, 1), make(chan struct{})
 
 	sub, stop = ch, sync.OnceFunc(func() {
 		close(cancel) // close the stop channel will notify the subscription to stop
@@ -196,7 +211,7 @@ func (s *State) SubscribeForRoutingUpdates() (sub <-chan routesMap, stop func())
 
 // URLToContainerByHostname returns a URL to the container with the given hostname. It returns false if the container
 // with the given hostname is not found.
-func (s *State) URLToContainerByHostname(hostname string) (map[string]url.URL, bool) { // map[container_id]url.URL
+func (s *State) URLToContainerByHostname(hostname string) (ContainerMap, bool) { // map[container_id]url.URL
 	{ // normalize the hostname
 		hostname = strings.ToLower(strings.TrimSpace(hostname))
 
@@ -218,7 +233,7 @@ func (s *State) URLToContainerByHostname(hostname string) (map[string]url.URL, b
 }
 
 // AllContainerURLs returns a map of all container URLs.
-func (s *State) AllContainerURLs() (routes map[string]map[string]url.URL) { // map[hostname]map[container_id]url.URL
+func (s *State) AllContainerURLs() (routes RoutesMap) { // map[hostname]map[container_id]url.URL
 	s.routesMu.Lock()
 	routes = maps.Clone(s.routes)
 	s.routesMu.Unlock()

@@ -47,7 +47,13 @@ export default function Screen({ apiClient }: { apiClient: Client }): React.JSX.
     const items: Array<ContainerListItem> = []
 
     for (const [hostname, containers] of routes.entries()) {
-      items.push({ name: hostname, routes: containers, url: new URL(`https://${hostname}.indocker.app`) })
+      items.push({
+        hostname: hostname,
+        routes: containers,
+        url: new URL(
+          `https://${hostname}.indocker.app` + (window.location.port ? `:${window.location.port}` : '') + '/'
+        ),
+      })
     }
 
     setListItems(items)

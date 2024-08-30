@@ -7,37 +7,40 @@ import (
 	"image"
 	"image/png"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
+	"gh.tarampamp.am/indocker-app/app/internal/docker"
 	_ "gh.tarampamp.am/indocker-app/app/internal/http/handlers/favicon/ico" // register the ICO format
-	"gh.tarampamp.am/indocker-app/app/internal/http/openapi"
 )
 
 type (
 	Handler struct {
-		resolver interface {
+		faviconResolver interface {
 			Resolve(ctx context.Context, baseUrl string, timeout time.Duration) (image.Image, error)
 		}
-
 		cache interface {
 			Get(string) (image.Image, bool)
 			Put(string, image.Image)
 			Clear()
 		}
-
-		handlerTimeout time.Duration
+		containerResolver docker.RoutingURLResolver
+		handlerTimeout    time.Duration
 	}
 )
 
 // New creates a new favicon handler with the given cache TTL for the favicon images. The cache is purged every TTL.
 // To stop the cache purging, cancel the given context.
 // The handlerTimeout is used for the whole operation (including the HTTP requests and image encoding).
-func New(ctx context.Context, cacheTTL, handlerTimeout time.Duration) *Handler {
+func New(ctx context.Context, r docker.RoutingURLResolver, cacheTTL, handlerTimeout time.Duration) *Handler {
 	var (
-		handler = Handler{resolver: NewResolver(), cache: newCache(), handlerTimeout: handlerTimeout}
-		ticker  = time.NewTicker(cacheTTL)
+		handler = Handler{
+			faviconResolver:   NewResolver(),
+			cache:             newCache(),
+			containerResolver: r,
+			handlerTimeout:    handlerTimeout,
+		}
+		ticker = time.NewTicker(cacheTTL)
 	)
 
 	go func() {
@@ -56,26 +59,27 @@ func New(ctx context.Context, cacheTTL, handlerTimeout time.Duration) *Handler {
 	return &handler
 }
 
-func (h *Handler) Handle(ctx context.Context, w http.ResponseWriter, params openapi.GetFaviconParams) error {
-	var baseUrl = params.BaseUrl
+func (h *Handler) Handle(ctx context.Context, w http.ResponseWriter, hostname string) error {
+	urls, routeFound := h.containerResolver.URLToContainerByHostname(hostname)
+	if !routeFound || len(urls) == 0 {
+		w.WriteHeader(http.StatusNotFound)
 
-	{ // normalize the base URL
-		// if the baseUrl does not have a scheme, add it
-		if !strings.HasPrefix(baseUrl, "http://") && !strings.HasPrefix(baseUrl, "https://") {
-			baseUrl = fmt.Sprintf("https://%s", baseUrl) // use https by default
-		}
-
-		// validate the base URL and remove the trailing slash
-		if u, err := url.Parse(baseUrl); err != nil {
-			return fmt.Errorf("failed to parse base url: %w", err)
-		} else {
-			baseUrl = strings.TrimRight(u.String(), "/") // remove trailing slash
-		}
+		return nil
 	}
 
-	var startedAt = time.Now()
+	var (
+		startedAt = time.Now()
+		baseUrl   string
+	)
 
-	favicon, faviconErr := h.resolver.Resolve(ctx, params.BaseUrl, h.handlerTimeout)
+	// pick a random url in round-robin fashion
+	for _, u := range urls {
+		baseUrl = strings.TrimRight(u.String(), "/") // remove the trailing slash
+
+		break
+	}
+
+	favicon, faviconErr := h.faviconResolver.Resolve(ctx, baseUrl, h.handlerTimeout)
 	if faviconErr == nil {
 		h.cache.Put(baseUrl, favicon)
 
@@ -103,6 +107,7 @@ func (h *Handler) Handle(ctx context.Context, w http.ResponseWriter, params open
 		w.Header().Set("Server-Timing", fmt.Sprintf("error;desc=\"%s\";dur=%d", msg, time.Since(startedAt).Milliseconds()))
 	}
 
+	w.Header().Set("Content-Length", "0")
 	w.WriteHeader(http.StatusNoContent)
 
 	return nil

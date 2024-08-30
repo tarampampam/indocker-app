@@ -5,7 +5,7 @@ import type { Client } from '~/api'
 import styles from './containers-list.module.scss'
 
 export type ContainerListItem = {
-  name: string
+  hostname: string
   url: URL
   routes?: ReadonlyMap<string, URL> // map[containerID]url
 }
@@ -15,16 +15,13 @@ const Row = ({ apiClient, item }: { apiClient: Client; item: ContainerListItem }
 
   // on component mount, get the favicon
   useEffect(() => {
-    if (item.routes && item.routes.size > 0) {
-      apiClient
-        // get the first route's favicon (all routes should have the same favicon)
-        .getFaviconFor(item.routes.values().next().value.toString())
-        .then((base64) => setIcon(base64))
-        .catch(() => {
-          /* do nothing */
-        })
-    }
-  }, [apiClient, item.routes])
+    apiClient
+      .getFaviconFor(item.hostname)
+      .then((base64) => base64 && setIcon(base64))
+      .catch(() => {
+        /* do nothing */
+      })
+  }, [apiClient, item.hostname])
 
   return (
     <div className={styles.row}>
@@ -32,7 +29,11 @@ const Row = ({ apiClient, item }: { apiClient: Client; item: ContainerListItem }
         <div className={styles.segment}>
           <Icon src={icon} />
         </div>
-        <div className={styles.segment}>{item.name}</div>
+        <div className={styles.segment}>
+          <a href={item.url.toString()} target="_blank" rel="noreferrer">
+            {item.hostname}
+          </a>
+        </div>
         {item.routes && item.routes.size > 1 && (
           <div className={styles.segment} style={{ opacity: 0.5 }}>
             {'//'} {item.routes.size} containers
@@ -49,10 +50,13 @@ const Row = ({ apiClient, item }: { apiClient: Client; item: ContainerListItem }
             )}
             <div className={styles.segment}>
               <a href={item.url.toString()} target="_blank" rel="noreferrer">
-                {item.url
-                  .toString()
-                  .replace(/\/+$/, '')
-                  .replace(/https?:\/\//, '')}
+                {
+                  item.url
+                    .toString()
+                    .replace(/\/+$/, '') // remove trailing slashes
+                    .replace(/https?:\/\//, '') // remove the protocol
+                    .replace(/:\d+$/, '') // remove the port
+                }
               </a>
             </div>
           </>
@@ -72,7 +76,7 @@ export default function Component({
   return (
     <div className={styles.list}>
       {items.map((item, i) => (
-        <Row key={i} apiClient={apiClient} item={item} />
+        <Row key={i + item.hostname} apiClient={apiClient} item={item} />
       ))}
     </div>
   )

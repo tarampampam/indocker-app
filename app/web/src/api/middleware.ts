@@ -4,7 +4,7 @@ import { APIErrorCommon, APIErrorNotFound } from './errors'
 /** This middleware throws an error if the response is not JSON. */
 export const throwIfNotJSON: Middleware = {
   async onResponse({ response, schemaPath }): Promise<undefined> {
-    if (schemaPath === '/api/favicon') {
+    if (schemaPath === '/api/favicon/{hostname}') {
       return undefined // https://openapi-ts.dev/openapi-fetch/middleware-auth#skipping
     }
 

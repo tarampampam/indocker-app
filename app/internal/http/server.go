@@ -8,13 +8,13 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"go.uber.org/zap"
 
+	"gh.tarampamp.am/indocker-app/app/internal/docker"
 	"gh.tarampamp.am/indocker-app/app/internal/http/middleware/frontend"
 	"gh.tarampamp.am/indocker-app/app/internal/http/middleware/logreq"
 	"gh.tarampamp.am/indocker-app/app/internal/http/openapi"
@@ -67,9 +67,9 @@ func NewServer(baseCtx context.Context, log *zap.Logger, opts ...ServerOption) *
 }
 
 func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface { //nolint:funlen
-	AllContainerURLs() map[string]map[string]url.URL
-	URLToContainerByHostname(string) (map[string]url.URL, bool)
-	SubscribeForRoutingUpdates() (sub <-chan map[string]map[string]url.URL, stop func())
+	docker.RoutingUpdateSubscriber
+	docker.RoutingURLResolver
+	docker.AllContainerURLsResolver
 }, localFrontendPath string) *Server {
 	// since both servers uses the same logics, we can iterate over them, but with differently named loggers
 	for namedLog, srv := range map[*zap.Logger]*http.Server{

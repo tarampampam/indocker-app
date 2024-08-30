@@ -1,22 +1,18 @@
 package routes_list
 
 import (
-	"net/url"
 	"slices"
 	"strings"
 
+	"gh.tarampamp.am/indocker-app/app/internal/docker"
 	"gh.tarampamp.am/indocker-app/app/internal/http/openapi"
 )
 
-type (
-	dockerRouter interface {
-		AllContainerURLs() map[string]map[string]url.URL
-	}
+type Handler struct {
+	router docker.AllContainerURLsResolver
+}
 
-	Handler struct{ router dockerRouter }
-)
-
-func New(router dockerRouter) *Handler { return &Handler{router: router} }
+func New(router docker.AllContainerURLsResolver) *Handler { return &Handler{router: router} }
 
 func (h *Handler) Handle() (resp openapi.RegisteredRoutesListResponse) {
 	var routes = h.router.AllContainerURLs()

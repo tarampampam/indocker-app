@@ -1,6 +1,6 @@
 module gh.tarampamp.am/indocker-app/app
 
-go 1.22
+go 1.23
 
 require (
 	github.com/docker/docker v27.1.1+incompatible

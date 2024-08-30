@@ -24,15 +24,15 @@ type (
 	// Resolver fetches the favicon from the given base URL.
 	Resolver struct{ httpClient httpClient }
 
-	// ResolverOption allows to set options for the resolver.
+	// ResolverOption allows to set options for the faviconResolver.
 	ResolverOption func(*Resolver)
 )
 
-// WithHTTPClient sets the HTTP client to be used by the resolver.
+// WithHTTPClient sets the HTTP client to be used by the faviconResolver.
 func WithHTTPClient(c httpClient) ResolverOption { return func(r *Resolver) { r.httpClient = c } }
 
-// NewResolver creates a new favicon resolver with the given options. If no HTTP client is provided, a default one is
-// created with a 5-second timeout.
+// NewResolver creates a new favicon faviconResolver with the given options. If no HTTP client is provided, a default
+// one is created with a 5-second timeout.
 func NewResolver(opts ...ResolverOption) *Resolver {
 	var r Resolver
 

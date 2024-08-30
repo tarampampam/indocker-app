@@ -12,22 +12,19 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"gh.tarampamp.am/indocker-app/app/internal/docker"
 	"gh.tarampamp.am/indocker-app/app/internal/http/openapi"
 )
 
 type (
-	routesSub interface {
-		SubscribeForRoutingUpdates() (sub <-chan map[string]map[string]url.URL, stop func())
-	}
-
 	Handler struct {
-		sub      routesSub
+		sub      docker.RoutingUpdateSubscriber
 		upgrader websocket.Upgrader
 	}
 )
 
 // New is a constructor for the [Handler] structure.
-func New(sub routesSub) *Handler { return &Handler{sub: sub} }
+func New(sub docker.RoutingUpdateSubscriber) *Handler { return &Handler{sub: sub} }
 
 // Handle is a function that handles the WebSocket connection. It reads messages from the client and sends routing
 // updates to the client in [openapi.ContainerRoutesList] format.

@@ -187,24 +187,27 @@ export class Client {
   }
 
   /** Returns the favicon (in base64) for the given base URL. */
-  async getFaviconFor(baseUrl: string, force: boolean = false): Promise<string> {
-    if (this.cache.favicons && this.cache.favicons.has(baseUrl) && !force) {
-      const cached = this.cache.favicons.get(baseUrl)
+  async getFaviconFor(hostname: string, force: boolean = false): Promise<string | null> {
+    if (this.cache.favicons && this.cache.favicons.has(hostname) && !force) {
+      const cached = this.cache.favicons.get(hostname)
 
       if (cached) {
         return cached
       }
     }
 
-    const { response, data } = await this.api.GET('/api/favicon', {
-      params: { query: { base_url: baseUrl.replace(/\/$/, '') } }, // remove trailing slash
+    const { response, data } = await this.api.GET('/api/favicon/{hostname}', {
+      params: { path: { hostname: hostname.replace(/\/$/, '') } }, // remove trailing slash
       parseAs: 'blob',
       priority: 'low',
-      cache: 'force-cache',
       signal: AbortSignal.timeout(10000), // 10 seconds request timeout
     })
 
-    if (data) {
+    if (response.status === 204) {
+      return null
+    }
+
+    if (data && typeof data === 'object' && data instanceof Blob) {
       const reader = new FileReader()
 
       const promise = new Promise<string>((resolve, reject) => {
@@ -222,7 +225,7 @@ export class Client {
       return promise.then((base64) => {
         const frozen = Object.freeze(base64)
 
-        this.cache.favicons?.set(baseUrl, frozen)
+        this.cache.favicons?.set(hostname, frozen)
 
         return frozen
       })
