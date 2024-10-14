@@ -33,40 +33,28 @@ jobs:
       - run: dnscontrol check
         working-directory: dns
 
-  golangci-lint-app:
-    name: 🧪 Run GolangCI-lint (app)
+  lint-and-test-app:
+    name: 🧪 Test and lint app
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - {uses: actions/setup-go@v5, with: {go-version-file: ./app/go.mod}}
-      - run: |
-          go install "github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@v2.2.0"
-          go generate ./...
+      - {uses: actions/setup-go@v5, with: {go-version-file: ./app/go.mod, cache-dependency-path: ./app/go.sum}}
+      - run: GOBIN=/bin go install "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.3.0"
+      - run: go generate ./...
         working-directory: ./app
       - uses: golangci/golangci-lint-action@v6
         with: {working-directory: ./app}
-
-  golangci-lint-mkcert:
-    name: 🧪 Run GolangCI-lint (mkcert)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - {uses: actions/setup-go@v5, with: {go-version-file: ./mkcert/go.mod}}
-      - uses: golangci/golangci-lint-action@v6
-        with: {working-directory: ./mkcert}
-
-  go-test-app:
-    name: 🧪 Run unit-tests (Go)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - {uses: actions/setup-go@v5, with: {go-version-file: ./app/go.mod}}
-      - run: |
-          go install "github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@v2.2.0"
-          go generate ./...
-        working-directory: ./app
       - run: go test -race -covermode=atomic ./...
         working-directory: ./app
+
+  lint-mkcert:
+    name: 🧪 Lint mkcert
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - {uses: actions/setup-go@v5, with: {go-version-file: ./mkcert/go.mod, cache-dependency-path: ./mkcert/go.sum}}
+      - uses: golangci/golangci-lint-action@v6
+        with: {working-directory: ./mkcert}
 
   build-docker-image:
     name: 🏗️ Build the docker image
