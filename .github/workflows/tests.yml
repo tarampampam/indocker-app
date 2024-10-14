@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - {uses: actions/setup-go@v5, with: {go-version-file: ./app/go.mod, cache-dependency-path: ./app/go.sum}}
-      - run: GOBIN=/bin go install "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.3.0"
+      - run: go install "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.3.0"
       - run: go generate ./...
         working-directory: ./app
       - uses: golangci/golangci-lint-action@v6
