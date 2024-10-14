@@ -6,7 +6,7 @@ name: 🚀 Deploy the DNS records
 on:
   workflow_dispatch: {}
   push:
-    branches: [v2] # TODO: change to `master, main`
+    branches: [master, main]
     paths: [dns/dnsconfig.js, .github/workflows/deploy-dns.yml]
 
 concurrency:
