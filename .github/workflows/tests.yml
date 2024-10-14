@@ -39,6 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - {uses: actions/setup-go@v5, with: {go-version-file: ./app/go.mod}}
+      - run: |
+          go install "github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@v2.2.0"
+          go generate ./...
+        working-directory: ./app
       - uses: golangci/golangci-lint-action@v6
         with: {working-directory: ./app}
 
@@ -50,6 +54,19 @@ jobs:
       - {uses: actions/setup-go@v5, with: {go-version-file: ./mkcert/go.mod}}
       - uses: golangci/golangci-lint-action@v6
         with: {working-directory: ./mkcert}
+
+  go-test-app:
+    name: 🧪 Run unit-tests (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - {uses: actions/setup-go@v5, with: {go-version-file: ./app/go.mod}}
+      - run: |
+          go install "github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@v2.2.0"
+          go generate ./...
+        working-directory: ./app
+      - run: go test -race -covermode=atomic ./...
+        working-directory: ./app
 
   build-docker-image:
     name: 🏗️ Build the docker image
