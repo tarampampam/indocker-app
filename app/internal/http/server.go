@@ -5,10 +5,8 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"io/fs"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -70,7 +68,9 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface
 	docker.RoutingUpdateSubscriber
 	docker.RoutingURLResolver
 	docker.AllContainerURLsResolver
-}, localFrontendPath string) *Server {
+}, useLiveFrontend bool) *Server {
+	var frontendFs = web.Dist(useLiveFrontend)
+
 	// since both servers uses the same logics, we can iterate over them, but with differently named loggers
 	for namedLog, srv := range map[*zap.Logger]*http.Server{
 		log.Named("http"):  s.http,
@@ -89,15 +89,7 @@ func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface
 				BaseRouter:       openapiMux,
 				Middlewares:      []openapi.MiddlewareFunc{openapi.CorsMiddleware()},
 			})
-
-			frontendFs fs.FS
 		)
-
-		if localFrontendPath != "" { // if the local frontend path is provided, use it
-			frontendFs = os.DirFS(localFrontendPath)
-		} else {
-			frontendFs = web.Dist() // otherwise, use the embedded frontend
-		}
 
 		// note that since a pattern ending in a slash names a rooted subtree, the pattern "/" matches all paths not
 		// matched by other registered patterns, not just the URL with Path == "/". this allows us to use this pattern

@@ -5,7 +5,7 @@ import { type SemVer } from 'semver'
 import { type Client } from '~/api'
 import { pathTo, RouteIDs, useCurrentRouteID } from '~/routing'
 import { Icon, type IconProps } from '~/shared/components'
-import { DockerRoundIcon, AboutIcon, SoftwareUpdateIcon } from '~/assets/icons'
+import { DockerRoundIcon, SoftwareUpdateIcon } from '~/assets/icons'
 import styles from './layout.module.scss'
 
 const Header = ({
@@ -30,17 +30,17 @@ const Header = ({
         ),
       },
     ],
-    [
-      RouteIDs.About,
-      {
-        component: (
-          <>
-            <Icon src={AboutIcon} {...commonIconProps} />
-            About
-          </>
-        ),
-      },
-    ],
+    // [
+    //   RouteIDs.About,
+    //   {
+    //     component: (
+    //       <>
+    //         <Icon src={AboutIcon} {...commonIconProps} />
+    //         About
+    //       </>
+    //     ),
+    //   },
+    // ],
   ])
 
   return (

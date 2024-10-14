@@ -43,7 +43,7 @@ type (
 				host string // Docker daemon host (e.g. "unix:///var/run/docker.sock")
 			}
 			frontend struct {
-				distPath string // path to the frontend distribution to serve instead of the built-in one
+				useLive bool // false to use embedded frontend, true to use live (local)
 			}
 		}
 	}
@@ -53,17 +53,21 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 	var cmd command
 
 	var (
-		addrFlag              = shared.AddrFlag
-		httpPortFlag          = shared.HttpPortFlag
-		httpsPortFlag         = shared.HttpsPortFlag
-		httpsCertFileFlag     = shared.HttpsCertFileFlag
-		httpsKeyFileFlag      = shared.HttpsKeyFileFlag
-		readTimeoutFlag       = shared.ReadTimeoutFlag
-		writeTimeoutFlag      = shared.WriteTimeoutFlag
-		idleTimeoutFlag       = shared.IdleTimeoutFlag
-		shutdownTimeoutFlag   = shared.ShutdownTimeoutFlag
-		dockerHostFlag        = shared.DockerHostFlag
-		localFrontendPathFlag = shared.LocalFrontendPathFlag
+		addrFlag            = shared.AddrFlag
+		httpPortFlag        = shared.HttpPortFlag
+		httpsPortFlag       = shared.HttpsPortFlag
+		httpsCertFileFlag   = shared.HttpsCertFileFlag
+		httpsKeyFileFlag    = shared.HttpsKeyFileFlag
+		readTimeoutFlag     = shared.ReadTimeoutFlag
+		writeTimeoutFlag    = shared.WriteTimeoutFlag
+		idleTimeoutFlag     = shared.IdleTimeoutFlag
+		shutdownTimeoutFlag = shared.ShutdownTimeoutFlag
+		dockerHostFlag      = shared.DockerHostFlag
+		useLiveFrontendFlag = cli.BoolFlag{
+			Name:     "use-live-frontend",
+			Usage:    "use frontend from the local directory instead of the embedded one (useful for development)",
+			OnlyOnce: true,
+		}
 	)
 
 	cmd.c = &cli.Command{
@@ -82,7 +86,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			opt.timeouts.httpIdle = c.Duration(idleTimeoutFlag.Name)
 			opt.timeouts.shutdown = c.Duration(shutdownTimeoutFlag.Name)
 			opt.docker.host = c.String(dockerHostFlag.Name)
-			opt.frontend.distPath = c.String(localFrontendPathFlag.Name)
+			opt.frontend.useLive = c.Bool(useLiveFrontendFlag.Name)
 
 			// if user provided both certificate and key files, use them
 			if crt, key := c.String(httpsCertFileFlag.Name), c.String(httpsKeyFileFlag.Name); crt != "" && key != "" { //nolint:nestif,lll
@@ -126,7 +130,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 			&idleTimeoutFlag,
 			&shutdownTimeoutFlag,
 			&dockerHostFlag,
-			&localFrontendPathFlag,
+			&useLiveFrontendFlag,
 		},
 		Commands: []*cli.Command{
 			healthcheck.NewCommand(),
@@ -166,7 +170,7 @@ func (cmd *command) Run(parentCtx context.Context, log *zap.Logger) error { //no
 		ctx,
 		log,
 		dockerState,
-		cmd.options.frontend.distPath,
+		cmd.options.frontend.useLive,
 	)
 
 	server.ShutdownTimeout = cmd.options.timeouts.shutdown // set shutdown timeout

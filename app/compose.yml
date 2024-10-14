@@ -23,7 +23,7 @@ services:
 
   daemon:
     build: *app-build
-    command: go run ./cmd/app/ start --local-frontend-path ./web/dist
+    command: go run ./cmd/app/ start --use-live-frontend
     volumes: [.:/src:rw, /var/run/docker.sock:/var/run/docker.sock:ro]
     ports: ['80:8080/tcp', '443:8443/tcp'] # open https://monitor.indocker.app
     depends_on: {app-web-dist: {condition: service_healthy}} # do not use it due file permissions issues

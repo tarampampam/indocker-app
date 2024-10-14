@@ -1,9 +1,11 @@
 @forward '~/theme/app';
 
 .list {
-  background-color: #123;
+  background-color: var(--color-bg-primary);
   padding: 1em;
   border-radius: 1em;
+  border-color: var(--color-ui-border-active);
+  border: solid 1px;
 
   .row {
     display: flex;
