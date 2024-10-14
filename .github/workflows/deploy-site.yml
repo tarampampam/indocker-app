@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 # docs: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
 
-name: 🚀 Deploy the frontend
+name: 🚀 Deploy the site
 
 on:
   workflow_dispatch: {}
@@ -18,7 +18,7 @@ jobs:
     name: 🖼 Deploy the site
     runs-on: ubuntu-latest
     environment:
-      name: Production
+      name: Site
       url: https://indocker.app
     steps:
       - uses: actions/checkout@v4
