@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://cdn.jsdelivr.net/gh/compose-spec/compose-spec@master/schema/compose-spec.json
+
+services:
+  my-nginx:
+    image: docker.io/library/nginx:latest
+    labels:
+      indocker.host: my-nginx
+      indocker.scheme: http # optional
+      indocker.port: 80
+    security_opt: [no-new-privileges:true] # optional
+
+  my-whoami:
+    image: docker.io/containous/whoami:latest
+    labels:
+      indocker.host: my-whoami
+      indocker.scheme: http # optional
+      indocker.port: 8080
+      indocker.network: some-network
+    command: --port 8080
+    networks: [some-network]
+    security_opt: [no-new-privileges:true] # optional
+
+networks:
+  some-network: {}

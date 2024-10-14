@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://cdn.jsdelivr.net/gh/compose-spec/compose-spec@master/schema/compose-spec.json
+
+name: indocker-app
+
+services:
+  app: # common use case is to run shell or execute commands
+    build: &app-build {dockerfile: Dockerfile, target: develop}
+    environment:
+      PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@develop] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
+      HOME: /tmp
+      LOG_LEVEL: debug
+    volumes: [.:/src:rw, app-tmp-data:/tmp:rw, app-modules-cache:/var/tmp/go:rw]
+    security_opt: [no-new-privileges:true]
+
+  app-web-dist:
+    build: *app-build
+    user: node
+    volumes: [.:/src:rw]
+    working_dir: /src/web
+    command: npm run watch
+    healthcheck: {test: ['CMD', 'test', '-f', './dist/robots.txt'], start_interval: 1s, interval: 10s, start_period: 20s}
+    security_opt: [no-new-privileges:true]
+
+  daemon:
+    build: *app-build
+    command: go run ./cmd/app/ start --use-live-frontend
+    volumes: [.:/src:rw, /var/run/docker.sock:/var/run/docker.sock:ro]
+    ports: ['80:8080/tcp', '443:8443/tcp'] # open https://monitor.indocker.app
+    depends_on: {app-web-dist: {condition: service_healthy}} # do not use it due file permissions issues
+
+  whoami: # just for a test
+    image: docker.io/containous/whoami:latest
+    labels:
+      indocker.host: whoami.indocker.app # Open <https://whoami.indocker.app>
+      indocker.port: 8080
+    command: --port 8080
+    scale: 2
+    #depends_on: {daemon: {condition: service_healthy}}
+    security_opt: [no-new-privileges:true]
+
+  httpbin: # just for a test
+    image: docker.io/mccutchen/go-httpbin:latest
+    labels:
+      indocker.host: httpbin.indocker.app # Open <https://whoami.indocker.app>
+      indocker.port: 8080
+    command: go-httpbin -port 8080
+    scale: 3
+    #depends_on: {daemon: {condition: service_healthy}}
+    security_opt: [no-new-privileges:true]
+
+  minio:
+    image: quay.io/minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: minio-user
+      MINIO_ROOT_PASSWORD: minio-password
+    command: server /data --json --console-address ':9090'
+    labels:
+      indocker.host: my-minio # Open <https://my-minio.indocker.app>
+      indocker.port: 9090
+    healthcheck: {test: ['CMD', 'curl', '-f', 'http://127.0.0.1:9000/minio/health/live'], interval: 10s, start_interval: 1s, start_period: 10s}
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  app-modules-cache: {}
+  app-tmp-data: {}

@@ -1,8 +1,10 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# docs: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
+
 name: 🚀 Release
 
 on:
-  release: # Docs: <https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release>
-    types: [published]
+  release: {types: [published]}
   workflow_dispatch: {}
 
 jobs:
@@ -10,55 +12,32 @@ jobs:
     name: 🏗️ Build the docker image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - uses: docker/login-action@v2
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_LOGIN }}
           password: ${{ secrets.QUAY_PASSWORD }}
-
-      - uses: docker/login-action@v2
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/github-script@v7
-        id: date
-        with: {script: 'return (new Date()).getMonth()', result-encoding: string}
-
-      - uses: actions/cache@v4
-        id: certs-cache # yea, I know about the sensitive data caching, bla bla bla
-        with: {path: traefik/certs, key: 'config-certs-month-${{ steps.date.outputs.result }}'}
-
-      - if: steps.certs-cache.outputs.cache-hit != 'true'
-        run: sh ./mkcert.sh
-        env:
-          CF_API_KEY: ${{ secrets.CF_API_KEY }}
-          CF_EMAIL: ${{ secrets.CF_EMAIL }}
-          DRY_RUN: 'false' # BE CAREFUL WITH THIS! QUOTA IS HARD LIMITED!
-
       - {uses: gacts/github-slug@v1, id: slug}
-
-      - uses: docker/setup-qemu-action@v2
-        with: {platforms: 'arm,arm64,amd64'}
-
-      - uses: docker/setup-buildx-action@v2
-
-      - uses: docker/build-push-action@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./app
+          file: ./app/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm/v6,linux/arm64/v8
           build-args: "APP_VERSION=${{ steps.slug.outputs.version }}"
-          cache-from: quay.io/indocker/app:latest
+          # TODO: add `ghcr.io/tarampampam/indocker:latest` and `quay.io/indocker/app:latest`
           tags: |
             ghcr.io/tarampampam/indocker:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}.${{ steps.slug.outputs.version-patch }}
             ghcr.io/tarampampam/indocker:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}
             ghcr.io/tarampampam/indocker:${{ steps.slug.outputs.version-major }}
-            ghcr.io/tarampampam/indocker:latest
             quay.io/indocker/app:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}.${{ steps.slug.outputs.version-patch }}
             quay.io/indocker/app:${{ steps.slug.outputs.version-major }}.${{ steps.slug.outputs.version-minor }}
             quay.io/indocker/app:${{ steps.slug.outputs.version-major }}
-            quay.io/indocker/app:latest

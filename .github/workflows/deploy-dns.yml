@@ -1,3 +1,6 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# docs: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
+
 name: 🚀 Deploy the DNS records
 
 on:
@@ -15,17 +18,13 @@ jobs:
     name: 🌐 Deploy the DNS records
     runs-on: ubuntu-latest
     environment: DNS
+    defaults: {run: {working-directory: ./dns}}
     steps:
-      - uses: actions/checkout@v3
-
+      - uses: actions/checkout@v4
       - uses: gacts/install-dnscontrol@v1
-
-      - name: Create credentials file
-        working-directory: dns
+      - name: Create the credentials file
         run: echo '{"cloudflare":{"TYPE":"CLOUDFLAREAPI","accountid":"$CF_ID","apitoken":"$CF_TOKEN"}}' > ./creds.json
-
       - run: dnscontrol push
-        working-directory: dns
         env:
           CF_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_TOKEN: ${{ secrets.CF_DNS_API_KEY }}

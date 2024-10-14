@@ -1,0 +1,96 @@
+{
+  "name": "monitor-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node --no-deprecation ./node_modules/.bin/openapi-typescript ./../api/openapi.yml --immutable --enum --array-length --additional-properties=false --output ./src/api/schema.gen.ts",
+    "fmt": "prettier --config package.json --write ./*.ts ./src && npm run lint:es -- --fix",
+    "lint": "npm run lint:ts && npm run lint:es",
+    "lint:ts": "tsc --noEmit",
+    "lint:es": "eslint --config package.json ./src/**/*.{ts,tsx}",
+    "test": "vitest --run",
+    "serve": "vite --strictPort",
+    "watch": "vite build --watch",
+    "build": "tsc --noEmit && vite build"
+  },
+  "dependencies": {
+    "framer-motion": "^11.3.24",
+    "openapi-fetch": "^0.10.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.0",
+    "semver": "^7.6.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.1.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/semver": "^7.5.8",
+    "@typescript-eslint/eslint-plugin": "^7.16.0",
+    "@typescript-eslint/parser": "^7.16.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.35.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.9",
+    "openapi-typescript": "^7.3.0",
+    "prettier": "^3.3.3",
+    "sass": "^1.77.8",
+    "typescript": "^5.5.4",
+    "vite": "^5.3.5",
+    "vitest": "^2.0.5",
+    "vitest-fetch-mock": "^0.3.0"
+  },
+  "eslintConfig": {
+    "root": true,
+    "env": {
+      "browser": true,
+      "es2021": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/recommended",
+      "plugin:react/recommended",
+      "plugin:react-hooks/recommended"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module",
+      "project": true,
+      "jsx": true
+    },
+    "plugins": [
+      "@typescript-eslint",
+      "react-refresh",
+      "react"
+    ],
+    "settings": {
+      "react": {
+        "version": "detect"
+      }
+    },
+    "rules": {
+      "react/react-in-jsx-scope": "off",
+      "react/jsx-key": [
+        "error",
+        {
+          "checkFragmentShorthand": true
+        }
+      ]
+    },
+    "ignorePatterns": [
+      "dist/*"
+    ]
+  },
+  "prettier": {
+    "semi": false,
+    "tabWidth": 2,
+    "singleQuote": true,
+    "printWidth": 120,
+    "trailingComma": "es5"
+  },
+  "engines": {
+    "node": ">=21"
+  }
+}

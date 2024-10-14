@@ -1,0 +1,188 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/schemas/v3.0/schema.json
+
+openapi: '3.0.3'
+info:
+  title: indocker.app internal API
+  license: {name: MIT}
+  version: '1.0.0'
+
+servers:
+  - {url: '/', description: Current server}
+
+paths:
+  /api/ping:
+    get:
+      summary: Ping the server
+      operationId: ping
+      responses:
+        '200': {$ref: '#/components/responses/PingResponse'}
+
+  /api/version:
+    get:
+      summary: Get application version
+      description: Returns the application version
+      operationId: getAppVersion
+      responses:
+        '200': {$ref: '#/components/responses/AppVersionResponse'}
+
+  /api/version/latest:
+    get:
+      summary: Get latest application version
+      description: Returns the latest application version
+      operationId: getLatestAppVersion
+      responses:
+        '200': {$ref: '#/components/responses/AppVersionResponse'}
+        '5XX': {$ref: '#/components/responses/ErrorResponse', description: Server error}
+
+  /api/routes:
+    get:
+      summary: List all registered routes
+      description: Returns all registered routes
+      operationId: listRoutes
+      responses:
+        '200': {$ref: '#/components/responses/RegisteredRoutesListResponse'}
+        '5XX': {$ref: '#/components/responses/ErrorResponse', description: Server error}
+
+  /api/routes/subscribe:
+    get:
+      summary: Subscribe to route changes via WebSocket
+      description: Establishes a WebSocket connection to receive route changes
+      operationId: subscribeRoutes
+      parameters:
+        - {$ref: '#/components/parameters/WebSocketRequestConnectionInHeader'}
+        - {$ref: '#/components/parameters/WebSocketRequestUpgradeInHeader'}
+        - {$ref: '#/components/parameters/WebSocketRequestSecKeyInHeader'}
+        - {$ref: '#/components/parameters/WebSocketRequestSecVersionInHeader'}
+      responses:
+        '101':
+          description: Switching Protocols
+          headers:
+            Connection: {$ref: '#/components/headers/WebSocketResponseConnection'}
+            Upgrade: {$ref: '#/components/headers/WebSocketResponseUpgrade'}
+            Sec-Websocket-Accept: {$ref: '#/components/headers/WebSocketResponseSecWebsocketAccept'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ContainerRoutesList'}
+        '400': {$ref: '#/components/responses/ErrorResponse', description: Bad request}
+        '5XX': {$ref: '#/components/responses/ErrorResponse', description: Server error}
+
+  /api/favicon/{hostname}:
+    get:
+      summary: Get favicon for the hostname
+      operationId: getFavicon
+      parameters: [{$ref: '#/components/parameters/HostNameInPath'}]
+      responses:
+        '200':
+          description: Favicon image for the hostname in PNG format
+          content: {image/png: {schema: {type: string, format: binary}}}
+        '204': {description: No favicon found}
+        '404': {description: Hostname not found}
+        '5XX': {$ref: '#/components/responses/ErrorResponse', description: Server error}
+
+components:
+  headers: # ------------------------------------------------ HEADERS -------------------------------------------------
+    WebSocketResponseConnection:
+      description: Websocket connection header
+      schema: {type: string, example: Upgrade, externalDocs: {url: 'https://mzl.la/3WWJi8w'}}
+
+    WebSocketResponseUpgrade:
+      description: Websocket upgrade header
+      schema: {type: string, example: websocket, externalDocs: {url: 'https://mzl.la/46XxkyZ'}}
+
+    WebSocketResponseSecWebsocketAccept:
+      description: Websocket Sec-WebSocket-Accept header
+      schema: {type: string, example: nESCeAuSsDkp9fVKF/BQ9Nfev+U=, externalDocs: {url: 'https://mzl.la/4duaxwC'}}
+
+  parameters: # --------------------------------------------- PARAMETERS ---------------------------------------------
+    WebSocketRequestConnectionInHeader:
+      name: Connection
+      in: header
+      required: true
+      schema: {type: string, example: Upgrade, externalDocs: {url: 'https://mzl.la/3WWJi8w'}}
+
+    WebSocketRequestUpgradeInHeader:
+      name: Upgrade
+      in: header
+      required: true
+      schema: {type: string, example: websocket, externalDocs: {url: 'https://mzl.la/46XxkyZ'}}
+
+    WebSocketRequestSecKeyInHeader:
+      name: Sec-WebSocket-Key
+      in: header
+      required: true
+      schema: {type: string, example: K/TxmSsnVc71pFVjGIYy3w==}
+
+    WebSocketRequestSecVersionInHeader:
+      name: Sec-WebSocket-Version
+      in: header
+      required: true
+      schema: {type: string, example: 13}
+
+    HostNameInPath:
+      name: hostname
+      in: path
+      description: Host name
+      required: true
+      schema: {type: string, example: whoami}
+
+  responses: # ---------------------------------------------- RESPONSES -----------------------------------------------
+    PingResponse:
+      description: Pong response
+      content:
+        application/json:
+          schema:
+            type: string
+            example: pong
+
+    AppVersionResponse:
+      description: Application version information
+      content:
+        application/json:
+          schema:
+            type: object
+            properties: {version: {type: string, example: '0.0.1', description: Without the 'v' prefix}}
+            additionalProperties: false
+            required: [version]
+
+    ErrorResponse:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: {type: string, example: 'Internal server error'}
+            additionalProperties: false
+            required: [error]
+
+    RegisteredRoutesListResponse:
+      description: List of registered routes
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ContainerRoutesList'}
+
+  schemas: # ------------------------------------------------ SCHEMAS -------------------------------------------------
+    ContainerRoutesList:
+      description: List of container routes
+      type: object
+      properties:
+        routes:
+          type: array
+          items: {$ref: '#/components/schemas/ContainerRoute'}
+      additionalProperties: false
+      required: [routes]
+
+    ContainerRoute:
+      description: Container route information
+      type: object
+      properties:
+        hostname: {type: string, example: 'whoami'}
+        urls:
+          type: object
+          additionalProperties: {type: string, format: uri, example: 'http://172.19.0.2:8080'}
+          minProperties: 1
+          example:
+            769c041f8685e91cee965832d46e9bdd5dccd98e759fe8b8691440a714a4972f: http://172.19.0.2:8080
+            f16c09e38a8a4d63669ac5638708691865d9ef6a56f2e20f95a21f86c2cfc442: http://172.19.0.3:8080
+      additionalProperties: false
+      required: [hostname, urls]

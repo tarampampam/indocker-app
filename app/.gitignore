@@ -1,0 +1,7 @@
+## Binaries
+/app
+
+## Generated code
+*.gen.go
+*_enum.go
+*.pb.go

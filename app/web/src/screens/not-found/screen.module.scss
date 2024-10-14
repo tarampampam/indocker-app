@@ -1,0 +1,29 @@
+@forward '~/theme/app';
+
+.main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  height: 100%;
+
+  color: var(--color-text-inverted);
+  background-image: radial-gradient(
+    circle farthest-corner at 48.4% 47.5%,
+    var(--color-bg-gradinent-from) 0%,
+    var(--color-bg-gradinent-to) 100%
+  );
+
+  img {
+    padding-bottom: 1em;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  h1 {
+    font-size: 1.2em;
+    font-weight: 700;
+    padding: 0.6em 1em;
+    background-color: var(--color-bg-inverted);
+  }
+}
