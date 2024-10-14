@@ -8,7 +8,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli-docs/v3 v3.0.0-alpha5
-	github.com/urfave/cli/v3 v3.0.0-alpha9
+	github.com/urfave/cli/v3 v3.0.0-alpha9.1
 	github.com/zenizh/go-capturer v0.0.0-20211219060012-52ea6c8fed04
 	go.uber.org/zap v1.27.0
 	golang.org/x/image v0.19.0
@@ -39,7 +39,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
 	go.opentelemetry.io/otel v1.29.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.28.0 // indirect
