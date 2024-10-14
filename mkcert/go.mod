@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/go-acme/lego/v4 v4.19.2
 	github.com/urfave/cli-docs/v3 v3.0.0-alpha5
-	github.com/urfave/cli/v3 v3.0.0-alpha9
+	github.com/urfave/cli/v3 v3.0.0-alpha9.1
 )
 
 require (
@@ -17,7 +17,6 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.29.0 // indirect
