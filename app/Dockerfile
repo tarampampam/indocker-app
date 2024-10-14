@@ -69,7 +69,7 @@ COPY . /src
 RUN --mount=type=bind,from=frontend,source=/src/web/dist,target=/src/web/dist \
     set -x \
     # build the app itself
-    && go generate ./... \
+    && go generate -skip readme ./... \
     && CGO_ENABLED=0 go build \
       -trimpath \
       -ldflags "-s -w -X gh.tarampamp.am/indocker-app/app/internal/version.version=${APP_VERSION}" \
