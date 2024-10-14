@@ -22,7 +22,7 @@
     "semver": "^7.6.3"
   },
   "devDependencies": {
-    "@types/node": "^22.1.0",
+    "@types/node": "^22.7.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/semver": "^7.5.8",
@@ -37,8 +37,8 @@
     "prettier": "^3.3.3",
     "sass": "^1.77.8",
     "typescript": "^5.5.4",
-    "vite": "^5.3.5",
-    "vitest": "^2.0.5",
+    "vite": "^5.4.8",
+    "vitest": "^2.1.2",
     "vitest-fetch-mock": "^0.3.0"
   },
   "eslintConfig": {
