@@ -13,7 +13,7 @@ import (
 	"gh.tarampamp.am/indocker-app/app/internal/version"
 )
 
-//go:generate go run app_generate.go
+//go:generate go run app_readme.go
 
 // NewApp creates new console application.
 func NewApp() *cli.Command { //nolint:funlen
