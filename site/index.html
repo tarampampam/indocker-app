@@ -110,7 +110,7 @@
   <div id="daemon-status-up" class="bg-success text-white bg-gradient d-none">
     <div class="container py-2 text-center">
       The local demon works!
-      <a class="btn btn-light btn-sm ms-2" href="https://monitor.indocker.app/dashboard/#/http/routers" target="_blank">
+      <a class="btn btn-light btn-sm ms-2" href="https://monitor.indocker.app/" target="_blank">
         Open dashboard
       </a>
     </div>
@@ -138,110 +138,33 @@
 </header>
 
 <main class="container">
-  <h1>How it works?</h1>
-
-  <p>
-    When you start our docker-container with pre-configured <a href="https://traefik.io/" target="_blank">Traefik
-    reverse proxy</a> - it allows you to send HTTP requests to other docker-containers, started on your
-    <strong>local</strong> machine, using domain names and don't care about SSL certificate - our container already
-    contains wildcard <code>*.indocker.app</code> certificate issued by
-    <a href="https://letsencrypt.org/">Let's encrypt</a>!
-  </p>
-
-  <blockquote class="blockquote text-muted">
-    You may want to use subdomains like <code>*.api.indocker.app</code> or <code>*.frontend.indocker.app</code> -
-    it's also possible! But have a limited number of subdomain names. For more information, please, watch the
-    certificate details.
-  </blockquote>
-
-  <blockquote class="blockquote text-muted">
-    Since this service is located on the <code>.app</code> domain zone, any HTTP requests which are sent from the
-    browser will be automatically rewritten to the HTTPS schema. This occurs because of all domains in this zone
-    are in the HSTS preload list. This affects only browser-based requests - API, curl requests, and so on work
-    as usual.
-  </blockquote>
-
-  <h2 class="pt-4">But what about DNS?</h2>
-
-  <p>
-    Domain zone <code>*.indocker.app</code> always resolves IP address <code>127.0.0.1</code> (<code>::1</code>).
-  </p>
-
-  <h1 class="pt-4" id="start_daemon">How to start?</h1>
-
-  <blockquote class="blockquote text-muted">
-    Make sure that you have no running nginx or any other application that uses 80 or 443 local ports.
-  </blockquote>
-
-  <p>
-    At first, you should create docker network for reverse proxy:
-  </p>
-
-  <pre><code class="language-shell">$ docker network create indocker-app-network
-64a84ea622e9a951a38fbd4654c34407ac5b04d516998596ce30d06979391b4e</code></pre>
-
-  <p>And then start the container (image name <code>quay.io/indocker/app</code>) with a reverse proxy in background mode:</p>
-
-  <pre><code class="language-shell">$ docker run -d --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -p 80:80 -p 443:443 \
-  --network indocker-app-network \
-  --name indocker.app \
-  quay.io/indocker/app:1</code></pre>
-
-  <blockquote class="blockquote text-muted">
-    SSL certificate is valid for just about 3 months after the image download. So, do not forget to update this
-    docker image time-to-time.
-  </blockquote>
-
-  <h2 class="pt-4">How to stop?</h2>
-
-  <p>
-    Very simple. Just execute in your terminal:
-  </p>
-
-  <pre><code class="language-shell">$ docker stop indocker.app</code></pre>
-
-  <h1 class="pt-4">How can I use this?</h1>
-
   <p>
     Let's write a dead simple docker-compose file that starts nginx with attaching some domain name to it:
   </p>
 
-  <pre><code class="language-yaml">version: '3.8'
-
-services:
+  <pre><code class="language-yaml">services:
   my-nginx:
-    image: nginx:latest
+    image: docker.io/library/nginx:latest
     labels:
-      - traefik.enable=true
-      - traefik.docker.network=indocker-app-network
-      # https://doc.traefik.io/traefik/routing/providers/docker/#routers
-      - traefik.http.routers.my-nginx-router.rule=Host(`my-nginx.indocker.app`)
-      - traefik.http.routers.my-nginx-router.service=my-nginx-service
-      # https://doc.traefik.io/traefik/routing/providers/docker/#services
-      - traefik.http.services.my-nginx-service.loadbalancer.server.port=80
-      - traefik.http.services.my-nginx-service.loadbalancer.healthcheck.path=/
-      - traefik.http.services.my-nginx-service.loadbalancer.healthcheck.interval=5s
+      indocker.host: my-nginx
+      indocker.scheme: http # optional
+      indocker.port: 80
     networks: [indocker-app-network]
     security_opt: [no-new-privileges:true]
 
-  whoami:
-    image: containous/whoami:latest
+  my-whoami:
+    image: docker.io/containous/whoami:latest
     labels:
-      - traefik.enable=true
-      - traefik.docker.network=indocker-app-network
-      - traefik.http.routers.whoami-router.rule=Host(`whoami.indocker.app`)
-      - traefik.http.routers.whoami-router.entrypoints=http # force HTTP instead of HTTPS
-      - traefik.http.routers.whoami-router.service=whoami-service
-      - traefik.http.services.whoami-service.loadbalancer.server.port=8080
+      indocker.host: my-whoami
+      indocker.scheme: http # optional
+      indocker.port: 8080
+      indocker.network: some-network
     command: --port 8080
-    networks: [indocker-app-network]
-    security_opt: [no-new-privileges:true]
+    networks: [some-network]
+    security_opt: [no-new-privileges:true] # optional
 
 networks:
-  indocker-app-network:
-    external: true</code></pre>
+  some-network: {}</code></pre>
 
   <pre><code class="language-shell">$ docker-compose up -d</code></pre>
 
@@ -255,19 +178,19 @@ networks:
 &lt;title&gt;Welcome to nginx!&lt;/title&gt;
 &lt;h1&gt;Welcome to nginx!&lt;/h1&gt;
 
-$ curl -sS http://whoami.indocker.app
+$ curl -sS http://my-whoami.indocker.app
 Hostname: 849834ab3299
 IP: 127.0.0.1
 IP: 172.20.0.3
 RemoteAddr: 172.20.0.2:33734
 GET / HTTP/1.1
-Host: whoami.indocker.app
+Host: my-whoami.indocker.app
 User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)
 Accept: */*
 Accept-Encoding: gzip
 Referer:
 X-Forwarded-For: 172.20.0.1
-X-Forwarded-Host: whoami.indocker.app
+X-Forwarded-Host: my-whoami.indocker.app
 X-Forwarded-Port: 80
 X-Forwarded-Proto: http
 X-Forwarded-Server: edc8405eccc6
@@ -345,7 +268,7 @@ X-Real-Ip: 172.20.0.1</code></pre>
     /** @return {Promise<boolean>} */
     isStarted() {
       return new Promise((resolve, reject) => {
-        fetch(`${this.baseUrl}/api/version`)
+        fetch(`${this.baseUrl}/api/ping`)
           .then((response) => resolve(response.status === 200))
           .catch((err) => resolve(false))
       })

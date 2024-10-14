@@ -306,7 +306,7 @@ func (s *State) buildRouteToContainer(info types.Container) ( //nolint:funlen,go
 
 			// parse the port
 			if parsed, parseErr := strconv.ParseUint(v, 10, 16); parseErr == nil {
-				port = uint16(parsed) //nolint:gosec
+				port = uint16(parsed)
 			}
 
 			break

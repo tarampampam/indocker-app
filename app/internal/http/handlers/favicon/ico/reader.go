@@ -145,7 +145,7 @@ func (d *decoder) decode(r io.Reader) error { //nolint:funlen,gocognit
 				for col := 0; col < int(e.Width); col++ {
 					if maskData != nil {
 						rowSize := (int(e.Width) + 31) / 32 * 4                       //nolint:mnd
-						if (maskData[row*rowSize+col/8]>>(7-uint(col)%8))&0x01 != 1 { //nolint:mnd
+						if (maskData[row*rowSize+col/8]>>(7-uint(col)%8))&0x01 != 1 { //nolint:mnd,gosec
 							mask.SetAlpha(col, int(e.Height)-row-1, color.Alpha{A: 255}) //nolint:mnd
 						}
 					} else { // 32-Bit
