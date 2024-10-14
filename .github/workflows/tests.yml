@@ -53,7 +53,8 @@ jobs:
     env: {FORCE_COLOR: 'true', NPM_CONFIG_PREFIX: './app/web'}
     steps:
       - uses: actions/checkout@v4
-      - {uses: actions/setup-node@v4, with: {node-version: 22, cache: 'npm'}}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: 'npm', cache-dependency-path: ./app/web/package-lock.json}
       - run: npm install
       - run: npm run generate
       - run: npm run lint
