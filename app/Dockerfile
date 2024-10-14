@@ -19,7 +19,7 @@ ENV \
 # install development tools and dependencies
 RUN set -x \
     # renovate: source=github-releases name=oapi-codegen/oapi-codegen
-    && DEEPMAP_OAPI_VERSION="2.3.0" \
+    && DEEPMAP_OAPI_VERSION="2.4.1" \
     && GOBIN=/bin go install "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v${DEEPMAP_OAPI_VERSION}" \
     && go clean -cache -modcache \
     # renovate: source=github-releases name=golangci/golangci-lint
