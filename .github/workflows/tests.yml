@@ -33,8 +33,8 @@ jobs:
       - run: dnscontrol check
         working-directory: dns
 
-  lint-and-test-app:
-    name: 🧪 Test and lint app
+  lint-and-test-app-backend:
+    name: 🧪 Test and lint app (backend)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +46,20 @@ jobs:
         with: {working-directory: ./app}
       - run: go test -race -covermode=atomic ./...
         working-directory: ./app
+
+  lint-and-test-app-frontend:
+    name: 🧪 Test and lint app (frontend)
+    runs-on: ubuntu-latest
+    env: {FORCE_COLOR: 'true', NPM_PREFIX: './app/web'}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: 'npm', cache-dependency-path: ./app/web/package-lock.json}
+      - run: npm --prefix "$NPM_PREFIX" install -dd --no-audit
+      - run: npm --prefix "$NPM_PREFIX" run generate
+      - run: npm --prefix "$NPM_PREFIX" run lint
+      - run: npm --prefix "$NPM_PREFIX" run test
+      - run: npm --prefix "$NPM_PREFIX" run build
 
   lint-mkcert:
     name: 🧪 Lint mkcert
