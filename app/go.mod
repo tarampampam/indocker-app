@@ -3,7 +3,7 @@ module gh.tarampamp.am/indocker-app/app
 go 1.23
 
 require (
-	github.com/docker/docker v27.2.0+incompatible
+	github.com/docker/docker v27.3.1+incompatible
 	github.com/gorilla/websocket v1.5.3
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/stretchr/testify v1.9.0
