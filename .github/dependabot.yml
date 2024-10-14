@@ -7,6 +7,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: {interval: monthly}
+    groups: {github-actions: {patterns: ['*']}}
     assignees: [tarampampam]
 
   # App updates:
@@ -14,19 +15,25 @@ updates:
   - package-ecosystem: docker
     directory: /app
     schedule: {interval: monthly}
+    groups: {docker: {patterns: ['*']}}
     assignees: [tarampampam]
 
   - package-ecosystem: gomod
     directory: /app
     schedule: {interval: monthly}
+    groups: {gomod: {patterns: ['*']}}
     assignees: [tarampampam]
 
   - package-ecosystem: npm
     directory: /app/web
     schedule: {interval: monthly}
+    groups:
+      npm-production: {dependency-type: production, update-types: [minor, patch]}
+      npm-development: {dependency-type: development, update-types: [minor, patch]}
     assignees: [tarampampam]
 
   - package-ecosystem: gomod
     directory: /mkcert
     schedule: {interval: monthly}
+    groups: {gomod: {patterns: ['*']}}
     assignees: [tarampampam]
