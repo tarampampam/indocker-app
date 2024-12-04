@@ -9,7 +9,7 @@ export const isDarkMode = (onChange?: (dark: boolean) => void): [boolean, () => 
   const preferDarkSelector: string = '(prefers-color-scheme: dark)'
 
   const update = (event: MediaQueryListEvent): void => {
-    onChange && onChange(event.matches)
+    onChange?.(event.matches)
   }
 
   let closer = () => {}
