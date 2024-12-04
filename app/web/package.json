@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "generate": "node --no-deprecation ./node_modules/.bin/openapi-typescript ./../api/openapi.yml --immutable --enum --array-length --additional-properties=false --output ./src/api/schema.gen.ts",
-    "fmt": "prettier --config package.json --write ./*.ts ./src && npm run lint:es -- --fix",
+    "fmt": "prettier --write ./*.{js,ts} ./src && npm run lint:es -- --fix",
     "lint": "npm run lint:ts && npm run lint:es",
     "lint:ts": "tsc --noEmit",
-    "lint:es": "eslint --config package.json ./src/**/*.{ts,tsx}",
+    "lint:es": "eslint ./src/**/*.{ts,tsx}",
     "test": "vitest --run",
     "serve": "vite --strictPort",
     "watch": "vite build --watch",
@@ -22,75 +22,33 @@
     "semver": "^7.6.3"
   },
   "devDependencies": {
-    "@types/node": "^22.7.5",
-    "@types/react": "^18.3.11",
+    "@eslint/compat": "^1.2.3",
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.16.0",
+    "@fetch-mock/vitest": "^0.2.6",
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@types/semver": "^7.5.8",
-    "@typescript-eslint/eslint-plugin": "^7.16.0",
-    "@typescript-eslint/parser": "^7.16.0",
-    "@vitejs/plugin-react": "^4.3.2",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react": "^7.37.1",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.16.0",
+    "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.0.0",
-    "eslint-plugin-react-refresh": "^0.4.12",
-    "openapi-typescript": "^7.4.1",
-    "prettier": "^3.3.3",
-    "sass": "^1.79.5",
-    "typescript": "^5.6.3",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.13.0",
+    "openapi-typescript": "^7.4.3",
+    "prettier": "^3.4.1",
+    "sass": "^1.81.0",
+    "typescript": "^5.7.2",
     "vite": "^5.4.9",
-    "vitest": "^2.1.3",
-    "vitest-fetch-mock": "^0.3.0"
+    "vitest": "^2.1.6"
   },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "browser": true,
-      "es2021": true
-    },
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/recommended",
-      "plugin:react/recommended",
-      "plugin:react-hooks/recommended"
-    ],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-      "ecmaVersion": "latest",
-      "sourceType": "module",
-      "project": true,
-      "jsx": true
-    },
-    "plugins": [
-      "@typescript-eslint",
-      "react-refresh",
-      "react"
-    ],
-    "settings": {
-      "react": {
-        "version": "detect"
-      }
-    },
-    "rules": {
-      "react/react-in-jsx-scope": "off",
-      "react/jsx-key": [
-        "error",
-        {
-          "checkFragmentShorthand": true
-        }
-      ]
-    },
-    "ignorePatterns": [
-      "dist/*"
-    ]
-  },
-  "prettier": {
-    "semi": false,
-    "tabWidth": 2,
-    "singleQuote": true,
-    "printWidth": 120,
-    "trailingComma": "es5"
+  "volta": {
+    "node": "22"
   },
   "engines": {
-    "node": ">=21"
+    "node": ">=22"
   }
 }
