@@ -64,7 +64,7 @@ func NewServer(baseCtx context.Context, log *zap.Logger, opts ...ServerOption) *
 	return &server
 }
 
-func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface { //nolint:funlen
+func (s *Server) Register(ctx context.Context, log *zap.Logger, router interface {
 	docker.RoutingUpdateSubscriber
 	docker.RoutingURLResolver
 	docker.AllContainerURLsResolver
