@@ -1,7 +1,0 @@
-displayName: docker-info
-summary: Docker info plugin
-type: middleware
-
-import: docker-info
-
-testData: {}

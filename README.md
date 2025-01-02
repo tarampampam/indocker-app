@@ -14,6 +14,9 @@
 
 > This project previously was called `localhost.tools`
 
+> [!WARNING]
+> v1 is not actively maintained. Please, upgrade to the v2 version of the project when it will be released.
+
 One time you may want to run docker containers locally and interact with they're using domain names instead of
 different TCP/UDP ports. And in addition - you want to use HTTPS protocol for this. This is what this project
 is about.
@@ -45,16 +48,6 @@ it using docker container labels (that's why it needs a docker socket to be moun
 
 All we have to do is run it, the necessary containers with the required labels, and Viola! It works! More details
 you can find on the website of the project: [indocker.app](https://indocker.app/).
-
-## Where is the docker image?
-
-Here: `quay.io/indocker/app:1` _(~40 Mb download size)_.
-
-From time to time (about once every 2 months) you need to update it. To do this, you need to run the following command:
-
-```bash
-$ docker pull quay.io/indocker/app:<used-tag>
-```
 
 ## Additional features
 

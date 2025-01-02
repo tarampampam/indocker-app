@@ -5,11 +5,6 @@ global:
   checkNewVersion: false
   sendAnonymousUsage: false
 
-experimental:
-  localPlugins:
-    docker-info: # sources are located in traefik/plugins/docker-info directory
-      moduleName: docker-info
-
 serversTransport: # https://doc.traefik.io/traefik/routing/services/#serverstransport_1
   insecureSkipVerify: true
 
