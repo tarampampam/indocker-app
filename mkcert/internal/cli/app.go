@@ -143,7 +143,7 @@ func (*app) domainsList() []string {
 	return domains
 }
 
-func (app *app) obtainCert() (*certificate.Resource, error) { //nolint:funlen
+func (app *app) obtainCert() (*certificate.Resource, error) {
 	privateKey, privateKeyErr := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if privateKeyErr != nil {
 		return nil, fmt.Errorf("failed to generate private key: %w", privateKeyErr)

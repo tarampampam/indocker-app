@@ -96,7 +96,7 @@ type decoder struct {
 	images  []image.Image
 }
 
-func (d *decoder) decode(r io.Reader) error { //nolint:funlen,gocognit
+func (d *decoder) decode(r io.Reader) error { //nolint:gocognit
 	if err := d.decodeHeader(r); err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (d *decoder) decodeEntries(r io.Reader) error {
 	return nil
 }
 
-func (d *decoder) forgeBMPHead(buf []byte, e *direntry) (mask []byte) { //nolint:funlen
+func (d *decoder) forgeBMPHead(buf []byte, e *direntry) (mask []byte) {
 	var ( // See en.wikipedia.org/wiki/BMP_file_format
 		data      = buf[14:]
 		imageSize = len(data)

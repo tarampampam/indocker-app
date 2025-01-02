@@ -108,7 +108,7 @@ func (s *State) StartAutoUpdate(ctx context.Context) (stop func()) { //nolint:go
 }
 
 // Update updates the state of running containers immediately. It returns an error if something went wrong.
-func (s *State) Update(ctx context.Context) error { //nolint:funlen,gocyclo
+func (s *State) Update(ctx context.Context) error { //nolint:gocyclo
 	var filter = filters.NewArgs()
 
 	// we need to filter only certain statuses (alive containers)
