@@ -4,3 +4,4 @@
 ## Except the following files and directories
 !/traefik
 !/docker-entrypoint.sh
+!/resolve-cert.sh
