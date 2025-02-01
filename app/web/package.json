@@ -28,7 +28,7 @@
     "@fetch-mock/vitest": "^0.2.6",
     "@types/node": "^22.10.4",
     "@types/react": "^19.0.2",
-    "@types/react-dom": "^18.3.1",
+    "@types/react-dom": "^19.0.3",
     "@types/semver": "^7.5.8",
     "@typescript-eslint/eslint-plugin": "^8.17.0",
     "@typescript-eslint/parser": "^8.19.0",
