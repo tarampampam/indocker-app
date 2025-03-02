@@ -3,7 +3,7 @@ module gh.tarampamp.am/indocker-app/mkcert
 go 1.23
 
 require (
-	github.com/go-acme/lego/v4 v4.21.0
+	github.com/go-acme/lego/v4 v4.22.2
 	github.com/urfave/cli-docs/v3 v3.0.0-alpha6
 	github.com/urfave/cli/v3 v3.0.0-beta1
 )
