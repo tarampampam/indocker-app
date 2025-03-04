@@ -1,6 +1,6 @@
 module gh.tarampamp.am/indocker-app/app
 
-go 1.23
+go 1.24
 
 require (
 	github.com/docker/docker v28.0.1+incompatible
@@ -18,6 +18,7 @@ require (
 
 require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

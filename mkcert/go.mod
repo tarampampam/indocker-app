@@ -1,6 +1,6 @@
 module gh.tarampamp.am/indocker-app/mkcert
 
-go 1.23
+go 1.24
 
 require (
 	github.com/go-acme/lego/v4 v4.21.0
