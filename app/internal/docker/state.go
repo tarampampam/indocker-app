@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
@@ -251,7 +250,7 @@ var (
 
 // buildRouteToContainer returns the routing info to the container, if possible. It returns false if the container
 // does not have the required labels or the network settings.
-func (s *State) buildRouteToContainer(info types.Container) ( //nolint:funlen,gocognit,gocyclo
+func (s *State) buildRouteToContainer(info container.Summary) ( //nolint:funlen,gocognit,gocyclo
 	scheme, host, ipAddr string, port uint16, found bool,
 ) {
 	scheme, port = "http", uint16(80) //nolint:mnd // defaults
