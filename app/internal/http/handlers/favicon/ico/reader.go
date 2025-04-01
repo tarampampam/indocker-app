@@ -64,7 +64,7 @@ func DecodeConfig(r io.Reader) (image.Config, error) {
 
 	buf = buf[:14+n]
 
-	if n > 8 && bytes.Compare(buf[14:22], pngHeader) == 0 { //nolint:gosimple
+	if n > 8 && bytes.Equal(buf[14:22], pngHeader) {
 		return png.DecodeConfig(bytes.NewReader(buf[14:]))
 	}
 
@@ -120,7 +120,7 @@ func (d *decoder) decode(r io.Reader) error { //nolint:gocognit
 
 		data = data[:14+n]
 
-		if n > 8 && bytes.Compare(data[14:22], pngHeader) == 0 { //nolint:nestif,gosimple // decode as PNG
+		if n > 8 && bytes.Equal(data[14:22], pngHeader) { //nolint:nestif // decode as PNG
 			if d.images[i], err = png.Decode(bytes.NewReader(data[14:])); err != nil {
 				return err
 			}

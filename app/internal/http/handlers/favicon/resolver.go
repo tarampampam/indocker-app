@@ -174,9 +174,10 @@ func (r *Resolver) extractFaviconLinks(doc *html.Node) (favicons []string) {
 			var rel, href string
 
 			for _, attr := range n.Attr {
-				if attr.Key == "rel" { // rel="..."
+				switch attr.Key {
+				case "rel": // rel="..."
 					rel = strings.ToLower(attr.Val)
-				} else if attr.Key == "href" {
+				case "href":
 					href = attr.Val // href="..."
 				}
 			}
