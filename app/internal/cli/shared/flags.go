@@ -136,7 +136,7 @@ var (
 )
 
 // validateTCPPortNumber validates the given TCP port number.
-func validateTCPPortNumber(port uint64) error {
+func validateTCPPortNumber(port uint) error {
 	if port == 0 || port > 65535 {
 		return fmt.Errorf("wrong TCP port number [%d]", port)
 	}
