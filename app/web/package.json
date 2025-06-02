@@ -14,12 +14,12 @@
     "build": "tsc --noEmit && vite build"
   },
   "dependencies": {
-    "framer-motion": "^12.9.4",
-    "openapi-fetch": "^0.13.5",
+    "framer-motion": "^12.15.0",
+    "openapi-fetch": "^0.14.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.5.3",
-    "semver": "^7.7.1"
+    "react-router-dom": "^7.6.1",
+    "semver": "^7.7.2"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.9",
