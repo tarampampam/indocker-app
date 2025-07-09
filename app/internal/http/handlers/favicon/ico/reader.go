@@ -43,7 +43,6 @@ func DecodeConfig(r io.Reader) (image.Config, error) {
 		cfg image.Config
 		err error
 	)
-
 	if err = d.decodeHeader(r); err != nil {
 		return cfg, err
 	}

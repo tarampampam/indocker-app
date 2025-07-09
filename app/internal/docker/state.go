@@ -155,6 +155,7 @@ func (s *State) Update(ctx context.Context) error { //nolint:gocyclo
 
 	if routesUpdated {
 		s.routeChangesSubsMu.Lock()
+
 		for sub, stop := range s.routeChangesSubs {
 			go func(sub chan<- RoutesMap, stop <-chan struct{}) {
 				select { // first, check if the subscription and context are still alive
@@ -169,6 +170,7 @@ func (s *State) Update(ctx context.Context) error { //nolint:gocyclo
 				}
 			}(sub, stop)
 		}
+
 		s.routeChangesSubsMu.Unlock()
 	}
 
