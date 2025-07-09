@@ -12,7 +12,7 @@ export default function Component({ children }: { children: ReactNode }): React.
         enter: { opacity: 1, filter: 'blur(0)' },
         exit: { opacity: 0, filter: 'blur(5px)' },
       }}
-      transition={{ duration: 0.1, type: 'easeInOut' }}
+      transition={{ duration: 0.1, type: 'spring' }}
       style={{ height: '100%', position: 'relative' }}
     >
       {children}
