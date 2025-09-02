@@ -18,7 +18,7 @@
     "openapi-fetch": "^0.14.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-router-dom": "^7.7.1",
+    "react-router-dom": "^7.8.2",
     "semver": "^7.7.2"
   },
   "devDependencies": {
