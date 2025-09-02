@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/go-acme/lego/v4 v4.25.2
 	github.com/urfave/cli-docs/v3 v3.0.0-alpha6
-	github.com/urfave/cli/v3 v3.3.8
+	github.com/urfave/cli/v3 v3.4.1
 )
 
 require (
