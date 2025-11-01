@@ -14,12 +14,12 @@
     "build": "tsc --noEmit && vite build"
   },
   "dependencies": {
-    "framer-motion": "^12.23.22",
-    "openapi-fetch": "^0.14.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.9.3",
-    "semver": "^7.7.2"
+    "framer-motion": "^12.23.24",
+    "openapi-fetch": "^0.15.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.5",
+    "semver": "^7.7.3"
   },
   "devDependencies": {
     "@eslint/compat": "^1.4.0",
@@ -27,8 +27,8 @@
     "@eslint/js": "^9.36.0",
     "@fetch-mock/vitest": "^0.2.15",
     "@types/node": "^24.6.1",
-    "@types/react": "^19.1.12",
-    "@types/react-dom": "^19.1.9",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
     "@types/semver": "^7.7.1",
     "@typescript-eslint/eslint-plugin": "^8.17.0",
     "@typescript-eslint/parser": "^8.45.0",
