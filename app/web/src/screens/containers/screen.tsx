@@ -12,7 +12,7 @@ export default function Screen({ apiClient }: { apiClient: Client }): React.JSX.
 
   // fetch the list of routes and subscribe to updates
   useEffect(() => {
-    setIsLoading(true)
+    Promise.resolve().then(() => setIsLoading(true))
 
     apiClient
       .routesList()
@@ -56,7 +56,7 @@ export default function Screen({ apiClient }: { apiClient: Client }): React.JSX.
       })
     }
 
-    setListItems(items)
+    Promise.resolve().then(() => setListItems(items))
   }, [routes])
 
   return (
