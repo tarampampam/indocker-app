@@ -21,10 +21,10 @@ $ app [GLOBAL FLAGS] [COMMAND] [COMMAND FLAGS] [ARGUMENTS...]
 
 Global flags:
 
-| Name               | Description                                 | Default value | Environment variables |
-|--------------------|---------------------------------------------|:-------------:|:---------------------:|
-| `--log-level="…"`  | Logging level (debug/info/warn/error/fatal) |    `info`     |      `LOG_LEVEL`      |
-| `--log-format="…"` | Logging format (console/json)               |   `console`   |     `LOG_FORMAT`      |
+| Name               | Description                                 | Type   | Default value | Environment variables |
+|--------------------|---------------------------------------------|--------|:-------------:|:---------------------:|
+| `--log-level="…"`  | Logging level (debug/info/warn/error/fatal) | string |    `info`     |      `LOG_LEVEL`      |
+| `--log-format="…"` | Logging format (console/json)               | string |   `console`   |     `LOG_FORMAT`      |
 
 ### `start` command (aliases: `server`, `serve`)
 
@@ -38,19 +38,19 @@ $ app [GLOBAL FLAGS] start [COMMAND FLAGS] [ARGUMENTS...]
 
 The following flags are supported:
 
-| Name                     | Description                                                                                |         Default value         |       Environment variables        |
-|--------------------------|--------------------------------------------------------------------------------------------|:-----------------------------:|:----------------------------------:|
-| `--addr="…"`             | IP (v4 or v6) address to listen on (0.0.0.0 to bind to all interfaces)                     |           `0.0.0.0`           |    `SERVER_ADDR`, `LISTEN_ADDR`    |
-| `--http-port="…"`        | HTTP server port                                                                           |            `8080`             |            `HTTP_PORT`             |
-| `--https-port="…"`       | HTTPS server port                                                                          |            `8443`             |            `HTTPS_PORT`            |
-| `--https-cert-file="…"`  | TLS certificate file path (if empty, the certificate will be automatically resolved)       |                               | `HTTPS_CERT_FILE`, `TLS_CERT_FILE` |
-| `--https-key-file="…"`   | TLS key file path (if empty, the key will be automatically resolved)                       |                               |  `HTTPS_KEY_FILE`, `TLS_KEY_FILE`  |
-| `--read-timeout="…"`     | maximum duration for reading the entire request, including the body (zero = no timeout)    |            `1m0s`             |        `HTTP_READ_TIMEOUT`         |
-| `--write-timeout="…"`    | maximum duration before timing out writes of the response (zero = no timeout)              |            `1m0s`             |        `HTTP_WRITE_TIMEOUT`        |
-| `--idle-timeout="…"`     | maximum amount of time to wait for the next request (keep-alive, zero = no timeout)        |            `1m0s`             |        `HTTP_IDLE_TIMEOUT`         |
-| `--shutdown-timeout="…"` | maximum duration for graceful shutdown                                                     |             `15s`             |         `SHUTDOWN_TIMEOUT`         |
-| `--docker-socket="…"`    | path to the docker socket (or docker host)                                                 | `unix:///var/run/docker.sock` |   `DOCKER_SOCKET`, `DOCKER_HOST`   |
-| `--use-live-frontend`    | use frontend from the local directory instead of the embedded one (useful for development) |            `false`            |               *none*               |
+| Name                     | Description                                                                                | Type     |         Default value         |       Environment variables        |
+|--------------------------|--------------------------------------------------------------------------------------------|----------|:-----------------------------:|:----------------------------------:|
+| `--addr="…"`             | IP (v4 or v6) address to listen on (0.0.0.0 to bind to all interfaces)                     | string   |           `0.0.0.0`           |    `SERVER_ADDR`, `LISTEN_ADDR`    |
+| `--http-port="…"`        | HTTP server port                                                                           | uint     |            `8080`             |            `HTTP_PORT`             |
+| `--https-port="…"`       | HTTPS server port                                                                          | uint     |            `8443`             |            `HTTPS_PORT`            |
+| `--https-cert-file="…"`  | TLS certificate file path (if empty, the certificate will be automatically resolved)       | string   |                               | `HTTPS_CERT_FILE`, `TLS_CERT_FILE` |
+| `--https-key-file="…"`   | TLS key file path (if empty, the key will be automatically resolved)                       | string   |                               |  `HTTPS_KEY_FILE`, `TLS_KEY_FILE`  |
+| `--read-timeout="…"`     | maximum duration for reading the entire request, including the body (zero = no timeout)    | duration |            `1m0s`             |        `HTTP_READ_TIMEOUT`         |
+| `--write-timeout="…"`    | maximum duration before timing out writes of the response (zero = no timeout)              | duration |            `1m0s`             |        `HTTP_WRITE_TIMEOUT`        |
+| `--idle-timeout="…"`     | maximum amount of time to wait for the next request (keep-alive, zero = no timeout)        | duration |            `1m0s`             |        `HTTP_IDLE_TIMEOUT`         |
+| `--shutdown-timeout="…"` | maximum duration for graceful shutdown                                                     | duration |             `15s`             |         `SHUTDOWN_TIMEOUT`         |
+| `--docker-socket="…"`    | path to the docker socket (or docker host)                                                 | string   | `unix:///var/run/docker.sock` |   `DOCKER_SOCKET`, `DOCKER_HOST`   |
+| `--use-live-frontend`    | use frontend from the local directory instead of the embedded one (useful for development) | bool     |            `false`            |               *none*               |
 
 ### `start healthcheck` subcommand (aliases: `hc`, `health`, `check`)
 
@@ -64,9 +64,9 @@ $ app [GLOBAL FLAGS] start healthcheck [COMMAND FLAGS] [ARGUMENTS...]
 
 The following flags are supported:
 
-| Name               | Description       | Default value | Environment variables |
-|--------------------|-------------------|:-------------:|:---------------------:|
-| `--http-port="…"`  | HTTP server port  |    `8080`     |      `HTTP_PORT`      |
-| `--https-port="…"` | HTTPS server port |    `8443`     |     `HTTPS_PORT`      |
+| Name               | Description       | Type | Default value | Environment variables |
+|--------------------|-------------------|------|:-------------:|:---------------------:|
+| `--http-port="…"`  | HTTP server port  | uint |    `8080`     |      `HTTP_PORT`      |
+| `--https-port="…"` | HTTPS server port | uint |    `8443`     |     `HTTPS_PORT`      |
 
 <!--/GENERATED:CLI_DOCS-->

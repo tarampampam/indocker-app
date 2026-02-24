@@ -82,7 +82,7 @@ func (r Resolver) Resolve(ctx context.Context) (*tls.Certificate, error) {
 	return &cert, nil
 }
 
-type remoteContent struct{ PrivateKey, FullChain []byte }
+type remoteContent struct{ PrivateKey, FullChain []byte } //nolint:gosec
 
 // getArchive fetches the archive with the private key and full chain from the remote server and extracts the
 // contents of those files into memory.
@@ -130,7 +130,7 @@ func (r Resolver) getArchive(ctx context.Context) (*remoteContent, error) { //no
 			}
 		}
 
-		if resp, respErr = http.DefaultClient.Do(req); respErr != nil {
+		if resp, respErr = http.DefaultClient.Do(req); respErr != nil { //nolint:gosec
 			respErr = fmt.Errorf("failed to send request: %w", respErr)
 
 			continue // retry

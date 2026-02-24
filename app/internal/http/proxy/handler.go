@@ -75,7 +75,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 				return nil
 			},
-		}).ServeHTTP(w, r)
+		}).ServeHTTP(w, r) //nolint:gosec
 
 		return
 	}

@@ -130,7 +130,7 @@ func NewApp() *cli.Command { //nolint:funlen
 func (*app) domainsList() []string {
 	const rootDomain = "indocker.app"
 
-	var domains = make([]string, 0)
+	var domains = make([]string, 0) //nolint:prealloc
 
 	for _, subDomain := range []string{
 		"*", "*.app", "*.apps", "*.www", "*.http", "*.mail", "*.m", "*.go", "*.static", "*.img", "*.media",
