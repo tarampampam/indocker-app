@@ -1,12 +1,13 @@
 # yaml-language-server: $schema=https://json.schemastore.org/dependabot-2.0.json
-# docs: https://docs.github.com/en/free-pro-team@latest/github/administering-a-repository/customizing-dependency-updates
+# docs: https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference
 
 version: 2
 
 updates:
   - package-ecosystem: github-actions
     directory: /
-    schedule: {interval: monthly}
+    schedule: {interval: monthly, time: '02:00', timezone: 'Etc/UTC'}
+    cooldown: {default-days: 2}
     groups: {github-actions: {patterns: ['*']}}
     assignees: [tarampampam]
 
@@ -14,19 +15,22 @@ updates:
 
   - package-ecosystem: docker
     directory: /app
-    schedule: {interval: monthly}
+    schedule: {interval: monthly, time: '02:00', timezone: 'Etc/UTC'}
+    cooldown: {default-days: 2}
     groups: {docker: {patterns: ['*']}}
     assignees: [tarampampam]
 
   - package-ecosystem: gomod
     directory: /app
-    schedule: {interval: monthly}
+    schedule: {interval: monthly, time: '02:00', timezone: 'Etc/UTC'}
+    cooldown: {default-days: 2, semver-major-days: 10, semver-minor-days: 4, semver-patch-days: 2}
     groups: {gomod: {patterns: ['*']}}
     assignees: [tarampampam]
 
   - package-ecosystem: npm
     directory: /app/web
-    schedule: {interval: monthly}
+    schedule: {interval: monthly, time: '02:00', timezone: 'Etc/UTC'}
+    cooldown: {default-days: 2, semver-major-days: 10, semver-minor-days: 4, semver-patch-days: 2}
     groups:
       npm-production: {dependency-type: production, update-types: [minor, patch]}
       npm-development: {dependency-type: development, update-types: [minor, patch]}
@@ -34,6 +38,7 @@ updates:
 
   - package-ecosystem: gomod
     directory: /mkcert
-    schedule: {interval: monthly}
+    schedule: {interval: monthly, time: '02:00', timezone: 'Etc/UTC'}
+    cooldown: {default-days: 2, semver-major-days: 10, semver-minor-days: 4, semver-patch-days: 2}
     groups: {gomod: {patterns: ['*']}}
     assignees: [tarampampam]
