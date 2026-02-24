@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     defaults: {run: {working-directory: ./mkcert}}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - {uses: actions/setup-go@v5, with: {go-version-file: ./mkcert/go.mod, cache-dependency-path: mkcert/*.sum}}
       - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o ./mkcert ./cmd/mkcert
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with: {name: mkcert, path: ./mkcert/mkcert, if-no-files-found: error, retention-days: 1}
 
   deploy:
