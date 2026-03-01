@@ -1,6 +1,6 @@
 module gh.tarampamp.am/indocker-app/app
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/docker/docker v28.5.2+incompatible
@@ -12,7 +12,7 @@ require (
 	github.com/zenizh/go-capturer v0.0.0-20211219060012-52ea6c8fed04
 	go.uber.org/zap v1.27.1
 	golang.org/x/image v0.36.0
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	golang.org/x/sync v0.19.0
 )
 
