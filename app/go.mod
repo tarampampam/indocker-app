@@ -12,8 +12,8 @@ require (
 	github.com/zenizh/go-capturer v0.0.0-20211219060012-52ea6c8fed04
 	go.uber.org/zap v1.27.1
 	golang.org/x/image v0.36.0
-	golang.org/x/net v0.51.0
-	golang.org/x/sync v0.19.0
+	golang.org/x/net v0.52.0
+	golang.org/x/sync v0.20.0
 )
 
 require (
@@ -44,7 +44,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
 	go.opentelemetry.io/otel v1.43.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.28.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
