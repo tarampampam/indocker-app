@@ -21,7 +21,8 @@ jobs:
     name: 🔐 Check for GitLeaks
     runs-on: ubuntu-latest
     steps:
-      - {uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
       - uses: gacts/gitleaks@v1
 
   dns-control:
@@ -38,7 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - {uses: actions/setup-go@v5, with: {go-version-file: ./app/go.mod, cache-dependency-path: ./app/go.sum}}
+      - uses: actions/setup-go@v5
+        with: {go-version-file: ./app/go.mod, cache-dependency-path: ./app/go.sum}
       - run: go install "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.6.0"
       - run: go generate -skip readme ./...
         working-directory: ./app
@@ -66,7 +68,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - {uses: actions/setup-go@v5, with: {go-version-file: ./mkcert/go.mod, cache-dependency-path: ./mkcert/go.sum}}
+      - uses: actions/setup-go@v5
+        with: {go-version-file: ./mkcert/go.mod, cache-dependency-path: ./mkcert/go.sum}
       - uses: golangci/golangci-lint-action@v9
         with: {working-directory: ./mkcert}
 
@@ -75,7 +78,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
       - uses: docker/build-push-action@v7
         with:
           context: ./app

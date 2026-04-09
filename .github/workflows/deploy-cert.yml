@@ -18,7 +18,8 @@ jobs:
     defaults: {run: {working-directory: ./mkcert}}
     steps:
       - uses: actions/checkout@v6
-      - {uses: actions/setup-go@v5, with: {go-version-file: ./mkcert/go.mod, cache-dependency-path: mkcert/*.sum}}
+      - uses: actions/setup-go@v5
+        with: {go-version-file: ./mkcert/go.mod, cache-dependency-path: mkcert/*.sum}
       - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o ./mkcert ./cmd/mkcert
       - uses: actions/upload-artifact@v7
         with: {name: mkcert, path: ./mkcert/mkcert, if-no-files-found: error, retention-days: 1}
@@ -29,7 +30,8 @@ jobs:
     needs: [build]
     environment: cert
     steps:
-      - {uses: actions/download-artifact@v4, with: {name: mkcert}}
+      - uses: actions/download-artifact@v4
+        with: {name: mkcert}
       - run: chmod +x ./mkcert && mkdir -p ./dist
       - run: ./mkcert --email "${{ secrets.CF_EMAIL }}" --api-key "${{ secrets.CF_API_KEY }}" --production --out-archive-dir ./dist
       - uses: cloudflare/wrangler-action@v3
