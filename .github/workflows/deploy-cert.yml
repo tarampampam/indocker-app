@@ -34,7 +34,7 @@ jobs:
         with: {name: mkcert}
       - run: chmod +x ./mkcert && mkdir -p ./dist
       - run: ./mkcert --email "${{ secrets.CF_EMAIL }}" --api-key "${{ secrets.CF_API_KEY }}" --production --out-archive-dir ./dist
-      - uses: cloudflare/wrangler-action@v3
+      - uses: cloudflare/wrangler-action@v4
         env: {PROJECT_NAME: indocker-app-certs, DIST_DIR: ./dist, CF_BRANCH_NAME: main}
         with:
           apiToken: ${{ secrets.CF_PAGES_DEPLOY_TOKEN }}
