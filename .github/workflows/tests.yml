@@ -21,7 +21,7 @@ jobs:
     name: 🔐 Check for GitLeaks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with: {fetch-depth: 0}
       - uses: gacts/gitleaks@v1
 
@@ -29,7 +29,7 @@ jobs:
     name: 🌐 DNSControl check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: gacts/install-dnscontrol@v1
       - run: dnscontrol check
         working-directory: dns
@@ -38,7 +38,7 @@ jobs:
     name: 🧪 Test and lint app (backend)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with: {go-version-file: ./app/go.mod, cache-dependency-path: ./app/go.sum}
       - run: go install "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.6.0"
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     env: {FORCE_COLOR: 'true', NPM_PREFIX: './app/web'}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with: {node-version: 22, cache: 'npm', cache-dependency-path: ./app/web/package-lock.json}
       - run: npm --prefix "$NPM_PREFIX" install -dd --no-audit
@@ -67,7 +67,7 @@ jobs:
     name: 🧪 Lint mkcert
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with: {go-version-file: ./mkcert/go.mod, cache-dependency-path: ./mkcert/go.sum}
       - uses: golangci/golangci-lint-action@v9
@@ -77,7 +77,7 @@ jobs:
     name: 🏗️ Build the docker image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: docker/build-push-action@v7
         with:
           context: ./app

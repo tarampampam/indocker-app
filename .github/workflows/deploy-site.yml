@@ -21,7 +21,7 @@ jobs:
       name: Site
       url: https://indocker.app
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: cloudflare/wrangler-action@v4
         env: {PROJECT_NAME: indocker-app-index, DIST_DIR: ./site, CF_BRANCH_NAME: main}
         with:
