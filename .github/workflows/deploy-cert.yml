@@ -18,7 +18,7 @@ jobs:
     defaults: {run: {working-directory: ./mkcert}}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with: {go-version-file: ./mkcert/go.mod, cache-dependency-path: mkcert/*.sum}
       - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o ./mkcert ./cmd/mkcert
       - uses: actions/upload-artifact@v7
